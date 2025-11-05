@@ -1,0 +1,21 @@
+# Build output
+build/
+bin/
+
+# Logs
+logs/
+
+# Data generated at runtime (e.g., users, cache)
+data/
+
+# Compiled objects
+*.o
+
+# Executables
+server
+client
+
+# Editor / OS files
+*.swp
+*.swo
+.DS_Store
