@@ -5,104 +5,117 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <json/json.h>
+#include <sstream>
 
 namespace server {
 
-// Enum for exercise types
+// Exercise content types for selective loading
 enum class ExerciseType {
-    REWRITE_SENTENCE,
-    ESSAY,
-    SPEAKING
+    QUESTION,
+    OPTIONS,
+    ANSWER,
+    EXPLANATION,
+    FULL  // All content
 };
 
-// Enum for exam types
-enum class ExamType {
-    MULTIPLE_CHOICE,
-    FILL_BLANK,
-    ORDER_SENTENCE
-};
-
-// Represents a single exercise
+// Represents a single exercise with all its content
 class Exercise {
 private:
     int exerciseId;
     int lessonId;
-    ExerciseType type;
+    std::string title;
+    std::string type; // e.g., "multiple_choice", "fill_in_the_blank"
+    std::string level;
     std::string question;
+    std::vector<std::string> options;
     std::string answer;
-    std::string mediaUrl;
-    int createdBy;
+    std::string explanation;
 
 public:
-    Exercise() : exerciseId(-1), lessonId(-1), createdBy(-1) {}
+    Exercise() : exerciseId(-1), lessonId(-1) {}
+    
+    Exercise(int id, int lId, const std::string& t, const std::string& ty, const std::string& lv)
+        : exerciseId(id), lessonId(lId), title(t), type(ty), level(lv) {}
 
     // Getters
     int getExerciseId() const { return exerciseId; }
     int getLessonId() const { return lessonId; }
-    ExerciseType getType() const { return type; }
+    std::string getTitle() const { return title; }
+    std::string getType() const { return type; }
+    std::string getLevel() const { return level; }
     std::string getQuestion() const { return question; }
+    std::vector<std::string> getOptions() const { return options; }
     std::string getAnswer() const { return answer; }
-    std::string getMediaUrl() const { return mediaUrl; }
-    int getCreatedBy() const { return createdBy; }
+    std::string getExplanation() const { return explanation; }
 
     // Setters
     void setExerciseId(int id) { exerciseId = id; }
     void setLessonId(int id) { lessonId = id; }
-    void setType(ExerciseType t) { type = t; }
+    void setTitle(const std::string& t) { title = t; }
+    void setType(const std::string& ty) { type = ty; }
+    void setLevel(const std::string& l) { level = l; }
     void setQuestion(const std::string& q) { question = q; }
-    void setAnswer(const std::string& a) { answer = a; }
-    void setMediaUrl(const std::string& url) { mediaUrl = url; }
-    void setCreatedBy(int id) { createdBy = id; }
+    void setOptions(const std::vector<std::string>& opts) { options = opts; }
+    void setAnswer(const std::string& ans) { answer = ans; }
+    void setExplanation(const std::string& exp) { explanation = exp; }
 
-    std::string serializeForNetwork() const;
+    // Serialize only the requested content type for network transmission
+    std::string serializeForNetwork(ExerciseType type) const;
+
+    // Serialize metadata (id, title, type, level) for exercise list
+    std::string serializeMetadata() const;
 };
 
-// Represents a single exam
-class Exam {
+// Container for multiple exercises with filtering capabilities
+class ExerciseList {
 private:
-    int examId;
-    int lessonId;
-    ExamType type;
-    Json::Value question;
-    int createdBy;
+    std::vector<Exercise> exercises;
 
 public:
-    Exam() : examId(-1), lessonId(-1), createdBy(-1) {}
+    ExerciseList() = default;
 
-    // Getters
-    int getExamId() const { return examId; }
-    int getLessonId() const { return lessonId; }
-    ExamType getType() const { return type; }
-    Json::Value getQuestion() const { return question; }
-    int getCreatedBy() const { return createdBy; }
+    // Add an exercise to the list
+    void addExercise(const Exercise& exercise) {
+        exercises.push_back(exercise);
+    }
 
-    // Setters
-    void setExamId(int id) { examId = id; }
-    void setLessonId(int id) { lessonId = id; }
-    void setType(ExamType t) { type = t; }
-    void setQuestion(const Json::Value& q) { question = q; }
-    void setCreatedBy(int id) { createdBy = id; }
+    // Get all exercises
+    const std::vector<Exercise>& getExercises() const { return exercises; }
 
+    // Filter exercises by type, level, and/or lessonId
+    // Empty string/negative lessonId means no filter for that field
+    ExerciseList filter(const std::string& type, const std::string& level, int lessonId) const;
+
+    // Serialize all exercises metadata for network transmission
+    // Format: <count>;<exercise1_meta>;<exercise2_meta>;...
     std::string serializeForNetwork() const;
+
+    // Get exercise count
+    size_t count() const { return exercises.size(); }
+
+    // Clear all exercises
+    void clear() { exercises.clear(); }
 };
 
-// Loader class for loading exercises and exams from the database
+// Loader class for loading exercises from database
 class ExerciseLoader {
 private:
     std::shared_ptr<Database> db;
-
-    ExerciseType stringToExerciseType(const std::string& typeStr) const;
-    ExamType stringToExamType(const std::string& typeStr) const;
+    bool parseExerciseFromRow(PGresult* result, int row, Exercise& exercise) const;
+    // Helper to parse JSON array from PostgreSQL JSONB field
+    std::vector<std::string> parseJsonArray(const std::string& jsonStr) const;
 
 public:
     ExerciseLoader(std::shared_ptr<Database> database);
 
-    // Load a specific exercise by ID
+    // Load all exercises from database
+    ExerciseList loadAllExercises();
+
+    // Load a specific exercise by ID with full content
     Exercise loadExerciseById(int exerciseId);
 
-    // Load a specific exam by ID
-    Exam loadExamById(int examId);
+    // Load exercises filtered by type, level, and/or lessonId
+    ExerciseList loadExercisesByFilter(const std::string& type, const std::string& level, int lessonId);
 };
 
 } // namespace server

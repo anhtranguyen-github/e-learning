@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS lessons (
 CREATE TABLE IF NOT EXISTS exercises (
     exercise_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
     type VARCHAR(30) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking')),
+    level VARCHAR(20) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     question TEXT NOT NULL,
     answer TEXT,
     media_url TEXT,
@@ -40,7 +42,9 @@ CREATE TABLE IF NOT EXISTS exercises (
 CREATE TABLE IF NOT EXISTS exams (
     exam_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
     type VARCHAR(30) CHECK (type IN ('multiple_choice', 'fill_blank', 'order_sentence')),
+    level VARCHAR(20) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     question JSONB,
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -54,6 +58,7 @@ CREATE TABLE IF NOT EXISTS results (
     score NUMERIC(5,2),
     feedback TEXT,
     graded_by VARCHAR(20) DEFAULT 'machine',
+    graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

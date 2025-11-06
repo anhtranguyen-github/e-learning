@@ -8,6 +8,7 @@
 #include "server/exercise_handler.h"
 #include "server/submission_handler.h"
 #include "server/result_handler.h"
+#include "server/exam_handler.h"
 #include <vector>
 #include <memory>
 
@@ -20,6 +21,7 @@ private:
     std::shared_ptr<LessonHandler> lessonHandler;
     std::shared_ptr<ExerciseHandler> exerciseHandler;
     std::shared_ptr<SubmissionHandler> submissionHandler;
+    std::shared_ptr<ExamHandler> examHandler;
     std::shared_ptr<ResultHandler> resultHandler;
 
     // Handle specific message types
@@ -40,6 +42,7 @@ public:
                  std::shared_ptr<LessonHandler> lh,
                  std::shared_ptr<ExerciseHandler> eh,
                  std::shared_ptr<SubmissionHandler> sh,
+                 std::shared_ptr<ExamHandler> exh,
                  std::shared_ptr<ResultHandler> rh);
 
     // Set lesson handler (optional, for lesson features)

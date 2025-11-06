@@ -61,6 +61,10 @@ public:
     bool submitAnswer(const std::string& targetType, int targetId, const std::string& answer);
     bool requestResultList();
 
+    // Exercise and exam requests
+    bool requestExercises();
+    bool requestExams();
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };

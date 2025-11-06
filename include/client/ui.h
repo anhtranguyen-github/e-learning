@@ -20,10 +20,14 @@ private:
     void handleDoExercise();
     void handleSubmitAnswer();
     void handleViewResults();
+    void handleViewExercises();
+    void handleViewExams();
     void clearScreen();
     
     // Helper to parse and display lesson list
     void parseLessonList(const std::string& payload);
+    void parseExerciseList(const std::string& payload);
+    void parseExamList(const std::string& payload);
     void displayLessonContent(const std::string& payload);
 
 public:
