@@ -5,6 +5,10 @@
 #include "server/database.h"
 #include "server/user_manager.h"
 #include "server/client_handler.h"
+#include "server/lesson_handler.h"
+#include "server/exercise_handler.h"
+#include "server/submission_handler.h"
+#include "server/result_handler.h"
 #include <vector>
 #include <set>
 #include <memory>
@@ -23,6 +27,9 @@ private:
     std::shared_ptr<SessionManager> sessionManager;
     std::shared_ptr<ClientHandler> clientHandler;
     std::shared_ptr<LessonHandler> lessonHandler;
+    std::shared_ptr<ExerciseHandler> exerciseHandler;
+    std::shared_ptr<SubmissionHandler> submissionHandler;
+    std::shared_ptr<ResultHandler> resultHandler;
 
     
     std::set<int> clientSockets;

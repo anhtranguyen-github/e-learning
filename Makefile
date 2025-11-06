@@ -20,6 +20,10 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/client_handler.cpp \
              $(SRC_DIR)/server/lesson_handler.cpp \
              $(SRC_DIR)/server/lesson_loader.cpp \
+             $(SRC_DIR)/server/exercise_handler.cpp \
+             $(SRC_DIR)/server/exercise_loader.cpp \
+             $(SRC_DIR)/server/submission_handler.cpp \
+             $(SRC_DIR)/server/result_handler.cpp \
 
 
 CLIENT_SRC = $(SRC_DIR)/client/client.cpp $(SRC_DIR)/client/network.cpp \

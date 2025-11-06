@@ -56,6 +56,11 @@ public:
     bool requestLessonList(const std::string& topic = "", const std::string& level = "");
     bool requestStudyLesson(int lessonId, const std::string& lessonType);
 
+    // Exercise and result management
+    bool requestExercise(protocol::MsgCode exerciseType, int exerciseId);
+    bool submitAnswer(const std::string& targetType, int targetId, const std::string& answer);
+    bool requestResultList();
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };

@@ -17,6 +17,9 @@ private:
     void handleLogout();
     void handleViewLessons();
     void handleStudyLesson();
+    void handleDoExercise();
+    void handleSubmitAnswer();
+    void handleViewResults();
     void clearScreen();
     
     // Helper to parse and display lesson list
