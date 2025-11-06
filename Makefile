@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -pthread
-LDFLAGS = -pthread
+LDFLAGS = -pthread -lpq
 
 # Directories
 SRC_DIR = src
@@ -10,9 +10,10 @@ BUILD_DIR = build
 BIN_DIR = bin
 
 # Source files
-COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp
+COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp $(SRC_DIR)/common/protocol.cpp
 SERVER_SRC = $(SRC_DIR)/server/server.cpp $(SRC_DIR)/server/session.cpp \
-             $(SRC_DIR)/server/database_utils.cpp $(SRC_DIR)/server/client_handler.cpp
+             $(SRC_DIR)/server/database.cpp $(SRC_DIR)/server/user_manager.cpp \
+             $(SRC_DIR)/server/client_handler.cpp
 CLIENT_SRC = $(SRC_DIR)/client/client.cpp $(SRC_DIR)/client/network.cpp \
              $(SRC_DIR)/client/ui.cpp
 
@@ -39,11 +40,11 @@ directories:
 
 # Server executable
 $(SERVER_BIN): $(COMMON_OBJ) $(SERVER_OBJ)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 # Client executable
 $(CLIENT_BIN): $(COMMON_OBJ) $(CLIENT_OBJ)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 # Compile common source files
 $(BUILD_DIR)/common/%.o: $(SRC_DIR)/common/%.cpp

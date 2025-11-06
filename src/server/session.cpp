@@ -2,19 +2,24 @@
 #include "common/utils.h"
 #include "common/logger.h"
 #include <algorithm>
+#include <sstream>
 
 namespace server {
 
-SessionManager::SessionManager(int timeout) : heartbeatTimeout(timeout) {}
+SessionManager::SessionManager(std::shared_ptr<Database> database, int timeout) 
+    : db(database), heartbeatTimeout(timeout) {}
 
-std::string SessionManager::createSession(const std::string& username, int clientFd) {
+std::string SessionManager::createSession(const std::string& username, int userId, int clientFd) {
     std::lock_guard<std::mutex> lock(sessionMutex);
     
     std::string sessionId = utils::generateSessionToken();
-    SessionData session(sessionId, username, clientFd);
+    SessionData session(sessionId, username, userId, clientFd);
     
     sessions[sessionId] = session;
     fdToSession[clientFd] = sessionId;
+    
+    // Persist to database
+    saveSessionToDB(session);
     
     if (logger::serverLogger) {
         logger::serverLogger->info("Created session " + sessionId + 
@@ -65,6 +70,9 @@ void SessionManager::updateLastActive(const std::string& sessionId) {
     if (it != sessions.end()) {
         it->second.lastActive = std::chrono::steady_clock::now();
         
+        // Update in database
+        updateSessionInDB(sessionId);
+        
         if (logger::serverLogger) {
             logger::serverLogger->debug("Updated last active for session " + sessionId);
         }
@@ -80,6 +88,9 @@ void SessionManager::removeSession(const std::string& sessionId) {
         fdToSession.erase(fd);
         sessions.erase(it);
         
+        // Remove from database
+        deleteSessionFromDB(sessionId);
+        
         if (logger::serverLogger) {
             logger::serverLogger->info("Removed session " + sessionId);
         }
@@ -92,6 +103,10 @@ void SessionManager::removeSessionByFd(int clientFd) {
     auto it = fdToSession.find(clientFd);
     if (it != fdToSession.end()) {
         std::string sessionId = it->second;
+        
+        // Remove from database
+        deleteSessionFromDB(sessionId);
+        
         sessions.erase(sessionId);
         fdToSession.erase(it);
         
@@ -143,6 +158,98 @@ std::vector<SessionData> SessionManager::getActiveSessions() {
     }
     
     return activeSessions;
+}
+
+// Database persistence methods
+bool SessionManager::saveSessionToDB(const SessionData& session) {
+    if (!db || !db->isConnected()) {
+        return false;
+    }
+    
+    std::string userIdStr = std::to_string(session.userId);
+    std::string clientFdStr = std::to_string(session.clientFd);
+    
+    const char* paramValues[3] = {
+        session.sessionId.c_str(),
+        userIdStr.c_str(),
+        clientFdStr.c_str()
+    };
+    
+    PGresult* res = db->execParams(
+        "INSERT INTO server_sessions (session_id, user_id, client_fd, last_active, active) "
+        "VALUES ($1, $2, $3, CURRENT_TIMESTAMP, TRUE) "
+        "ON CONFLICT (session_id) DO UPDATE SET "
+        "client_fd = EXCLUDED.client_fd, last_active = CURRENT_TIMESTAMP, active = TRUE",
+        3, paramValues
+    );
+    
+    if (res) {
+        PQclear(res);
+        return true;
+    }
+    return false;
+}
+
+bool SessionManager::loadSessionFromDB(const std::string& sessionId) {
+    if (!db || !db->isConnected()) {
+        return false;
+    }
+    
+    const char* paramValues[1] = {sessionId.c_str()};
+    
+    PGresult* res = db->execParams(
+        "SELECT user_id, client_fd, active FROM server_sessions WHERE session_id = $1",
+        1, paramValues
+    );
+    
+    if (!res || PQntuples(res) == 0) {
+        if (res) PQclear(res);
+        return false;
+    }
+    
+    // Note: This is a simplified version. Full implementation would reconstruct SessionData
+    // from database including username lookup
+    
+    PQclear(res);
+    return true;
+}
+
+bool SessionManager::updateSessionInDB(const std::string& sessionId) {
+    if (!db || !db->isConnected()) {
+        return false;
+    }
+    
+    const char* paramValues[1] = {sessionId.c_str()};
+    
+    PGresult* res = db->execParams(
+        "UPDATE server_sessions SET last_active = CURRENT_TIMESTAMP WHERE session_id = $1",
+        1, paramValues
+    );
+    
+    if (res) {
+        PQclear(res);
+        return true;
+    }
+    return false;
+}
+
+bool SessionManager::deleteSessionFromDB(const std::string& sessionId) {
+    if (!db || !db->isConnected()) {
+        return false;
+    }
+    
+    const char* paramValues[1] = {sessionId.c_str()};
+    
+    PGresult* res = db->execParams(
+        "UPDATE server_sessions SET active = FALSE WHERE session_id = $1",
+        1, paramValues
+    );
+    
+    if (res) {
+        PQclear(res);
+        return true;
+    }
+    return false;
 }
 
 } // namespace server

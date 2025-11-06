@@ -3,15 +3,16 @@
 
 #include "common/protocol.h"
 #include "server/session.h"
-#include "server/database_utils.h"
+#include "server/user_manager.h"
 #include <vector>
+#include <memory>
 
 namespace server {
 
 class ClientHandler {
 private:
-    SessionManager& sessionManager;
-    UserDatabase& userDatabase;
+    std::shared_ptr<SessionManager> sessionManager;
+    std::shared_ptr<UserManager> userManager;
 
     // Handle specific message types
     void handleLoginRequest(int clientFd, const protocol::Message& msg);
@@ -26,7 +27,7 @@ private:
     protocol::Message receiveMessage(int clientFd);
 
 public:
-    ClientHandler(SessionManager& sm, UserDatabase& db);
+    ClientHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<UserManager> um);
 
     // Process incoming message from client
     void processMessage(int clientFd, const std::vector<uint8_t>& data);

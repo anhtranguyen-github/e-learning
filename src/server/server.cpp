@@ -10,10 +10,26 @@
 
 namespace server {
 
-Server::Server(int port)
-    : serverSocket(-1), port(port), running(false),
-      sessionManager(30), userDatabase(),
-      clientHandler(sessionManager, userDatabase) {
+Server::Server(int port, const std::string& dbConn)
+    : serverSocket(-1), port(port), running(false), dbConnInfo(dbConn) {
+    
+    // Initialize database connection
+    database = std::make_shared<Database>(dbConnInfo);
+    if (!database->connect()) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("Failed to connect to database");
+        }
+        throw std::runtime_error("Database connection failed");
+    }
+    
+    // Initialize managers
+    userManager = std::make_shared<UserManager>(database);
+    sessionManager = std::make_shared<SessionManager>(database, 30);
+    clientHandler = std::make_shared<ClientHandler>(sessionManager, userManager);
+    
+    if (logger::serverLogger) {
+        logger::serverLogger->info("Server components initialized successfully");
+    }
 }
 
 Server::~Server() {
@@ -123,11 +139,11 @@ void Server::handleClientData(int clientFd) {
     buffer.resize(received);
     
     // Process the message
-    clientHandler.processMessage(clientFd, buffer);
+    clientHandler->processMessage(clientFd, buffer);
 }
 
 void Server::removeClient(int clientFd) {
-    clientHandler.handleClientDisconnect(clientFd);
+    clientHandler->handleClientDisconnect(clientFd);
     clientSockets.erase(clientFd);
     close(clientFd);
 }
@@ -215,7 +231,7 @@ void Server::run() {
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastSessionCheck).count();
         
         if (elapsed >= sessionCheckInterval) {
-            sessionManager.checkExpiredSessions();
+            sessionManager->checkExpiredSessions();
             lastSessionCheck = now;
         }
     }

@@ -7,8 +7,8 @@
 
 namespace server {
 
-ClientHandler::ClientHandler(SessionManager& sm, UserDatabase& db)
-    : sessionManager(sm), userDatabase(db) {
+ClientHandler::ClientHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<UserManager> um)
+    : sessionManager(sm), userManager(um) {
 }
 
 void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& data) {
@@ -67,9 +67,12 @@ void ClientHandler::handleLoginRequest(int clientFd, const protocol::Message& ms
     }
 
     // Verify credentials
-    if (userDatabase.verifyCredentials(username, password)) {
+    if (userManager->verifyCredentials(username, password)) {
+        // Get user ID
+        int userId = userManager->getUserId(username);
+        
         // Create session
-        std::string sessionId = sessionManager.createSession(username, clientFd);
+        std::string sessionId = sessionManager->createSession(username, userId, clientFd);
         
         // Send success response with cookie
         std::string cookieHeader = utils::createCookieHeader(sessionId);
@@ -105,7 +108,7 @@ void ClientHandler::handleLogoutRequest(int clientFd, const protocol::Message& m
     }
 
     // Validate session
-    if (!sessionManager.validateSession(sessionId)) {
+    if (!sessionManager->validateSession(sessionId)) {
         if (logger::serverLogger) {
             logger::serverLogger->error("Invalid session token in logout request from fd=" + 
                                        std::to_string(clientFd));
@@ -116,7 +119,7 @@ void ClientHandler::handleLogoutRequest(int clientFd, const protocol::Message& m
     }
 
     // Remove session
-    sessionManager.removeSession(sessionId);
+    sessionManager->removeSession(sessionId);
     
     // Send success response
     protocol::Message response(protocol::MsgCode::LOGOUT_SUCCESS, "Logout successful");
@@ -141,8 +144,8 @@ void ClientHandler::handleHeartbeat(int clientFd, const protocol::Message& msg) 
     }
 
     // Validate and update session
-    if (sessionManager.validateSession(sessionId)) {
-        sessionManager.updateLastActive(sessionId);
+    if (sessionManager->validateSession(sessionId)) {
+        sessionManager->updateLastActive(sessionId);
         
         if (logger::serverLogger) {
             logger::serverLogger->debug("Heartbeat received from fd=" + std::to_string(clientFd));
@@ -167,7 +170,7 @@ void ClientHandler::handleDisconnectRequest(int clientFd) {
 
 void ClientHandler::handleClientDisconnect(int clientFd) {
     // Remove session if exists
-    sessionManager.removeSessionByFd(clientFd);
+    sessionManager->removeSessionByFd(clientFd);
     
     if (logger::serverLogger) {
         logger::serverLogger->info("Client disconnected (fd=" + std::to_string(clientFd) + ")");

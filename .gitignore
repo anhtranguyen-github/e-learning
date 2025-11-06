@@ -1,3 +1,13 @@
 bin/
 build/
 logs/
+data/
+*.o
+*.exe
+*.out
+database/db_test
+database/*.o
+.vscode/
+.idea/
+*.log
+.DS_Store
