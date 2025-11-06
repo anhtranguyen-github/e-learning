@@ -15,7 +15,13 @@ private:
     void displayLoggedInMenu();
     void handleLogin();
     void handleLogout();
+    void handleViewLessons();
+    void handleStudyLesson();
     void clearScreen();
+    
+    // Helper to parse and display lesson list
+    void parseLessonList(const std::string& payload);
+    void displayLessonContent(const std::string& payload);
 
 public:
     UI(NetworkClient& net);
