@@ -11,6 +11,10 @@
 
 #include "server/lesson_loader.h"
 #include "server/lesson_handler.h"
+#include "server/exercise_loader.h"
+#include "server/exercise_handler.h"
+#include "server/submission_handler.h"
+#include "server/result_handler.h"
 
 
 namespace server {
@@ -32,10 +36,14 @@ Server::Server(int port, const std::string& dbConn)
     sessionManager = std::make_shared<SessionManager>(database, 30);
 
     auto lessonLoader = std::make_shared<LessonLoader>(database);
+    auto exerciseLoader = std::make_shared<ExerciseLoader>(database);
 
     lessonHandler = std::make_shared<LessonHandler>(sessionManager, lessonLoader);
+    exerciseHandler = std::make_shared<ExerciseHandler>(sessionManager, exerciseLoader);
+    submissionHandler = std::make_shared<SubmissionHandler>(sessionManager, database);
+    resultHandler = std::make_shared<ResultHandler>(sessionManager, database);
     
-    clientHandler = std::make_shared<ClientHandler>(sessionManager, userManager, lessonHandler);
+    clientHandler = std::make_shared<ClientHandler>(sessionManager, userManager, lessonHandler, exerciseHandler, submissionHandler, resultHandler);
     
     if (logger::serverLogger) {
         logger::serverLogger->info("Server components initialized successfully");
