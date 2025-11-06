@@ -37,15 +37,6 @@
 - Create UI components
 - Connect UI to network layer
 
-## 5. Testing
-- Write unit tests in both header and implementation files
-- Test both success and error cases
-- Verify all new methods are properly tested
-
-## 6. Documentation
-- Update API documentation in header files
-- Add usage examples in implementation files
-- Document any new configuration options
 
 ## Key Reminders for .h and .cpp Files:
 1. **For every class**:
