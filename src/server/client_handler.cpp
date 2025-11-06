@@ -5,10 +5,14 @@
 #include <unistd.h>
 #include <cstring>
 
+#include "server/lesson_handler.h"  
+
 namespace server {
 
-ClientHandler::ClientHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<UserManager> um)
-    : sessionManager(sm), userManager(um) {
+ClientHandler::ClientHandler(std::shared_ptr<SessionManager> sm, 
+                           std::shared_ptr<UserManager> um,
+                           std::shared_ptr<LessonHandler> lh)
+    : sessionManager(sm), userManager(um), lessonHandler(lh) {
 }
 
 void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& data) {
@@ -36,6 +40,24 @@ void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& dat
             
             case protocol::MsgCode::DISCONNECT_REQUEST:
                 handleDisconnectRequest(clientFd);
+                break;
+            
+            case protocol::MsgCode::LESSON_LIST_REQUEST:
+                if (lessonHandler) {
+                    lessonHandler->handleLessonListRequest(clientFd, msg);
+                } else {
+                    protocol::Message errorMsg(protocol::MsgCode::GENERAL_FAILURE, "Lesson feature not available");
+                    sendMessage(clientFd, errorMsg);
+                }
+                break;
+            
+            case protocol::MsgCode::STUDY_LESSON_REQUEST:
+                if (lessonHandler) {
+                    lessonHandler->handleStudyLessonRequest(clientFd, msg);
+                } else {
+                    protocol::Message errorMsg(protocol::MsgCode::GENERAL_FAILURE, "Lesson feature not available");
+                    sendMessage(clientFd, errorMsg);
+                }
                 break;
             
             default:

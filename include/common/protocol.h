@@ -20,6 +20,15 @@ enum class MsgCode : uint16_t {
     LOGOUT_REQUEST = 200,
     LOGOUT_SUCCESS = 201,
 
+    // Lesson management
+    LESSON_LIST_REQUEST = 110,
+    LESSON_LIST_SUCCESS = 111,
+    LESSON_LIST_FAILURE = 113,
+    
+    STUDY_LESSON_REQUEST = 120,
+    STUDY_LESSON_SUCCESS = 121,
+    STUDY_LESSON_FAILURE = 123,
+
     // Heartbeat
     HEARTBEAT = 900,
 

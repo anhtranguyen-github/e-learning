@@ -22,6 +22,8 @@ private:
     std::shared_ptr<UserManager> userManager;
     std::shared_ptr<SessionManager> sessionManager;
     std::shared_ptr<ClientHandler> clientHandler;
+    std::shared_ptr<LessonHandler> lessonHandler;
+
     
     std::set<int> clientSockets;
     

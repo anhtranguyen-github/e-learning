@@ -8,6 +8,11 @@
 #include <csignal>
 #include <iostream>
 
+
+#include "server/lesson_loader.h"
+#include "server/lesson_handler.h"
+
+
 namespace server {
 
 Server::Server(int port, const std::string& dbConn)
@@ -25,7 +30,12 @@ Server::Server(int port, const std::string& dbConn)
     // Initialize managers
     userManager = std::make_shared<UserManager>(database);
     sessionManager = std::make_shared<SessionManager>(database, 30);
-    clientHandler = std::make_shared<ClientHandler>(sessionManager, userManager);
+
+    auto lessonLoader = std::make_shared<LessonLoader>(database);
+
+    lessonHandler = std::make_shared<LessonHandler>(sessionManager, lessonLoader);
+    
+    clientHandler = std::make_shared<ClientHandler>(sessionManager, userManager, lessonHandler);
     
     if (logger::serverLogger) {
         logger::serverLogger->info("Server components initialized successfully");

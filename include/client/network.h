@@ -52,6 +52,10 @@ public:
     std::string getSessionToken() const { return sessionToken; }
     void setSessionToken(const std::string& token) { sessionToken = token; }
 
+    // Lesson management
+    bool requestLessonList(const std::string& topic = "", const std::string& level = "");
+    bool requestStudyLesson(int lessonId, const std::string& lessonType);
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };

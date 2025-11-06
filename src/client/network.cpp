@@ -310,4 +310,67 @@ std::vector<uint8_t> NetworkClient::receiveData() {
     return buffer;
 }
 
+bool NetworkClient::requestLessonList(const std::string& topic, const std::string& level) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request lesson list");
+        }
+        return false;
+    }
+
+    // Build payload: <session_token>[;<topic>;<level>]
+    std::string payload = sessionToken;
+    if (!topic.empty() || !level.empty()) {
+        payload += ";" + topic + ";" + level;
+    }
+
+    if (logger::clientLogger) {
+        logger::clientLogger->debug("Sending LESSON_LIST_REQUEST with payload: " + payload);
+    }
+
+    // Send lesson list request
+    protocol::Message msg(protocol::MsgCode::LESSON_LIST_REQUEST, payload);
+    
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send LESSON_LIST_REQUEST");
+        }
+        return false;
+    }
+
+    if (logger::clientLogger) {
+        logger::clientLogger->debug("Successfully sent LESSON_LIST_REQUEST");
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestStudyLesson(int lessonId, const std::string& lessonType) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request lesson");
+        }
+        return false;
+    }
+
+    // Build payload: <session_token>;<lesson_id>;<lesson_type>
+    std::string payload = sessionToken + ";" + std::to_string(lessonId) + ";" + lessonType;
+
+    // Send study lesson request
+    protocol::Message msg(protocol::MsgCode::STUDY_LESSON_REQUEST, payload);
+    
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send STUDY_LESSON_REQUEST");
+        }
+        return false;
+    }
+
+    if (logger::clientLogger) {
+        logger::clientLogger->debug("Sent STUDY_LESSON_REQUEST for lesson " + std::to_string(lessonId));
+    }
+
+    return true;
+}
+
 } // namespace client

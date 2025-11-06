@@ -4,6 +4,7 @@
 #include "common/protocol.h"
 #include "server/session.h"
 #include "server/user_manager.h"
+#include "server/lesson_handler.h"
 #include <vector>
 #include <memory>
 
@@ -13,6 +14,7 @@ class ClientHandler {
 private:
     std::shared_ptr<SessionManager> sessionManager;
     std::shared_ptr<UserManager> userManager;
+    std::shared_ptr<LessonHandler> lessonHandler;
 
     // Handle specific message types
     void handleLoginRequest(int clientFd, const protocol::Message& msg);
@@ -27,7 +29,12 @@ private:
     protocol::Message receiveMessage(int clientFd);
 
 public:
-    ClientHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<UserManager> um);
+    ClientHandler(std::shared_ptr<SessionManager> sm, 
+                 std::shared_ptr<UserManager> um,
+                 std::shared_ptr<LessonHandler> lh = nullptr);
+
+    // Set lesson handler (optional, for lesson features)
+    void setLessonHandler(std::shared_ptr<LessonHandler> lh) { lessonHandler = lh; }
 
     // Process incoming message from client
     void processMessage(int clientFd, const std::vector<uint8_t>& data);
