@@ -1,0 +1,11 @@
+-- =====================================
+-- DATABASE DELETE SCRIPT
+-- =====================================
+
+DROP TABLE IF EXISTS server_sessions CASCADE;
+DROP TABLE IF EXISTS game_items CASCADE;
+DROP TABLE IF EXISTS results CASCADE;
+DROP TABLE IF EXISTS exams CASCADE;
+DROP TABLE IF EXISTS exercises CASCADE;
+DROP TABLE IF EXISTS lessons CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
