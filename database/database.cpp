@@ -1,7 +1,7 @@
 #include "database.h"
 #include <iostream>
 
-Database::Database(const std::string& conninfo) {
+Database::Database(const std::string& conninfo) : conn(nullptr) {
     conn = PQconnectdb(conninfo.c_str());
 }
 

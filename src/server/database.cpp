@@ -4,7 +4,7 @@
 
 namespace server {
 
-Database::Database(const std::string& conninfo) : connInfo(conninfo), conn(nullptr) {
+Database::Database(const std::string& conninfo) : conn(nullptr), connInfo(conninfo) {
 }
 
 Database::~Database() {
