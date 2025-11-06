@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -pthread
-LDFLAGS = -pthread -lpq
+CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -I/usr/include/jsoncpp -pthread
+LDFLAGS = -pthread -lpq -ljsoncpp
 
 # Directories
 SRC_DIR = src
@@ -11,9 +11,17 @@ BIN_DIR = bin
 
 # Source files
 COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp $(SRC_DIR)/common/protocol.cpp
-SERVER_SRC = $(SRC_DIR)/server/server.cpp $(SRC_DIR)/server/session.cpp \
-             $(SRC_DIR)/server/database.cpp $(SRC_DIR)/server/user_manager.cpp \
-             $(SRC_DIR)/server/client_handler.cpp
+
+
+SERVER_SRC = $(SRC_DIR)/server/server.cpp \
+             $(SRC_DIR)/server/session.cpp \
+             $(SRC_DIR)/server/database.cpp \
+             $(SRC_DIR)/server/user_manager.cpp \
+             $(SRC_DIR)/server/client_handler.cpp \
+             $(SRC_DIR)/server/lesson_handler.cpp \
+             $(SRC_DIR)/server/lesson_loader.cpp \
+
+
 CLIENT_SRC = $(SRC_DIR)/client/client.cpp $(SRC_DIR)/client/network.cpp \
              $(SRC_DIR)/client/ui.cpp
 
