@@ -40,10 +40,12 @@ public:
 // Global logger instances
 extern Logger* serverLogger;
 extern Logger* clientLogger;
+extern Logger* heartbeatLogger;
 
 // Initialize loggers
 void initServerLogger(const std::string& filename = "logs/server.log");
 void initClientLogger(const std::string& filename = "logs/client.log");
+void initHeartbeatLogger(const std::string& filename = "logs/heartbeat.log");
 
 } // namespace logger
 
