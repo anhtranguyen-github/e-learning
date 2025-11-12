@@ -373,4 +373,106 @@ bool NetworkClient::requestStudyLesson(int lessonId, const std::string& lessonTy
     return true;
 }
 
+bool NetworkClient::requestExercise(protocol::MsgCode exerciseType, int exerciseId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request exercise");
+        }
+        return false;
+    }
+
+    std::string payload = sessionToken + ";" + std::to_string(exerciseId);
+    protocol::Message msg(exerciseType, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send exercise request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::submitAnswer(const std::string& targetType, int targetId, const std::string& answer) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot submit answer");
+        }
+        return false;
+    }
+
+    std::string payload = sessionToken + ";" + targetType + ";" + std::to_string(targetId) + ";" + answer;
+    protocol::Message msg(protocol::MsgCode::SUBMIT_ANSWER_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send submit answer request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestResultList() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request result list");
+        }
+        return false;
+    }
+
+    protocol::Message msg(protocol::MsgCode::RESULT_LIST_REQUEST, sessionToken);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send result list request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestExercises() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request exercises");
+        }
+        return false;
+    }
+
+    protocol::Message msg(protocol::MsgCode::EXERCISE_LIST_REQUEST, sessionToken);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send get exercises request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestExams() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request exams");
+        }
+        return false;
+    }
+
+    protocol::Message msg(protocol::MsgCode::EXAM_LIST_REQUEST, sessionToken);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send get exams request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace client

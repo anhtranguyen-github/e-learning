@@ -45,9 +45,14 @@ void UI::displayLoggedInMenu() {
     std::cout << "Session Token: " << network.getSessionToken().substr(0, 8) << "...\n\n";
     std::cout << "1. View Lesson List\n";
     std::cout << "2. Study Lesson\n";
-    std::cout << "3. View Status\n";
-    std::cout << "4. Logout\n";
-    std::cout << "5. Exit\n\n";
+    std::cout << "3. Do Exercise\n";
+    std::cout << "4. Submit Answer\n";
+    std::cout << "5. View Results\n";
+    std::cout << "6. View Exercises\n";
+    std::cout << "7. View Exams\n";
+    std::cout << "8. View Status\n";
+    std::cout << "9. Logout\n";
+    std::cout << "10. Exit\n\n";
     std::cout << "Choose an option: ";
 }
 
@@ -172,8 +177,28 @@ void UI::run() {
                 case 2:
                     handleStudyLesson();
                     break;
-                
+
                 case 3:
+                    handleDoExercise();
+                    break;
+
+                case 4:
+                    handleSubmitAnswer();
+                    break;
+
+                case 5:
+                    handleViewResults();
+                    break;
+
+                case 6:
+                    handleViewExercises();
+                    break;
+
+                case 7:
+                    handleViewExams();
+                    break;
+                
+                case 8:
                     std::cout << "\n--- Status ---\n";
                     std::cout << "Connected: Yes\n";
                     std::cout << "Logged In: Yes\n";
@@ -183,11 +208,11 @@ void UI::run() {
                     std::cin.get();
                     break;
                 
-                case 4:
+                case 9:
                     handleLogout();
                     break;
                 
-                case 5:
+                case 10:
                     running = false;
                     break;
                 
@@ -398,6 +423,157 @@ void UI::displayLessonContent(const std::string& payload) {
     }
     
     std::cout << "----------------------------------------\n";
+}
+
+void UI::handleDoExercise() {
+    int exerciseId;
+    int exerciseTypeChoice;
+    protocol::MsgCode exerciseType;
+
+    std::cout << "\n--- Do Exercise ---\n";
+    std::cout << "Enter exercise ID: ";
+    std::cin >> exerciseId;
+
+    std::cout << "Choose exercise type:\n";
+    std::cout << "1. Multiple Choice\n";
+    std::cout << "2. Fill In the Blank\n";
+    std::cout << "3. Order Sentence\n";
+    std::cout << "4. Rewrite Sentence\n";
+    std::cout << "5. Write Paragraph\n";
+    std::cout << "6. Speaking Topic\n";
+    std::cout << "Type: ";
+    std::cin >> exerciseTypeChoice;
+
+    switch (exerciseTypeChoice) {
+        case 1: exerciseType = protocol::MsgCode::MULTIPLE_CHOICE_REQUEST; break;
+        case 2: exerciseType = protocol::MsgCode::FILL_IN_REQUEST; break;
+        case 3: exerciseType = protocol::MsgCode::SENTENCE_ORDER_REQUEST; break;
+        case 4: exerciseType = protocol::MsgCode::REWRITE_SENTENCE_REQUEST; break;
+        case 5: exerciseType = protocol::MsgCode::WRITE_PARAGRAPH_REQUEST; break;
+        case 6: exerciseType = protocol::MsgCode::SPEAKING_TOPIC_REQUEST; break;
+        default: std::cout << "Invalid choice\n"; return;
+    }
+
+    if (!network.requestExercise(exerciseType, exerciseId)) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    std::cout << "\nExercise Content:\n" << response.toString() << "\n";
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+void UI::handleSubmitAnswer() {
+    int targetId;
+    std::string targetType, answer;
+
+    std::cout << "\n--- Submit Answer ---\n";
+    std::cout << "Enter target type (exam/exercise): ";
+    std::cin >> targetType;
+    std::cout << "Enter target ID: ";
+    std::cin >> targetId;
+    std::cout << "Enter your answer: ";
+    std::cin.ignore();
+    std::getline(std::cin, answer);
+
+    if (!network.submitAnswer(targetType, targetId, answer)) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    std::cout << "\nServer response:\n" << response.toString() << "\n";
+    std::cout << "\nPress Enter to continue...";
+    std::cin.get();
+}
+
+void UI::handleViewResults() {
+    std::cout << "\n--- View Results ---\n";
+    if (!network.requestResultList()) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    std::cout << "\nYour Results:\n" << response.toString() << "\n";
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+void UI::handleViewExercises() {
+    std::cout << "\n--- View Exercises ---\n";
+    if (!network.requestExercises()) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    if (response.code == protocol::MsgCode::EXERCISE_LIST_SUCCESS) {
+        std::cout << "\n=== Exercise List ===\n\n";
+        parseExerciseList(response.toString());
+    } else {
+        std::cout << "\nFailed to get exercise list: " << response.toString() << "\n";
+    }
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+void UI::handleViewExams() {
+    std::cout << "\n--- View Exams ---\n";
+    if (!network.requestExams()) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    if (response.code == protocol::MsgCode::EXAM_LIST_SUCCESS) {
+        std::cout << "\n=== Exam List ===\n\n";
+        parseExamList(response.toString());
+    } else {
+        std::cout << "\nFailed to get exam list: " << response.toString() << "\n";
+    }
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+void UI::parseExerciseList(const std::string& payload) {
+    // Format: <id>;<title>;<type>;<level>;<question>\n
+    std::stringstream ss(payload);
+    std::string line;
+    while (std::getline(ss, line)) {
+        std::stringstream line_ss(line);
+        std::string id, title, type, level, question;
+        std::getline(line_ss, id, ';');
+        std::getline(line_ss, title, ';');
+        std::getline(line_ss, type, ';');
+        std::getline(line_ss, level, ';');
+        std::getline(line_ss, question, ';');
+        std::cout << "[" << id << "] " << title << " (" << type << " - " << level << ")\n";
+        std::cout << "    Question: " << question << "\n\n";
+    }
+}
+
+void UI::parseExamList(const std::string& payload) {
+    // Format: <id>;<title>;<type>;<level>;<question>\n
+    std::stringstream ss(payload);
+    std::string line;
+    while (std::getline(ss, line)) {
+        std::stringstream line_ss(line);
+        std::string id, title, type, level, question;
+        std::getline(line_ss, id, ';');
+        std::getline(line_ss, title, ';');
+        std::getline(line_ss, type, ';');
+        std::getline(line_ss, level, ';');
+        std::getline(line_ss, question, ';');
+        std::cout << "[" << id << "] " << title << " (" << type << " - " << level << ")\n";
+        std::cout << "    Question: " << question << "\n\n";
+    }
 }
 
 } // namespace client

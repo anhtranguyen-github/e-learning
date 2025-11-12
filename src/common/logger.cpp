@@ -7,6 +7,7 @@ namespace logger {
 
 Logger* serverLogger = nullptr;
 Logger* clientLogger = nullptr;
+Logger* heartbeatLogger = nullptr;
 
 Logger::Logger(const std::string& filename, LogLevel minLevel)
     : minLevel(minLevel) {
@@ -57,7 +58,7 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
     
     // Also print to console
-    std::cout << logEntry << std::endl;
+    //std::cout << logEntry << std::endl;
 }
 
 void Logger::debug(const std::string& message) {
@@ -85,6 +86,12 @@ void initServerLogger(const std::string& filename) {
 void initClientLogger(const std::string& filename) {
     if (clientLogger == nullptr) {
         clientLogger = new Logger(filename, LogLevel::DEBUG);
+    }
+}
+
+void initHeartbeatLogger(const std::string& filename) {
+    if (heartbeatLogger == nullptr) {
+        heartbeatLogger = new Logger(filename, LogLevel::DEBUG);
     }
 }
 
