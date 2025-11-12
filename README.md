@@ -81,30 +81,6 @@ make all
 
 ## Database Schema
 
-### Users Table
-```sql
-CREATE TABLE users (
-    user_id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(10) CHECK (role IN ('admin', 'teacher', 'student')),
-    level VARCHAR(10) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Server Sessions Table
-```sql
-CREATE TABLE server_sessions (
-    session_id VARCHAR(255) PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    client_fd INTEGER,
-    last_active TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
 
 ## Configuration
 
@@ -134,13 +110,7 @@ int port = 8080;  // Change this
 ```
 
 ### Message Codes
-- `LOGIN_REQUEST`: User login
-- `LOGIN_SUCCESS`: Login successful
-- `LOGIN_FAILURE`: Login failed
-- `LOGOUT_REQUEST`: User logout
-- `LOGOUT_SUCCESS`: Logout successful
-- `HEARTBEAT`: Keep-alive ping
-- `DISCONNECT_REQUEST`: Graceful disconnect
+
 
 ## Development
 
