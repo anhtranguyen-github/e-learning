@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
-    role VARCHAR(10) CHECK (role IN ('admin', 'teacher', 'student')) NOT NULL,
-    level VARCHAR(10) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    role VARCHAR(50) CHECK (role IN ('admin', 'teacher', 'student')) NOT NULL,
+    level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS lessons (
     lesson_id SERIAL PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     topic VARCHAR(100),
-    level VARCHAR(10) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     video_url TEXT,
     audio_url TEXT,
     text_content TEXT,
@@ -30,11 +30,13 @@ CREATE TABLE IF NOT EXISTS exercises (
     exercise_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
     title VARCHAR(100) NOT NULL,
-    type VARCHAR(30) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking')),
-    level VARCHAR(20) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    type VARCHAR(50) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking')),
+    level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    options JSONB,
     question TEXT NOT NULL,
     answer TEXT,
     media_url TEXT,
+    explanation TEXT,
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -43,8 +45,8 @@ CREATE TABLE IF NOT EXISTS exams (
     exam_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
     title VARCHAR(100) NOT NULL,
-    type VARCHAR(30) CHECK (type IN ('multiple_choice', 'fill_blank', 'order_sentence')),
-    level VARCHAR(20) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    type VARCHAR(50) CHECK (type IN ('multiple_choice', 'fill_blank', 'order_sentence')),
+    level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     question JSONB,
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -53,20 +55,20 @@ CREATE TABLE IF NOT EXISTS exams (
 CREATE TABLE IF NOT EXISTS results (
     result_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
-    target_type VARCHAR(10) CHECK (target_type IN ('exam','exercise')),
+    target_type VARCHAR(50) CHECK (target_type IN ('exam','exercise')),
     target_id INT NOT NULL,
     score NUMERIC(5,2),
     feedback TEXT,
-    graded_by VARCHAR(20) DEFAULT 'machine',
+    graded_by VARCHAR(50) DEFAULT 'machine',
     graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS game_items (
     game_id SERIAL PRIMARY KEY,
-    type VARCHAR(30) CHECK (type IN ('word_match', 'sentence_match', 'image_match')),
+    type VARCHAR(50) CHECK (type IN ('word_match', 'sentence_match', 'image_match')),
     question JSONB,
-    level VARCHAR(10) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
+    level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

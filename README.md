@@ -14,25 +14,7 @@ A multi-threaded C++ socket server for an English learning platform with Postgre
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│           Client Application            │
-└─────────────┬───────────────────────────┘
-              │ TCP Socket
-┌─────────────▼───────────────────────────┐
-│           Server (Port 8080)            │
-├─────────────────────────────────────────┤
-│  ClientHandler → SessionManager         │
-│                   ↓                     │
-│              UserManager                │
-│                   ↓                     │
-│           Database (libpq)              │
-└─────────────┬───────────────────────────┘
-              │
-┌─────────────▼───────────────────────────┐
-│        PostgreSQL Database              │
-│  - users                                │
-│  - server_sessions                      │
-│  - lessons, exercises, exams            │
+
 └─────────────────────────────────────────┘
 ```
 
@@ -94,34 +76,7 @@ make all
 ## Project Structure
 
 ```
-project/
-├── include/              # Header files
-│   ├── common/          # Shared utilities
-│   │   ├── logger.h
-│   │   ├── protocol.h
-│   │   └── utils.h
-│   ├── server/          # Server components
-│   │   ├── database.h
-│   │   ├── user_manager.h
-│   │   ├── session.h
-│   │   ├── client_handler.h
-│   │   └── server.h
-│   └── client/          # Client components
-│       ├── network.h
-│       └── ui.h
-├── src/                 # Implementation files
-│   ├── common/
-│   ├── server/
-│   └── client/
-├── database/            # Database setup
-│   ├── init_db.sql
-│   ├── seed_db.sql
-│   ├── setup.sh
-│   └── README.md
-├── bin/                 # Compiled binaries
-├── build/               # Object files
-├── logs/                # Log files
-└── Makefile
+
 ```
 
 ## Database Schema
