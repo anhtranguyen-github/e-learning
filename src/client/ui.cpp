@@ -543,36 +543,80 @@ void UI::handleViewExams() {
 }
 
 void UI::parseExerciseList(const std::string& payload) {
-    // Format: <id>;<title>;<type>;<level>;<question>\n
+    // Format: <count>;<id1>|<lesson_id1>|<title1>|<type1>|<level1>;...
     std::stringstream ss(payload);
-    std::string line;
-    while (std::getline(ss, line)) {
-        std::stringstream line_ss(line);
-        std::string id, title, type, level, question;
-        std::getline(line_ss, id, ';');
-        std::getline(line_ss, title, ';');
-        std::getline(line_ss, type, ';');
-        std::getline(line_ss, level, ';');
-        std::getline(line_ss, question, ';');
-        std::cout << "[" << id << "] " << title << " (" << type << " - " << level << ")\n";
-        std::cout << "    Question: " << question << "\n\n";
+    std::string segment;
+
+    // Get count
+    if (!std::getline(ss, segment, ';')) {
+        std::cout << "No exercises found.\n";
+        return;
+    }
+    int count = 0;
+    try {
+        count = std::stoi(segment);
+    } catch (const std::invalid_argument& e) {
+        std::cout << "Invalid exercise list format (count).\n";
+        return;
+    }
+
+    std::cout << "Total exercises: " << count << "\n\n";
+    if (count == 0) {
+        return;
+    }
+
+    // Get exercises
+    while(std::getline(ss, segment, ';')) {
+        std::stringstream meta_ss(segment);
+        std::string id, lesson_id, title, type, level;
+
+        std::getline(meta_ss, id, '|');
+        std::getline(meta_ss, lesson_id, '|');
+        std::getline(meta_ss, title, '|');
+        std::getline(meta_ss, type, '|');
+        std::getline(meta_ss, level, '|');
+
+        std::cout << "[" << id << "] " << title << "\n";
+        std::cout << "    Lesson ID: " << lesson_id << " | Type: " << type << " | Level: " << level << "\n\n";
     }
 }
 
 void UI::parseExamList(const std::string& payload) {
-    // Format: <id>;<title>;<type>;<level>;<question>\n
+    // Format: <count>;<id1>|<lesson_id1>|<title1>|<type1>|<level1>;...
     std::stringstream ss(payload);
-    std::string line;
-    while (std::getline(ss, line)) {
-        std::stringstream line_ss(line);
-        std::string id, title, type, level, question;
-        std::getline(line_ss, id, ';');
-        std::getline(line_ss, title, ';');
-        std::getline(line_ss, type, ';');
-        std::getline(line_ss, level, ';');
-        std::getline(line_ss, question, ';');
-        std::cout << "[" << id << "] " << title << " (" << type << " - " << level << ")\n";
-        std::cout << "    Question: " << question << "\n\n";
+    std::string segment;
+
+    // Get count
+    if (!std::getline(ss, segment, ';')) {
+        std::cout << "No exams found.\n";
+        return;
+    }
+    int count = 0;
+    try {
+        count = std::stoi(segment);
+    } catch (const std::invalid_argument& e) {
+        std::cout << "Invalid exam list format (count).\n";
+        return;
+    }
+
+    std::cout << "Total exams: " << count << "\n\n";
+    if (count == 0) {
+        return;
+    }
+
+    // Get exams
+    while(std::getline(ss, segment, ';')) {
+        std::stringstream meta_ss(segment);
+        std::string id, lesson_id, title, type, level;
+
+        std::getline(meta_ss, id, '|');
+        std::getline(meta_ss, lesson_id, '|');
+        std::getline(meta_ss, title, '|');
+        std::getline(meta_ss, type, '|');
+        std::getline(meta_ss, level, '|');
+
+        std::cout << "[" << id << "] " << title << "\n";
+        std::cout << "    Lesson ID: " << lesson_id << " | Type: " << type << " | Level: " << level << "\n\n";
     }
 }
 
