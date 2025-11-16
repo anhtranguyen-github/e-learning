@@ -81,6 +81,15 @@ enum class MsgCode : uint16_t {
     // Notifications (290-299)
     NOTIFICATION_PUSH = 290,
 
+    // Chat Management (300-319)
+    CHAT_PRIVATE_REQUEST = 300,
+    CHAT_PRIVATE_RECEIVE = 301,
+    CHAT_MESSAGE_SUCCESS = 302,
+    CHAT_MESSAGE_FAILURE = 303,
+    CHAT_HISTORY_REQUEST = 304,
+    CHAT_HISTORY_SUCCESS = 305,
+    CHAT_HISTORY_FAILURE = 306,
+
     // Heartbeat and Disconnect (900-909)
     HEARTBEAT = 900,
     DISCONNECT_REQUEST = 901,

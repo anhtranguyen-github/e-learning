@@ -14,18 +14,21 @@ COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp $(SRC_DIR)
 
 
 SERVER_SRC = $(SRC_DIR)/server/server.cpp \
-             $(SRC_DIR)/server/session.cpp \
              $(SRC_DIR)/server/database.cpp \
+             $(SRC_DIR)/server/database_utils.cpp \
              $(SRC_DIR)/server/user_manager.cpp \
-             $(SRC_DIR)/server/client_handler.cpp \
-             $(SRC_DIR)/server/lesson_handler.cpp \
              $(SRC_DIR)/server/lesson_loader.cpp \
-             $(SRC_DIR)/server/exercise_handler.cpp \
              $(SRC_DIR)/server/exercise_loader.cpp \
+             $(SRC_DIR)/server/exam_loader.cpp \
+             $(SRC_DIR)/server/lesson_handler.cpp \
+             $(SRC_DIR)/server/exercise_handler.cpp \
              $(SRC_DIR)/server/submission_handler.cpp \
              $(SRC_DIR)/server/result_handler.cpp \
              $(SRC_DIR)/server/exam_handler.cpp \
-             $(SRC_DIR)/server/exam_loader.cpp
+             $(SRC_DIR)/server/chat_handler.cpp \
+             $(SRC_DIR)/server/handler_registry.cpp \
+             $(SRC_DIR)/server/client_handler.cpp \
+             $(SRC_DIR)/server/session.cpp
 
 
 CLIENT_SRC = $(SRC_DIR)/client/client.cpp $(SRC_DIR)/client/network.cpp \
