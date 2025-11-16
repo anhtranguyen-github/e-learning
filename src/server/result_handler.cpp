@@ -60,16 +60,14 @@ void ResultHandler::handleResultRequest(int clientFd, const protocol::Message& m
     std::string sessionToken = parts[0];
     std::string targetType = parts[1];
     int targetId = std::stoi(parts[2]);
-
-    auto session = sessionManager->getSession(sessionToken);
-    if (!session) {
+    int userId = sessionManager->get_user_id_by_session(sessionToken);
+    if (userId == -1) {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
         sendMessage(clientFd, response);
         return;
     }
 
-    sessionManager->updateLastActive(sessionToken);
-    int userId = session->userId;
+    sessionManager->update_session(sessionToken);
 
     std::string query = "SELECT score, feedback FROM results WHERE user_id = " + std::to_string(userId) +
                         " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId);
@@ -113,15 +111,14 @@ void ResultHandler::handleDoneUndoneListRequest(int clientFd, const protocol::Me
     std::string sessionToken = parts[0];
     std::string targetType = parts[1];
 
-    auto session = sessionManager->getSession(sessionToken);
-    if (!session) {
+    int userId = sessionManager->get_user_id_by_session(sessionToken);
+    if (userId == -1) {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
         sendMessage(clientFd, response);
         return;
     }
 
-    sessionManager->updateLastActive(sessionToken);
-    int userId = session->userId;
+    sessionManager->update_session(sessionToken);
 
     // This is a simplified implementation. A real implementation would need to join with the exercises/exams tables.
     std::string query = "SELECT target_id, score FROM results WHERE user_id = " + std::to_string(userId) +

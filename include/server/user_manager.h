@@ -1,33 +1,29 @@
 #ifndef USER_MANAGER_H
 #define USER_MANAGER_H
 
-#include "server/database.h"
 #include <string>
 #include <memory>
+#include <unordered_map>
 
 namespace server {
 
+class Database;
+class ClientHandler;
+
 class UserManager {
-private:
-    std::shared_ptr<Database> db;
-
 public:
-    UserManager(std::shared_ptr<Database> database);
+    UserManager(Database& db);
 
-    // User authentication and management
-    bool verifyCredentials(const std::string& username, const std::string& password);
-    bool addUser(const std::string& username, const std::string& password, 
-                 const std::string& role = "student", const std::string& level = "beginner");
-    bool userExists(const std::string& username);
-    
-    // Get user information
-    int getUserId(const std::string& username);
-    std::string getUserRole(const std::string& username);
-    std::string getUserLevel(const std::string& username);
-    
-    // Update user information
-    bool updateUserLevel(const std::string& username, const std::string& level);
-    bool updatePassword(const std::string& username, const std::string& newPassword);
+    bool verify_credentials(const std::string& username, const std::string& password);
+    int get_user_id(const std::string& username);
+
+    void add_client(int user_id, ClientHandler* client);
+    void remove_client(int user_id);
+    ClientHandler* get_client(int user_id);
+
+private:
+    Database& db_;
+    std::unordered_map<int, ClientHandler*> active_clients_;
 };
 
 } // namespace server

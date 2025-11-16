@@ -11,60 +11,29 @@
 
 namespace server {
 
-struct SessionData {
-    std::string sessionId;
-    std::string username;
-    int userId;
-    int clientFd;
-    std::chrono::steady_clock::time_point lastActive;
-    bool active;
-
-    SessionData() : userId(-1), clientFd(-1), active(false) {}
-    
-    SessionData(const std::string& sid, const std::string& user, int uid, int fd)
-        : sessionId(sid), username(user), userId(uid), clientFd(fd), 
-          lastActive(std::chrono::steady_clock::now()), active(true) {}
-};
-
 class SessionManager {
-private:
-    std::shared_ptr<Database> db;
-    std::unordered_map<std::string, SessionData> sessions; // sessionId -> SessionData
-    std::unordered_map<int, std::string> fdToSession;      // clientFd -> sessionId
-    std::mutex sessionMutex;
-    int heartbeatTimeout; // seconds
-    
-    // Database persistence methods
-    bool saveSessionToDB(const SessionData& session);
-    bool loadSessionFromDB(const std::string& sessionId);
-    bool updateSessionInDB(const std::string& sessionId);
-    bool deleteSessionFromDB(const std::string& sessionId);
-
 public:
-    SessionManager(std::shared_ptr<Database> database, int timeout = 30);
+    SessionManager();
+    SessionManager(std::shared_ptr<Database> db);
 
-    // Create a new session
-    std::string createSession(const std::string& username, int userId, int clientFd);
+    bool is_session_valid(const std::string& session_id);
+    std::string create_session(int user_id, int client_fd);
+    void remove_session(const std::string& session_id);
+    void update_session(const std::string& session_id);
+    int get_user_id_by_session(const std::string& session_id);
+    int get_user_id_by_fd(int client_fd);
+    void remove_session_by_fd(int client_fd);
 
-    // Validate session token
-    bool validateSession(const std::string& sessionId);
+private:
+    struct Session {
+        int user_id;
+        std::chrono::steady_clock::time_point last_active;
+    };
 
-    // Get session data
-    SessionData* getSession(const std::string& sessionId);
-    SessionData* getSessionByFd(int clientFd);
-
-    // Update last active time (for heartbeat)
-    void updateLastActive(const std::string& sessionId);
-
-    // Remove session
-    void removeSession(const std::string& sessionId);
-    void removeSessionByFd(int clientFd);
-
-    // Check for expired sessions
-    void checkExpiredSessions();
-
-    // Get all active sessions
-    std::vector<SessionData> getActiveSessions();
+    std::unordered_map<std::string, Session> sessions_;
+    std::unordered_map<int, std::string> fd_to_session_id_;
+    std::shared_ptr<Database> db_;
+    std::mutex mutex_;
 };
 
 } // namespace server

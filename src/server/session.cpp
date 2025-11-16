@@ -1,255 +1,68 @@
 #include "server/session.h"
 #include "common/utils.h"
-#include "common/logger.h"
-#include <algorithm>
-#include <sstream>
+#include <chrono>
+#include <random>
 
 namespace server {
 
-SessionManager::SessionManager(std::shared_ptr<Database> database, int timeout) 
-    : db(database), heartbeatTimeout(timeout) {}
+SessionManager::SessionManager() : db_(nullptr) {}
 
-std::string SessionManager::createSession(const std::string& username, int userId, int clientFd) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    std::string sessionId = utils::generateSessionToken();
-    SessionData session(sessionId, username, userId, clientFd);
-    
-    sessions[sessionId] = session;
-    fdToSession[clientFd] = sessionId;
-    
-    // Persist to database
-    saveSessionToDB(session);
-    
-    if (logger::serverLogger) {
-        logger::serverLogger->info("Created session " + sessionId + 
-                                  " for user " + username + 
-                                  " (fd=" + std::to_string(clientFd) + ")");
-    }
-    
-    return sessionId;
+SessionManager::SessionManager(std::shared_ptr<Database> db) : db_(db) {}
+
+bool SessionManager::is_session_valid(const std::string& session_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return sessions_.count(session_id);
 }
 
-bool SessionManager::validateSession(const std::string& sessionId) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = sessions.find(sessionId);
-    if (it == sessions.end()) {
-        return false;
-    }
-    
-    return it->second.active;
+std::string SessionManager::create_session(int user_id, int client_fd) {
+    std::string session_id = utils::generateSessionToken();
+    std::lock_guard<std::mutex> lock(mutex_);
+    sessions_[session_id] = {user_id, std::chrono::steady_clock::now()};
+    fd_to_session_id_[client_fd] = session_id;
+    return session_id;
 }
 
-SessionData* SessionManager::getSession(const std::string& sessionId) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = sessions.find(sessionId);
-    if (it == sessions.end()) {
-        return nullptr;
-    }
-    
-    return &(it->second);
-}
-
-SessionData* SessionManager::getSessionByFd(int clientFd) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = fdToSession.find(clientFd);
-    if (it == fdToSession.end()) {
-        return nullptr;
-    }
-    
-    return getSession(it->second);
-}
-
-void SessionManager::updateLastActive(const std::string& sessionId) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = sessions.find(sessionId);
-    if (it != sessions.end()) {
-        it->second.lastActive = std::chrono::steady_clock::now();
-        
-        // Update in database
-        updateSessionInDB(sessionId);
-        
-        if (logger::serverLogger) {
-            logger::serverLogger->debug("Updated last active for session " + sessionId);
-        }
-    }
-}
-
-void SessionManager::removeSession(const std::string& sessionId) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = sessions.find(sessionId);
-    if (it != sessions.end()) {
-        int fd = it->second.clientFd;
-        fdToSession.erase(fd);
-        sessions.erase(it);
-        
-        // Remove from database
-        deleteSessionFromDB(sessionId);
-        
-        if (logger::serverLogger) {
-            logger::serverLogger->info("Removed session " + sessionId);
-        }
-    }
-}
-
-void SessionManager::removeSessionByFd(int clientFd) {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto it = fdToSession.find(clientFd);
-    if (it != fdToSession.end()) {
-        std::string sessionId = it->second;
-        
-        // Remove from database
-        deleteSessionFromDB(sessionId);
-        
-        sessions.erase(sessionId);
-        fdToSession.erase(it);
-        
-        if (logger::serverLogger) {
-            logger::serverLogger->info("Removed session for fd=" + std::to_string(clientFd));
-        }
-    }
-}
-
-void SessionManager::checkExpiredSessions() {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    auto now = std::chrono::steady_clock::now();
-    std::vector<std::string> expiredSessions;
-    
-    for (auto& pair : sessions) {
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-            now - pair.second.lastActive).count();
-        
-        if (elapsed > heartbeatTimeout) {
-            expiredSessions.push_back(pair.first);
-            
-            if (logger::serverLogger) {
-                logger::serverLogger->warn("Session " + pair.first + 
-                                          " expired (timeout=" + 
-                                          std::to_string(elapsed) + "s)");
+void SessionManager::remove_session(const std::string& session_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (sessions_.count(session_id)) {
+        for (auto it = fd_to_session_id_.begin(); it != fd_to_session_id_.end(); ++it) {
+            if (it->second == session_id) {
+                fd_to_session_id_.erase(it);
+                break;
             }
         }
-    }
-    
-    // Remove expired sessions
-    for (const auto& sessionId : expiredSessions) {
-        auto it = sessions.find(sessionId);
-        if (it != sessions.end()) {
-            fdToSession.erase(it->second.clientFd);
-            sessions.erase(it);
-        }
+        sessions_.erase(session_id);
     }
 }
 
-std::vector<SessionData> SessionManager::getActiveSessions() {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    
-    std::vector<SessionData> activeSessions;
-    for (const auto& pair : sessions) {
-        if (pair.second.active) {
-            activeSessions.push_back(pair.second);
-        }
+void SessionManager::update_session(const std::string& session_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (sessions_.count(session_id)) {
+        sessions_[session_id].last_active = std::chrono::steady_clock::now();
     }
-    
-    return activeSessions;
 }
 
-// Database persistence methods
-bool SessionManager::saveSessionToDB(const SessionData& session) {
-    if (!db || !db->isConnected()) {
-        return false;
+int SessionManager::get_user_id_by_session(const std::string& session_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (sessions_.count(session_id)) {
+        return sessions_[session_id].user_id;
     }
-    
-    std::string userIdStr = std::to_string(session.userId);
-    std::string clientFdStr = std::to_string(session.clientFd);
-    
-    const char* paramValues[3] = {
-        session.sessionId.c_str(),
-        userIdStr.c_str(),
-        clientFdStr.c_str()
-    };
-    
-    PGresult* res = db->execParams(
-        "INSERT INTO server_sessions (session_id, user_id, client_fd, last_active, active) "
-        "VALUES ($1, $2, $3, CURRENT_TIMESTAMP, TRUE) "
-        "ON CONFLICT (session_id) DO UPDATE SET "
-        "client_fd = EXCLUDED.client_fd, last_active = CURRENT_TIMESTAMP, active = TRUE",
-        3, paramValues
-    );
-    
-    if (res) {
-        PQclear(res);
-        return true;
-    }
-    return false;
+    return -1;
 }
 
-bool SessionManager::loadSessionFromDB(const std::string& sessionId) {
-    if (!db || !db->isConnected()) {
-        return false;
+int SessionManager::get_user_id_by_fd(int client_fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (fd_to_session_id_.count(client_fd)) {
+        return get_user_id_by_session(fd_to_session_id_[client_fd]);
     }
-    
-    const char* paramValues[1] = {sessionId.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT user_id, client_fd, active FROM server_sessions WHERE session_id = $1",
-        1, paramValues
-    );
-    
-    if (!res || PQntuples(res) == 0) {
-        if (res) PQclear(res);
-        return false;
-    }
-    
-    // Note: This is a simplified version. Full implementation would reconstruct SessionData
-    // from database including username lookup
-    
-    PQclear(res);
-    return true;
+    return -1;
 }
 
-bool SessionManager::updateSessionInDB(const std::string& sessionId) {
-    if (!db || !db->isConnected()) {
-        return false;
+void SessionManager::remove_session_by_fd(int client_fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (fd_to_session_id_.count(client_fd)) {
+        remove_session(fd_to_session_id_[client_fd]);
     }
-    
-    const char* paramValues[1] = {sessionId.c_str()};
-    
-    PGresult* res = db->execParams(
-        "UPDATE server_sessions SET last_active = CURRENT_TIMESTAMP WHERE session_id = $1",
-        1, paramValues
-    );
-    
-    if (res) {
-        PQclear(res);
-        return true;
-    }
-    return false;
-}
-
-bool SessionManager::deleteSessionFromDB(const std::string& sessionId) {
-    if (!db || !db->isConnected()) {
-        return false;
-    }
-    
-    const char* paramValues[1] = {sessionId.c_str()};
-    
-    PGresult* res = db->execParams(
-        "UPDATE server_sessions SET active = FALSE WHERE session_id = $1",
-        1, paramValues
-    );
-    
-    if (res) {
-        PQclear(res);
-        return true;
-    }
-    return false;
 }
 
 } // namespace server

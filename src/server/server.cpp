@@ -1,4 +1,5 @@
 #include "server/server.h"
+#include "server/client_handler.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -8,24 +9,11 @@
 #include <csignal>
 #include <iostream>
 
-
-#include "server/lesson_loader.h"
-#include "server/lesson_handler.h"
-#include "server/exercise_loader.h"
-#include "server/exercise_handler.h"
-#include "server/submission_handler.h"
-#include "server/result_handler.h"
-#include "server/exam_loader.h"
-#include "server/exam_handler.h"
-
-
-namespace server {
-
 Server::Server(int port, const std::string& dbConn)
     : serverSocket(-1), port(port), running(false), dbConnInfo(dbConn) {
     
     // Initialize database connection
-    database = std::make_shared<Database>(dbConnInfo);
+    database = std::make_shared<server::Database>(dbConnInfo);
     if (!database->connect()) {
         if (logger::serverLogger) {
             logger::serverLogger->error("Failed to connect to database");
@@ -34,27 +22,15 @@ Server::Server(int port, const std::string& dbConn)
     }
     
     // Initialize managers
-    userManager = std::make_shared<UserManager>(database);
-    sessionManager = std::make_shared<SessionManager>(database, 30);
+    userManager = std::make_shared<server::UserManager>(*database);
+    sessionManager = std::make_shared<server::SessionManager>(database);
 
-    auto lessonLoader = std::make_shared<LessonLoader>(database);
-    this->exerciseLoader = std::make_shared<ExerciseLoader>(database);
-    auto examLoader = std::make_shared<ExamLoader>(database);
+    handlerRegistry = std::make_shared<server::HandlerRegistry>(sessionManager, *userManager, database);
 
-    this->lessonHandler = std::make_shared<LessonHandler>(sessionManager, lessonLoader);
-    this->exerciseHandler = std::make_shared<ExerciseHandler>(sessionManager, this->exerciseLoader);
-    this->examHandler = std::make_shared<ExamHandler>(sessionManager, examLoader);
-    this->submissionHandler = std::make_shared<SubmissionHandler>(sessionManager, database);
-    this->resultHandler = std::make_shared<ResultHandler>(sessionManager, database);
-
-    this->clientHandler = std::make_shared<ClientHandler>(
+    this->clientHandler = std::make_shared<server::ClientHandler>(
         sessionManager,
         userManager,
-        this->lessonHandler,
-        this->exerciseHandler,
-        this->submissionHandler,
-        this->examHandler,
-        this->resultHandler);
+        handlerRegistry);
         
     if (logger::serverLogger) {
         logger::serverLogger->info("Server components initialized successfully");
@@ -260,7 +236,7 @@ void Server::run() {
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastSessionCheck).count();
         
         if (elapsed >= sessionCheckInterval) {
-            sessionManager->checkExpiredSessions();
+            // sessionManager->checkExpiredSessions();
             lastSessionCheck = now;
         }
     }
@@ -290,8 +266,6 @@ void Server::stop() {
     }
 }
 
-} // namespace server
-
 // Main entry point
 int main(int argc, char* argv[]) {
     // Initialize logger
@@ -303,7 +277,7 @@ int main(int argc, char* argv[]) {
         port = std::atoi(argv[1]);
     }
 
-    server::Server srv(port);
+    Server srv(port);
 
     // Handle Ctrl+C gracefully
     signal(SIGINT, [](int) {

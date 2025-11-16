@@ -94,7 +94,7 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
     }
     
     // Validate session token
-    if (!sessionManager->validateSession(sessionToken)) {
+    if (!sessionManager->is_session_valid(sessionToken)) {
         std::string errorMsg = "Invalid or expired session token in EXERCISE_LIST_REQUEST from fd=" +
                              std::to_string(clientFd);
         if (logger::serverLogger) {
@@ -106,7 +106,7 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
     }
     
     // Update session activity
-    sessionManager->updateLastActive(sessionToken);
+    sessionManager->update_session(sessionToken);
     
     // Load exercises from database
     ExerciseList exerciseList;
@@ -187,7 +187,7 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     std::string exerciseTypeStr = parts[2];
     
     // Validate session token
-    if (!sessionManager->validateSession(sessionToken)) {
+    if (!sessionManager->is_session_valid(sessionToken)) {
         if (logger::serverLogger) {
             logger::serverLogger->warn("Invalid session token in STUDY_EXERCISE_REQUEST from fd=" +
                                       std::to_string(clientFd));
@@ -198,7 +198,7 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     }
     
     // Update session activity
-    sessionManager->updateLastActive(sessionToken);
+    sessionManager->update_session(sessionToken);
     
     // Parse exercise ID
     int exerciseId;

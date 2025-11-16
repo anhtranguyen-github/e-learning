@@ -1,228 +1,62 @@
 #include "server/user_manager.h"
+#include "server/database.h"
 #include "common/logger.h"
 #include <cstring>
 
 namespace server {
 
-UserManager::UserManager(std::shared_ptr<Database> database) : db(database) {
+UserManager::UserManager(Database& db) : db_(db) {}
+
+bool UserManager::verify_credentials(const std::string& username, const std::string& password) {
+    // This method should ideally hash the password and compare it with the stored hash.
+    // For simplicity, we are currently storing plain text passwords.
+    std::string query = "SELECT password_hash FROM users WHERE username = $1";
+    const char* values[] = {username.c_str()};
+    PGresult* res = db_.execParams(query, 1, values);
+
+    if (res && PQntuples(res) == 1) {
+        std::string stored_password = PQgetvalue(res, 0, 0);
+        PQclear(res);
+        return stored_password == password;
+    }
+
+    if (res) {
+        PQclear(res);
+    }
+    return false;
 }
 
-bool UserManager::verifyCredentials(const std::string& username, const std::string& password) {
-    if (!db || !db->isConnected()) {
-        if (logger::serverLogger) {
-            logger::serverLogger->error("Database not connected");
-        }
-        return false;
+int UserManager::get_user_id(const std::string& username) {
+    std::string query = "SELECT user_id FROM users WHERE username = $1";
+    const char* values[] = {username.c_str()};
+    PGresult* res = db_.execParams(query, 1, values);
+
+    if (res && PQntuples(res) == 1) {
+        int user_id = std::stoi(PQgetvalue(res, 0, 0));
+        PQclear(res);
+        return user_id;
     }
-    
-    const char* paramValues[2] = {username.c_str(), password.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT user_id FROM users WHERE username = $1 AND password_hash = $2",
-        2, paramValues
-    );
-    
-    if (!res) {
-        return false;
+
+    if (res) {
+        PQclear(res);
     }
-    
-    int nRows = PQntuples(res);
-    PQclear(res);
-    
-    bool verified = (nRows > 0);
-    
-    if (logger::serverLogger) {
-        if (verified) {
-            logger::serverLogger->info("User '" + username + "' authenticated successfully");
-        } else {
-            logger::serverLogger->warn("Authentication failed for user '" + username + "'");
-        }
-    }
-    
-    return verified;
+    return -1;
 }
 
-bool UserManager::addUser(const std::string& username, const std::string& password,
-                          const std::string& role, const std::string& level) {
-    if (!db || !db->isConnected()) {
-        if (logger::serverLogger) {
-            logger::serverLogger->error("Database not connected");
-        }
-        return false;
-    }
-    
-    // Check if user already exists
-    if (userExists(username)) {
-        if (logger::serverLogger) {
-            logger::serverLogger->warn("User '" + username + "' already exists");
-        }
-        return false;
-    }
-    
-    const char* paramValues[4] = {
-        username.c_str(),
-        password.c_str(),
-        role.c_str(),
-        level.c_str()
-    };
-    
-    PGresult* res = db->execParams(
-        "INSERT INTO users (username, password_hash, role, level) VALUES ($1, $2, $3, $4)",
-        4, paramValues
-    );
-    
-    if (!res) {
-        return false;
-    }
-    
-    PQclear(res);
-    
-    if (logger::serverLogger) {
-        logger::serverLogger->info("User '" + username + "' added successfully");
-    }
-    
-    return true;
+void UserManager::add_client(int user_id, ClientHandler* client) {
+    active_clients_[user_id] = client;
 }
 
-bool UserManager::userExists(const std::string& username) {
-    if (!db || !db->isConnected()) {
-        return false;
-    }
-    
-    const char* paramValues[1] = {username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT user_id FROM users WHERE username = $1",
-        1, paramValues
-    );
-    
-    if (!res) {
-        return false;
-    }
-    
-    int nRows = PQntuples(res);
-    PQclear(res);
-    
-    return (nRows > 0);
+void UserManager::remove_client(int user_id) {
+    active_clients_.erase(user_id);
 }
 
-int UserManager::getUserId(const std::string& username) {
-    if (!db || !db->isConnected()) {
-        return -1;
+ClientHandler* UserManager::get_client(int user_id) {
+    auto it = active_clients_.find(user_id);
+    if (it != active_clients_.end()) {
+        return it->second;
     }
-    
-    const char* paramValues[1] = {username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT user_id FROM users WHERE username = $1",
-        1, paramValues
-    );
-    
-    if (!res || PQntuples(res) == 0) {
-        if (res) PQclear(res);
-        return -1;
-    }
-    
-    int userId = std::stoi(PQgetvalue(res, 0, 0));
-    PQclear(res);
-    
-    return userId;
-}
-
-std::string UserManager::getUserRole(const std::string& username) {
-    if (!db || !db->isConnected()) {
-        return "";
-    }
-    
-    const char* paramValues[1] = {username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT role FROM users WHERE username = $1",
-        1, paramValues
-    );
-    
-    if (!res || PQntuples(res) == 0) {
-        if (res) PQclear(res);
-        return "";
-    }
-    
-    std::string role = PQgetvalue(res, 0, 0);
-    PQclear(res);
-    
-    return role;
-}
-
-std::string UserManager::getUserLevel(const std::string& username) {
-    if (!db || !db->isConnected()) {
-        return "";
-    }
-    
-    const char* paramValues[1] = {username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "SELECT level FROM users WHERE username = $1",
-        1, paramValues
-    );
-    
-    if (!res || PQntuples(res) == 0) {
-        if (res) PQclear(res);
-        return "";
-    }
-    
-    std::string level = PQgetvalue(res, 0, 0);
-    PQclear(res);
-    
-    return level;
-}
-
-bool UserManager::updateUserLevel(const std::string& username, const std::string& level) {
-    if (!db || !db->isConnected()) {
-        return false;
-    }
-    
-    const char* paramValues[2] = {level.c_str(), username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "UPDATE users SET level = $1 WHERE username = $2",
-        2, paramValues
-    );
-    
-    if (!res) {
-        return false;
-    }
-    
-    PQclear(res);
-    
-    if (logger::serverLogger) {
-        logger::serverLogger->info("Updated level for user '" + username + "' to '" + level + "'");
-    }
-    
-    return true;
-}
-
-bool UserManager::updatePassword(const std::string& username, const std::string& newPassword) {
-    if (!db || !db->isConnected()) {
-        return false;
-    }
-    
-    const char* paramValues[2] = {newPassword.c_str(), username.c_str()};
-    
-    PGresult* res = db->execParams(
-        "UPDATE users SET password_hash = $1 WHERE username = $2",
-        2, paramValues
-    );
-    
-    if (!res) {
-        return false;
-    }
-    
-    PQclear(res);
-    
-    if (logger::serverLogger) {
-        logger::serverLogger->info("Password updated for user '" + username + "'");
-    }
-    
-    return true;
+    return nullptr;
 }
 
 } // namespace server

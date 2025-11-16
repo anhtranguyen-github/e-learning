@@ -63,15 +63,14 @@ void SubmissionHandler::handleSubmission(int clientFd, const protocol::Message& 
     int targetId = std::stoi(parts[2]);
     std::string userAnswer = parts[3];
 
-    auto session = sessionManager->getSession(sessionToken);
-    if (!session) {
+    int userId = sessionManager->get_user_id_by_session(sessionToken);
+    if (userId == -1) {
         protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Invalid or expired session");
         sendMessage(clientFd, response);
         return;
     }
 
-    sessionManager->updateLastActive(sessionToken);
-    int userId = session->userId;
+    sessionManager->update_session(sessionToken);
 
     std::string query = "INSERT INTO results (user_id, target_type, target_id, feedback) VALUES (" +
                         std::to_string(userId) + ", '" + targetType + "', " + std::to_string(targetId) +

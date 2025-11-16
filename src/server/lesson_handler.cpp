@@ -94,7 +94,7 @@ void LessonHandler::handleLessonListRequest(int clientFd, const protocol::Messag
     }
     
     // Validate session token
-    if (!sessionManager->validateSession(sessionToken)) {
+    if (!sessionManager->is_session_valid(sessionToken)) {
         std::string errorMsg = "Invalid or expired session token in LESSON_LIST_REQUEST from fd=" + 
                              std::to_string(clientFd);
         if (logger::serverLogger) {
@@ -106,7 +106,7 @@ void LessonHandler::handleLessonListRequest(int clientFd, const protocol::Messag
     }
     
     // Update session activity
-    sessionManager->updateLastActive(sessionToken);
+    sessionManager->update_session(sessionToken);
     
     // Load lessons from database
     LessonList lessonList;
@@ -187,7 +187,7 @@ void LessonHandler::handleStudyLessonRequest(int clientFd, const protocol::Messa
     std::string lessonTypeStr = parts[2];
     
     // Validate session token
-    if (!sessionManager->validateSession(sessionToken)) {
+    if (!sessionManager->is_session_valid(sessionToken)) {
         if (logger::serverLogger) {
             logger::serverLogger->warn("Invalid session token in STUDY_LESSON_REQUEST from fd=" + 
                                       std::to_string(clientFd));
@@ -198,7 +198,7 @@ void LessonHandler::handleStudyLessonRequest(int clientFd, const protocol::Messa
     }
     
     // Update session activity
-    sessionManager->updateLastActive(sessionToken);
+    sessionManager->update_session(sessionToken);
     
     // Parse lesson ID
     int lessonId;

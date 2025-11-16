@@ -48,7 +48,7 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
     }
 
     // Validate session token
-    if (!sessionManager->validateSession(sessionToken)) {
+    if (!sessionManager->is_session_valid(sessionToken)) {
         std::string errorMsg = "Invalid or expired session token in EXAM_LIST_REQUEST from fd=" +
                              std::to_string(clientFd);
         if (logger::serverLogger) {
@@ -60,7 +60,7 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
     }
 
     // Update session activity
-    sessionManager->updateLastActive(sessionToken);
+    sessionManager->update_session(sessionToken);
 
     // Load exams from database
     ExamList examList;
