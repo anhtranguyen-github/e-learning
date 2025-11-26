@@ -249,4 +249,62 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     }
 }
 
+void ExerciseHandler::handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    
+    // Parse payload: <session_token>;<exercise_id>
+    std::vector<std::string> parts;
+    std::istringstream iss(payload);
+    std::string part;
+    
+    while (std::getline(iss, part, ';')) {
+        parts.push_back(part);
+    }
+    
+    protocol::MsgCode successCode = static_cast<protocol::MsgCode>(static_cast<int>(msg.code) + 1);
+    protocol::MsgCode failureCode = static_cast<protocol::MsgCode>(static_cast<int>(msg.code) + 2);
+
+    if (parts.size() < 2) {
+        protocol::Message response(failureCode, "Invalid request format");
+        sendMessage(clientFd, response);
+        return;
+    }
+    
+    std::string sessionToken = parts[0];
+    std::string exerciseIdStr = parts[1];
+    
+    if (!sessionManager->is_session_valid(sessionToken)) {
+        protocol::Message response(failureCode, "Invalid session");
+        sendMessage(clientFd, response);
+        return;
+    }
+    
+    sessionManager->update_session(sessionToken);
+    
+    int exerciseId;
+    try {
+        exerciseId = std::stoi(exerciseIdStr);
+    } catch (...) {
+        protocol::Message response(failureCode, "Invalid exercise ID");
+        sendMessage(clientFd, response);
+        return;
+    }
+    
+    Exercise exercise = exerciseLoader->loadExerciseById(exerciseId);
+    
+    if (exercise.getExerciseId() == -1) {
+        protocol::Message response(failureCode, "Exercise not found");
+        sendMessage(clientFd, response);
+        return;
+    }
+    
+    // For specific exercises, we usually return the question content
+    // We can use serializeForNetwork with QUESTION type or FULL depending on needs.
+    // The client expects the question text usually.
+    std::string content = exercise.serializeForNetwork(ExerciseType::QUESTION);
+    
+    protocol::Message response(successCode, content);
+    sendMessage(clientFd, response);
+}
+
 } // namespace server
