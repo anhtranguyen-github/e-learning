@@ -29,15 +29,21 @@ void ChatHandler::handle_chat_message(ClientHandler* client, const protocol::Mes
 
 void ChatHandler::handle_private_message(ClientHandler* client, const protocol::Message& msg) {
     std::string payload = msg.toString();
-    size_t delimiter_pos = payload.find(':');
-    if (delimiter_pos == std::string::npos) {
+    std::vector<std::string> parts;
+    std::istringstream iss(payload);
+    std::string part;
+    while (std::getline(iss, part, ';')) {
+        parts.push_back(part);
+    }
+
+    if (parts.size() < 3) {
         protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Invalid message format");
         client->send_message(error_msg);
         return;
     }
 
-    std::string recipient_username = payload.substr(0, delimiter_pos);
-    std::string message_content = payload.substr(delimiter_pos + 1);
+    std::string recipient_username = parts[1];
+    std::string message_content = parts[2];
 
     int sender_id = client->get_user_id();
     int recipient_id = user_manager_.get_user_id(recipient_username);
@@ -70,7 +76,21 @@ void ChatHandler::handle_private_message(ClientHandler* client, const protocol::
 }
 
 void ChatHandler::handle_chat_history(ClientHandler* client, const protocol::Message& msg) {
-    std::string other_username = msg.toString();
+    std::string payload = msg.toString();
+    std::vector<std::string> parts;
+    std::istringstream iss(payload);
+    std::string part;
+    while (std::getline(iss, part, ';')) {
+        parts.push_back(part);
+    }
+
+    if (parts.size() < 2) {
+        protocol::Message error_msg(protocol::MsgCode::CHAT_HISTORY_FAILURE, "Invalid request format");
+        client->send_message(error_msg);
+        return;
+    }
+
+    std::string other_username = parts[1];
     int user1_id = client->get_user_id();
     int user2_id = user_manager_.get_user_id(other_username);
 

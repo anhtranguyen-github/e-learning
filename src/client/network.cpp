@@ -475,4 +475,46 @@ bool NetworkClient::requestExams() {
     return true;
 }
 
+bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::string& message) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot send private message");
+        }
+        return false;
+    }
+
+    std::string payload = sessionToken + ";" + recipient + ";" + message;
+    protocol::Message msg(protocol::MsgCode::CHAT_PRIVATE_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send private message");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestChatHistory(const std::string& otherUser) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request chat history");
+        }
+        return false;
+    }
+
+    std::string payload = sessionToken + ";" + otherUser;
+    protocol::Message msg(protocol::MsgCode::CHAT_HISTORY_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send chat history request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace client

@@ -65,6 +65,10 @@ public:
     bool requestExercises();
     bool requestExams();
 
+    // Chat
+    bool sendPrivateMessage(const std::string& recipient, const std::string& message);
+    bool requestChatHistory(const std::string& otherUser);
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };

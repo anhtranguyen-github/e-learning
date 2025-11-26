@@ -22,6 +22,9 @@ private:
     void handleViewResults();
     void handleViewExercises();
     void handleViewExams();
+    void handleChat();
+    void handleSendPrivateMessage();
+    void handleViewChatHistory();
     void clearScreen();
     
     // Helper to parse and display lesson list

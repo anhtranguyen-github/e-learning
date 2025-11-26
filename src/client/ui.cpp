@@ -50,9 +50,10 @@ void UI::displayLoggedInMenu() {
     std::cout << "5. View Results\n";
     std::cout << "6. View Exercises\n";
     std::cout << "7. View Exams\n";
-    std::cout << "8. View Status\n";
-    std::cout << "9. Logout\n";
-    std::cout << "10. Exit\n\n";
+    std::cout << "8. Chat\n";
+    std::cout << "9. View Status\n";
+    std::cout << "10. Logout\n";
+    std::cout << "11. Exit\n\n";
     std::cout << "Choose an option: ";
 }
 
@@ -199,6 +200,10 @@ void UI::run() {
                     break;
                 
                 case 8:
+                    handleChat();
+                    break;
+
+                case 9:
                     std::cout << "\n--- Status ---\n";
                     std::cout << "Connected: Yes\n";
                     std::cout << "Logged In: Yes\n";
@@ -208,11 +213,11 @@ void UI::run() {
                     std::cin.get();
                     break;
                 
-                case 9:
+                case 10:
                     handleLogout();
                     break;
                 
-                case 10:
+                case 11:
                     running = false;
                     break;
                 
@@ -537,6 +542,83 @@ void UI::handleViewExams() {
     } else {
         std::cout << "\nFailed to get exam list: " << response.toString() << "\n";
     }
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+void UI::handleChat() {
+    bool chatRunning = true;
+    while (chatRunning) {
+        clearScreen();
+        std::cout << "\n--- Chat Menu ---\n";
+        std::cout << "1. Send Private Message\n";
+        std::cout << "2. View Chat History\n";
+        std::cout << "3. Back to Main Menu\n\n";
+        std::cout << "Choose an option: ";
+
+        int choice;
+        std::cin >> choice;
+
+        if (std::cin.fail()) {
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                handleSendPrivateMessage();
+                break;
+            case 2:
+                handleViewChatHistory();
+                break;
+            case 3:
+                chatRunning = false;
+                break;
+            default:
+                std::cout << "Invalid option.\n";
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                break;
+        }
+    }
+}
+
+void UI::handleSendPrivateMessage() {
+    std::string recipient, message;
+
+    std::cout << "\n--- Send Private Message ---\n";
+    std::cout << "Recipient: ";
+    std::cin >> recipient;
+    std::cout << "Message: ";
+    std::cin.ignore();
+    std::getline(std::cin, message);
+
+    if (!network.sendPrivateMessage(recipient, message)) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    std::cout << "\nServer response:\n" << response.toString() << "\n";
+    std::cout << "\nPress Enter to continue...";
+    std::cin.get();
+}
+
+void UI::handleViewChatHistory() {
+    std::string otherUser;
+
+    std::cout << "\n--- View Chat History ---\n";
+    std::cout << "Enter username to view history with: ";
+    std::cin >> otherUser;
+
+    if (!network.requestChatHistory(otherUser)) {
+        std::cout << "Failed to send request.\n";
+        return;
+    }
+
+    protocol::Message response = network.receiveMessage();
+    std::cout << "\nChat History:\n" << response.toString() << "\n";
     std::cout << "\nPress Enter to continue...";
     std::cin.ignore();
     std::cin.get();
