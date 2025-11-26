@@ -89,12 +89,22 @@ bool NetworkClient::connect() {
 void NetworkClient::disconnect() {
     if (sockfd >= 0) {
         if (loggedIn) {
-            logout();
+            try {
+                logout();
+            } catch (const std::exception& e) {
+                if (logger::clientLogger) {
+                    logger::clientLogger->error("Error during logout in disconnect: " + std::string(e.what()));
+                }
+            }
         }
         
         // Send disconnect request
-        protocol::Message msg(protocol::MsgCode::DISCONNECT_REQUEST, "");
-        sendMessage(msg);
+        try {
+            protocol::Message msg(protocol::MsgCode::DISCONNECT_REQUEST, "");
+            sendMessage(msg);
+        } catch (...) {
+            // Ignore errors during disconnect
+        }
         
         close(sockfd);
         sockfd = -1;
@@ -127,31 +137,38 @@ bool NetworkClient::login(const std::string& username, const std::string& passwo
     }
 
     // Wait for response
-    protocol::Message response = receiveMessage();
-    
-    if (response.code == protocol::MsgCode::LOGIN_SUCCESS) {
-        // Extract session token from response
-        std::string responseStr = response.toString();
-        sessionToken = utils::extractCookie(responseStr, "session_id");
+    try {
+        protocol::Message response = receiveMessage();
         
-        if (sessionToken.empty()) {
+        if (response.code == protocol::MsgCode::LOGIN_SUCCESS) {
+            // Extract session token from response
+            std::string responseStr = response.toString();
+            sessionToken = utils::extractCookie(responseStr, "session_id");
+            
+            if (sessionToken.empty()) {
+                if (logger::clientLogger) {
+                    logger::clientLogger->error("Failed to extract session token");
+                }
+                return false;
+            }
+            
+            loggedIn = true;
+            lastHeartbeat = std::chrono::steady_clock::now();
+            
             if (logger::clientLogger) {
-                logger::clientLogger->error("Failed to extract session token");
+                logger::clientLogger->info("Login successful for user: " + username);
+            }
+            
+            return true;
+        } else if (response.code == protocol::MsgCode::LOGIN_FAILURE) {
+            if (logger::clientLogger) {
+                logger::clientLogger->error("Login failed: Invalid credentials");
             }
             return false;
         }
-        
-        loggedIn = true;
-        lastHeartbeat = std::chrono::steady_clock::now();
-        
+    } catch (const std::exception& e) {
         if (logger::clientLogger) {
-            logger::clientLogger->info("Login successful for user: " + username);
-        }
-        
-        return true;
-    } else if (response.code == protocol::MsgCode::LOGIN_FAILURE) {
-        if (logger::clientLogger) {
-            logger::clientLogger->error("Login failed: Invalid credentials");
+            logger::clientLogger->error("Error receiving login response: " + std::string(e.what()));
         }
         return false;
     }
@@ -168,7 +185,10 @@ bool NetworkClient::logout() {
     }
 
     // Send logout request with session token
-    std::string payload = "Cookie: session_id=" + sessionToken;
+    if (logger::clientLogger) {
+        logger::clientLogger->debug("Sending logout request with token: " + sessionToken);
+    }
+    std::string payload = sessionToken;
     protocol::Message logoutMsg(protocol::MsgCode::LOGOUT_REQUEST, payload);
     
     if (!sendMessage(logoutMsg)) {
@@ -179,18 +199,29 @@ bool NetworkClient::logout() {
     }
 
     // Wait for response
-    protocol::Message response = receiveMessage();
-    
-    if (response.code == protocol::MsgCode::LOGOUT_SUCCESS) {
-        loggedIn = false;
-        sessionToken.clear();
+    try {
+        protocol::Message response = receiveMessage();
         
-        if (logger::clientLogger) {
-            logger::clientLogger->info("Logout successful");
+        if (response.code == protocol::MsgCode::LOGOUT_SUCCESS) {
+            loggedIn = false;
+            sessionToken.clear();
+            
+            if (logger::clientLogger) {
+                logger::clientLogger->info("Logout successful");
+            }
+            
+            return true;
         }
-        
-        return true;
+    } catch (const std::exception& e) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Error receiving logout response: " + std::string(e.what()));
+        }
     }
+    
+    // Even if logout failed (e.g. invalid session), we should clear local session state
+    // because the server likely already considers us logged out.
+    loggedIn = false;
+    sessionToken.clear();
     
     return false;
 }
@@ -200,7 +231,7 @@ bool NetworkClient::sendHeartbeat() {
         return false;
     }
 
-    std::string payload = "Cookie: session_id=" + sessionToken;
+    std::string payload = sessionToken;
     protocol::Message heartbeatMsg(protocol::MsgCode::HEARTBEAT, payload);
     
     if (sendMessage(heartbeatMsg)) {
@@ -484,7 +515,7 @@ bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::
     }
 
     std::string payload = sessionToken + ";" + recipient + ";" + message;
-    protocol::Message msg(protocol::MsgCode::CHAT_PRIVATE_REQUEST, payload);
+    protocol::Message msg(protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST, payload);
 
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {

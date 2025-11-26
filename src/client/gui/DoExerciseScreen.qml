@@ -1,0 +1,82 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+
+Page {
+    title: "Do Exercise"
+    property int exerciseId
+    property string exerciseTypeStr
+    property string targetType: "exercise"
+
+    function getTypeCode(typeStr) {
+        switch(typeStr) {
+            case "MULTIPLE_CHOICE": return 170;
+            case "FILL_IN_BLANK": return 180;
+            case "SENTENCE_ORDER": return 190;
+            case "REWRITE_SENTENCE": return 200;
+            case "WRITE_PARAGRAPH": return 210;
+            case "SPEAKING_TOPIC": return 220;
+            default: return 170;
+        }
+    }
+
+    Component.onCompleted: {
+        var code = 170;
+        if (exerciseTypeStr.indexOf("MULTIPLE") !== -1) code = 170;
+        else if (exerciseTypeStr.indexOf("FILL") !== -1) code = 180;
+        else if (exerciseTypeStr.indexOf("ORDER") !== -1) code = 190;
+        else if (exerciseTypeStr.indexOf("REWRITE") !== -1) code = 200;
+        else if (exerciseTypeStr.indexOf("PARAGRAPH") !== -1) code = 210;
+        else if (exerciseTypeStr.indexOf("SPEAKING") !== -1) code = 220;
+        
+        networkManager.requestExercise(code, exerciseId)
+    }
+
+    Connections {
+        target: networkManager
+        function onExerciseContentReceived(content) {
+            questionText.text = content
+        }
+        function onAnswerSubmissionResult(response) {
+            resultText.text = response
+        }
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 10
+        spacing: 10
+
+        ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            TextArea {
+                id: questionText
+                readOnly: true
+                wrapMode: Text.WordWrap
+                text: "Loading question..."
+            }
+        }
+
+        TextField {
+            id: answerField
+            placeholderText: "Type your answer here..."
+            Layout.fillWidth: true
+        }
+
+        Button {
+            text: "Submit Answer"
+            Layout.fillWidth: true
+            onClicked: {
+                networkManager.submitAnswer(targetType, exerciseId, answerField.text)
+            }
+        }
+
+        Text {
+            id: resultText
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: "blue"
+        }
+    }
+}

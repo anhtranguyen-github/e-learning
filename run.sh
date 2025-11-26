@@ -22,6 +22,19 @@ function clean() {
   make clean
 }
 
+function build_qt() {
+  echo "[BUILD QT] Compiling Qt client..."
+  mkdir -p src/client/gui/build
+  cd src/client/gui/build
+  cmake ..
+  make
+}
+
+function run_qt() {
+  echo "[RUN QT] Starting Qt client..."
+  ./src/client/gui/build/socker_client "$@"
+}
+
 function help() {
   echo "Usage: ./run.sh <command> [args]"
   echo
@@ -29,6 +42,8 @@ function help() {
   echo "  build           Build the project (make)"
   echo "  server [port]   Run the server on optional port (default 8080)"
   echo "  client [host] [port]  Run a client (default 127.0.0.1 8080)"
+  echo "  build_qt        Build the Qt client"
+  echo "  run_qt          Run the Qt client"
   echo "  clean           Clean build artifacts (make clean)"
   echo "  help            Show this help message"
 }
@@ -40,6 +55,10 @@ case "$1" in
     shift; server "$@" ;;
   client)
     shift; client "$@" ;;
+  build_qt)
+    shift; build_qt "$@" ;;
+  run_qt)
+    shift; run_qt "$@" ;;
   clean)
     shift; clean ;;
   help | --help | -h | "")
