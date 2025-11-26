@@ -62,9 +62,18 @@ void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& dat
                 handlerRegistry_->get_exercise_handler()->handleStudyExerciseRequest(clientFd, msg);
                 break;
             
-            case protocol::MsgCode::CHAT_PRIVATE_REQUEST:
+            case protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST:
             case protocol::MsgCode::CHAT_HISTORY_REQUEST:
                 handlerRegistry_->get_chat_handler()->handle_chat_message(this, msg);
+                break;
+
+            case protocol::MsgCode::MULTIPLE_CHOICE_REQUEST:
+            case protocol::MsgCode::FILL_IN_REQUEST:
+            case protocol::MsgCode::SENTENCE_ORDER_REQUEST:
+            case protocol::MsgCode::REWRITE_SENTENCE_REQUEST:
+            case protocol::MsgCode::WRITE_PARAGRAPH_REQUEST:
+            case protocol::MsgCode::SPEAKING_TOPIC_REQUEST:
+                handlerRegistry_->get_exercise_handler()->handleSpecificExerciseRequest(clientFd, msg);
                 break;
 
             case protocol::MsgCode::SUBMIT_ANSWER_REQUEST:
