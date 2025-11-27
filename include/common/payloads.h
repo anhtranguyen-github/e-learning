@@ -241,6 +241,22 @@ namespace Payloads {
         }
     };
 
+    struct ExamRequest : public ISerializable {
+        std::string sessionToken;
+        std::string examId;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {sessionToken, examId};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) examId = parts[1];
+        }
+    };
+
     // GenericResponse
     struct GenericResponse : public ISerializable {
         bool success;
@@ -255,6 +271,210 @@ namespace Payloads {
             auto parts = utils::split(raw, ';');
             if (parts.size() >= 1) success = (parts[0] == "1");
             if (parts.size() >= 2) message = parts[1];
+        }
+    };
+
+    struct LessonMetadataDTO : public ISerializable {
+        std::string id;
+        std::string title;
+        std::string topic;
+        std::string level;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {id, title, topic, level};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) title = parts[1];
+            if (parts.size() >= 3) topic = parts[2];
+            if (parts.size() >= 4) level = parts[3];
+        }
+    };
+
+    struct LessonDTO : public ISerializable {
+        std::string id;
+        std::string title;
+        std::string topic;
+        std::string level;
+        std::string videoUrl;
+        std::string audioUrl;
+        std::string textContent;
+        std::vector<std::string> vocabulary;
+        std::vector<std::string> grammar;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts;
+            parts.push_back(id);
+            parts.push_back(title);
+            parts.push_back(topic);
+            parts.push_back(level);
+            parts.push_back(videoUrl);
+            parts.push_back(audioUrl);
+            parts.push_back(textContent);
+            parts.push_back(utils::join(vocabulary, ','));
+            parts.push_back(utils::join(grammar, ','));
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) title = parts[1];
+            if (parts.size() >= 3) topic = parts[2];
+            if (parts.size() >= 4) level = parts[3];
+            if (parts.size() >= 5) videoUrl = parts[4];
+            if (parts.size() >= 6) audioUrl = parts[5];
+            if (parts.size() >= 7) textContent = parts[6];
+            if (parts.size() >= 8) vocabulary = utils::split(parts[7], ',');
+            if (parts.size() >= 9) grammar = utils::split(parts[8], ',');
+        }
+    };
+
+    struct ExerciseMetadataDTO : public ISerializable {
+        std::string id;
+        std::string lessonId;
+        std::string title;
+        std::string type;
+        std::string level;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {id, lessonId, title, type, level};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) lessonId = parts[1];
+            if (parts.size() >= 3) title = parts[2];
+            if (parts.size() >= 4) type = parts[3];
+            if (parts.size() >= 5) level = parts[4];
+        }
+    };
+
+    struct ExerciseDTO : public ISerializable {
+        std::string id;
+        std::string lessonId;
+        std::string title;
+        std::string type;
+        std::string level;
+        std::string question;
+        std::vector<std::string> options;
+        std::string answer;
+        std::string explanation;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts;
+            parts.push_back(id);
+            parts.push_back(lessonId);
+            parts.push_back(title);
+            parts.push_back(type);
+            parts.push_back(level);
+            parts.push_back(question);
+            parts.push_back(utils::join(options, ','));
+            parts.push_back(answer);
+            parts.push_back(explanation);
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) lessonId = parts[1];
+            if (parts.size() >= 3) title = parts[2];
+            if (parts.size() >= 4) type = parts[3];
+            if (parts.size() >= 5) level = parts[4];
+            if (parts.size() >= 6) question = parts[5];
+            if (parts.size() >= 7) options = utils::split(parts[6], ',');
+            if (parts.size() >= 8) answer = parts[7];
+            if (parts.size() >= 9) explanation = parts[8];
+        }
+    };
+
+    struct ExamMetadataDTO : public ISerializable {
+        std::string id;
+        std::string lessonId;
+        std::string title;
+        std::string type;
+        std::string level;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {id, lessonId, title, type, level};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) lessonId = parts[1];
+            if (parts.size() >= 3) title = parts[2];
+            if (parts.size() >= 4) type = parts[3];
+            if (parts.size() >= 5) level = parts[4];
+        }
+    };
+
+    struct ExamDTO : public ISerializable {
+        std::string id;
+        std::string lessonId;
+        std::string title;
+        std::string type;
+        std::string level;
+        std::vector<std::string> questions;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts;
+            parts.push_back(id);
+            parts.push_back(lessonId);
+            parts.push_back(title);
+            parts.push_back(type);
+            parts.push_back(level);
+            parts.push_back(utils::join(questions, ','));
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) lessonId = parts[1];
+            if (parts.size() >= 3) title = parts[2];
+            if (parts.size() >= 4) type = parts[3];
+            if (parts.size() >= 5) level = parts[4];
+            if (parts.size() >= 6) questions = utils::split(parts[5], ',');
+        }
+    };
+
+    struct ResultDTO : public ISerializable {
+        std::string score;
+        std::string feedback;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {score, feedback};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) score = parts[0];
+            if (parts.size() >= 2) feedback = parts[1];
+        }
+    };
+
+    struct ResultSummaryDTO : public ISerializable {
+        std::string targetId;
+        std::string score;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {targetId, score};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) targetId = parts[0];
+            if (parts.size() >= 2) score = parts[1];
         }
     };
 

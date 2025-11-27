@@ -69,11 +69,38 @@ void test_study_lesson_payload() {
     std::cout << "StudyLessonRequest tests passed!" << std::endl;
 }
 
+void test_lesson_dto() {
+    Payloads::LessonDTO dto;
+    dto.id = "1";
+    dto.title = "Intro";
+    dto.topic = "Math";
+    dto.level = "Beginner";
+    dto.videoUrl = "http://video";
+    dto.audioUrl = "http://audio";
+    dto.textContent = "Hello";
+    dto.vocabulary = {"one", "two"};
+    dto.grammar = {"rule1", "rule2"};
+    
+    std::string serialized = dto.serialize();
+    // "1|Intro|Math|Beginner|http://video|http://audio|Hello|one,two|rule1,rule2"
+    
+    Payloads::LessonDTO dto2;
+    dto2.deserialize(serialized);
+    
+    assert(dto2.id == "1");
+    assert(dto2.title == "Intro");
+    assert(dto2.vocabulary.size() == 2);
+    assert(dto2.vocabulary[0] == "one");
+    
+    std::cout << "LessonDTO tests passed!" << std::endl;
+}
+
 int main() {
     test_utils();
     test_login_payload();
     test_study_lesson_payload();
     test_empty_fields();
+    test_lesson_dto();
     std::cout << "All tests passed!" << std::endl;
     return 0;
 }

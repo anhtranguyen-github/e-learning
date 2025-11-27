@@ -1,5 +1,6 @@
-#include "server/submission_handler.h"
+#include "server/controller/submission_controller.h"
 #include "common/payloads.h"
+#include "common/utils.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,14 +13,14 @@ namespace server {
 // Constructor
 // ============================================================================
 
-SubmissionHandler::SubmissionHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<Database> db)
-    : sessionManager(sm), db(db) {}
+SubmissionController::SubmissionController(std::shared_ptr<SessionManager> sessionMgr, std::shared_ptr<Database> database)
+    : sessionManager(sessionMgr), db(database) {}
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-bool SubmissionHandler::sendMessage(int clientFd, const protocol::Message& msg) {
+bool SubmissionController::sendMessage(int clientFd, const protocol::Message& msg) {
     try {
         std::vector<uint8_t> serialized = msg.serialize();
         ssize_t bytesSent = send(clientFd, serialized.data(), serialized.size(), 0);
@@ -40,7 +41,7 @@ bool SubmissionHandler::sendMessage(int clientFd, const protocol::Message& msg) 
 // Message Handlers
 // ============================================================================
 
-void SubmissionHandler::handleSubmission(int clientFd, const protocol::Message& msg) {
+void SubmissionController::handleSubmission(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling submission from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -76,10 +77,16 @@ void SubmissionHandler::handleSubmission(int clientFd, const protocol::Message& 
 
     if (PQresultStatus(result) != PGRES_COMMAND_OK) {
         logger::serverLogger->error("Failed to insert submission into database: " + std::string(PQresultErrorMessage(result)));
-        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Failed to save submission");
+        Payloads::GenericResponse resp;
+        resp.success = false;
+        resp.message = "Failed to save submission";
+        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, resp.serialize());
         sendMessage(clientFd, response);
     } else {
-        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, "Submission received");
+        Payloads::GenericResponse resp;
+        resp.success = true;
+        resp.message = "Submission received";
+        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, resp.serialize());
         sendMessage(clientFd, response);
     }
 

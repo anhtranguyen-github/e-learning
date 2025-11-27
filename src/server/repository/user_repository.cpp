@@ -1,18 +1,18 @@
-#include "server/user_manager.h"
-#include "server/database.h"
+#include "server/repository/user_repository.h"
 #include "common/logger.h"
-#include <cstring>
 
 namespace server {
 
-UserManager::UserManager(Database& db) : db_(db) {}
+UserRepository::UserRepository(std::shared_ptr<Database> database) : db(database) {}
 
-bool UserManager::verify_credentials(const std::string& username, const std::string& password) {
+bool UserRepository::verifyCredentials(const std::string& username, const std::string& password) {
+    if (!db) return false;
+
     // This method should ideally hash the password and compare it with the stored hash.
     // For simplicity, we are currently storing plain text passwords.
     std::string query = "SELECT password_hash FROM users WHERE username = $1";
     const char* values[] = {username.c_str()};
-    PGresult* res = db_.execParams(query, 1, values);
+    PGresult* res = db->execParams(query, 1, values);
 
     if (res && PQntuples(res) == 1) {
         std::string stored_password = PQgetvalue(res, 0, 0);
@@ -26,10 +26,12 @@ bool UserManager::verify_credentials(const std::string& username, const std::str
     return false;
 }
 
-int UserManager::get_user_id(const std::string& username) {
+int UserRepository::getUserId(const std::string& username) {
+    if (!db) return -1;
+
     std::string query = "SELECT user_id FROM users WHERE username = $1";
     const char* values[] = {username.c_str()};
-    PGresult* res = db_.execParams(query, 1, values);
+    PGresult* res = db->execParams(query, 1, values);
 
     if (res && PQntuples(res) == 1) {
         int user_id = std::stoi(PQgetvalue(res, 0, 0));
@@ -43,20 +45,9 @@ int UserManager::get_user_id(const std::string& username) {
     return -1;
 }
 
-void UserManager::add_client(int user_id, ClientHandler* client) {
-    active_clients_[user_id] = client;
-}
-
-void UserManager::remove_client(int user_id) {
-    active_clients_.erase(user_id);
-}
-
-ClientHandler* UserManager::get_client(int user_id) {
-    auto it = active_clients_.find(user_id);
-    if (it != active_clients_.end()) {
-        return it->second;
-    }
-    return nullptr;
+User UserRepository::findById(int id) {
+    // Placeholder implementation if needed later
+    return User();
 }
 
 } // namespace server

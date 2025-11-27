@@ -1,15 +1,21 @@
-#include "server/exam_handler.h"
+#include "server/controller/exam_controller.h"
 #include "common/payloads.h"
-#include "common/logger.h"
-#include <json/json.h>
 #include "common/utils.h"
+#include "common/logger.h"
+#include <sys/socket.h>
+#include <sstream>
+#include <vector>
 
 namespace server {
 
-ExamHandler::ExamHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<ExamLoader> el)
-    : sessionManager(sm), examLoader(el) {}
+ExamController::ExamController(std::shared_ptr<SessionManager> sessionMgr, 
+                           std::shared_ptr<ExamRepository> examRepo)
+    : sessionManager(sessionMgr), examRepository(examRepo) {
+}
 
-void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
+
+
+void ExamController::handleGetExams(int clientFd, const protocol::Message &msg) {
     std::string payload = msg.toString();
 
     if (logger::serverLogger) {
@@ -55,12 +61,12 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
             if (logger::serverLogger) {
                 logger::serverLogger->debug("[DEBUG] Loading all exams");
             }
-            examList = examLoader->loadAllExams();
+            examList = examRepository->loadAllExams();
         } else {
             if (logger::serverLogger) {
                 logger::serverLogger->debug("[DEBUG] Loading filtered exams");
             }
-            examList = examLoader->loadExamsByFilter(type, level, lessonId);
+            examList = examRepository->loadExamsByFilter(lessonId, type, level);
         }
 
         int examCount = examList.count();
@@ -69,7 +75,15 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
         }
 
         // Serialize exam list for network transmission
-        std::string serializedList = examList.serializeForNetwork();
+        // Serialize exam list using DTOs
+        std::vector<std::string> serializedDtos;
+        for (const auto& exam : examList.getExams()) {
+            serializedDtos.push_back(exam.toMetadataDTO().serialize());
+        }
+        std::string serializedList = std::to_string(serializedDtos.size());
+        if (!serializedDtos.empty()) {
+            serializedList += ";" + utils::join(serializedDtos, ';');
+        }
 
         // Send success response
         protocol::Message response(protocol::MsgCode::EXAM_LIST_SUCCESS, serializedList);
@@ -94,16 +108,41 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
         sendMessage(clientFd, response);
     }
 }
-void ExamHandler::handleExamRequest(int clientFd, const protocol::Message &msg) {
-    (void)clientFd; // Suppress unused parameter warning
-    (void)msg;      // Suppress unused parameter warning
-    // Placeholder implementation
-    if (logger::serverLogger) {
-        logger::serverLogger->info("Handling exam request");
+void ExamController::handleExamRequest(int clientFd, const protocol::Message &msg) {
+    std::string payload = msg.toString();
+    Payloads::ExamRequest req;
+    req.deserialize(payload);
+
+    if (!sessionManager->is_session_valid(req.sessionToken)) {
+        protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Invalid session");
+        sendMessage(clientFd, response);
+        return;
     }
+    sessionManager->update_session(req.sessionToken);
+
+    int examId;
+    try {
+        examId = std::stoi(req.examId);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Invalid exam ID");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    Exam exam = examRepository->loadExamById(examId);
+    
+    if (exam.getExamId() == -1) {
+        protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Exam not found");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    Payloads::ExamDTO dto = exam.toDTO();
+    protocol::Message response(protocol::MsgCode::EXAM_SUCCESS, dto.serialize());
+    sendMessage(clientFd, response);
 }
 
-bool ExamHandler::sendMessage(int clientFd, const protocol::Message& msg) {
+bool ExamController::sendMessage(int clientFd, const protocol::Message& msg) {
     std::vector<uint8_t> data = msg.serialize();
     
     ssize_t sent = send(clientFd, data.data(), data.size(), 0);

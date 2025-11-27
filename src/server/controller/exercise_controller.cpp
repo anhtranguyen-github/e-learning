@@ -1,5 +1,6 @@
-#include "server/exercise_handler.h"
+#include "server/controller/exercise_controller.h"
 #include "common/payloads.h"
+#include "common/utils.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,15 +13,15 @@ namespace server {
 // Constructor
 // ============================================================================
 
-ExerciseHandler::ExerciseHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<ExerciseLoader> el)
-    : sessionManager(sm), exerciseLoader(el) {
+ExerciseController::ExerciseController(std::shared_ptr<SessionManager> sessionMgr, std::shared_ptr<ExerciseRepository> exerciseRepo)
+    : sessionManager(sessionMgr), exerciseRepository(exerciseRepo) {
 }
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-bool ExerciseHandler::sendMessage(int clientFd, const protocol::Message& msg) {
+bool ExerciseController::sendMessage(int clientFd, const protocol::Message& msg) {
     try {
         std::vector<uint8_t> serialized = msg.serialize();
         ssize_t bytesSent = send(clientFd, serialized.data(), serialized.size(), 0);
@@ -41,7 +42,7 @@ bool ExerciseHandler::sendMessage(int clientFd, const protocol::Message& msg) {
     }
 }
 
-ExerciseType ExerciseHandler::parseExerciseType(const std::string& typeStr) {
+ExerciseType ExerciseController::parseExerciseType(const std::string& typeStr) {
     if (typeStr == "question") return ExerciseType::QUESTION;
     if (typeStr == "options") return ExerciseType::OPTIONS;
     if (typeStr == "answer") return ExerciseType::ANSWER;
@@ -56,7 +57,7 @@ ExerciseType ExerciseHandler::parseExerciseType(const std::string& typeStr) {
 // Message Handlers
 // ============================================================================
 
-void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleExerciseListRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -101,12 +102,12 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
             if (logger::serverLogger) {
                 logger::serverLogger->debug("[DEBUG] Loading all exercises");
             }
-            exerciseList = exerciseLoader->loadAllExercises();
+            exerciseList = exerciseRepository->loadAllExercises();
         } else {
             if (logger::serverLogger) {
                 logger::serverLogger->debug("[DEBUG] Loading filtered exercises");
             }
-            exerciseList = exerciseLoader->loadExercisesByFilter(type, level, lessonId);
+            exerciseList = exerciseRepository->loadExercisesByFilter(lessonId, type, level);
         }
         
         int exerciseCount = exerciseList.count();
@@ -115,7 +116,15 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
         }
         
         // Serialize exercise list for network transmission
-        std::string serializedList = exerciseList.serializeForNetwork();
+        // Serialize exercise list using DTOs
+        std::vector<std::string> serializedDtos;
+        for (const auto& exercise : exerciseList.getExercises()) {
+            serializedDtos.push_back(exercise.toMetadataDTO().serialize());
+        }
+        std::string serializedList = std::to_string(serializedDtos.size());
+        if (!serializedDtos.empty()) {
+            serializedList += ";" + utils::join(serializedDtos, ';');
+        }
         
         // Send success response
         protocol::Message response(protocol::MsgCode::EXERCISE_LIST_SUCCESS, serializedList);
@@ -141,7 +150,7 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
     }
 }
 
-void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleStudyExerciseRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -184,10 +193,10 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     }
     
     // Parse exercise type
-    ExerciseType exerciseType = parseExerciseType(exerciseTypeStr);
+    // ExerciseType exerciseType = parseExerciseType(exerciseTypeStr); // Unused with DTOs
     
     // Load exercise from database
-    Exercise exercise = exerciseLoader->loadExerciseById(exerciseId);
+    Exercise exercise = exerciseRepository->loadExerciseById(exerciseId);
     
     // Check if exercise was found
     if (exercise.getExerciseId() == -1) {
@@ -201,7 +210,9 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     }
     
     // Serialize only the requested content type
-    std::string serializedContent = exercise.serializeForNetwork(exerciseType);
+    // Serialize using DTO
+    Payloads::ExerciseDTO dto = exercise.toDTO();
+    std::string serializedContent = dto.serialize();
     
     // Send success response
     protocol::Message response(protocol::MsgCode::STUDY_EXERCISE_SUCCESS, serializedContent);
@@ -218,7 +229,7 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
     }
 }
 
-void ExerciseHandler::handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     Payloads::SpecificExerciseRequest req;
@@ -247,7 +258,7 @@ void ExerciseHandler::handleSpecificExerciseRequest(int clientFd, const protocol
         return;
     }
     
-    Exercise exercise = exerciseLoader->loadExerciseById(exerciseId);
+    Exercise exercise = exerciseRepository->loadExerciseById(exerciseId);
     
     if (exercise.getExerciseId() == -1) {
         protocol::Message response(failureCode, "Exercise not found");
@@ -258,7 +269,9 @@ void ExerciseHandler::handleSpecificExerciseRequest(int clientFd, const protocol
     // For specific exercises, we usually return the question content
     // We can use serializeForNetwork with QUESTION type or FULL depending on needs.
     // The client expects the question text usually.
-    std::string content = exercise.serializeForNetwork(ExerciseType::QUESTION);
+    // Use DTO
+    Payloads::ExerciseDTO dto = exercise.toDTO();
+    std::string content = dto.serialize();
     
     protocol::Message response(successCode, content);
     sendMessage(clientFd, response);

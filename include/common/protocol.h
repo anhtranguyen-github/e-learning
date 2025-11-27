@@ -72,11 +72,15 @@ enum class MsgCode : uint16_t {
     RESULT_LIST_REQUEST = 260,
     RESULT_LIST_SUCCESS = 261,
     RESULT_LIST_FAILURE = 262,
+    RESULT_REQUEST = 265, // Added for single result request
 
     // Exam Management (270-289)
     EXAM_LIST_REQUEST = 270, // Re-adding this as it was removed earlier
     EXAM_LIST_SUCCESS = 271,
     EXAM_LIST_FAILURE = 272,
+    EXAM_REQUEST = 275, // Added for single exam request
+    EXAM_SUCCESS = 276,
+    EXAM_FAILURE = 277,
 
     // Notifications (290-299)
     NOTIFICATION_PUSH = 290,

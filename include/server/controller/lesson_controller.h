@@ -1,38 +1,38 @@
-
-#ifndef LESSON_HANDLER_H
-#define LESSON_HANDLER_H
+#ifndef LESSON_CONTROLLER_H
+#define LESSON_CONTROLLER_H
 
 #include "common/protocol.h"
 #include "server/session.h"
-#include "server/lesson_loader.h"
+#include "server/repository/lesson_repository.h"
 #include <memory>
+#include <string>
 
 namespace server {
 
 /**
- * LessonHandler - Handles lesson-related messages from clients
- * 
+ * LessonController - Handles lesson-related messages from clients
+ *
  * This class processes LESSON_LIST_REQUEST and STUDY_LESSON_REQUEST messages,
  * validates session tokens, loads lessons from database, and sends responses.
  */
-class LessonHandler {
+class LessonController {
 private:
     std::shared_ptr<SessionManager> sessionManager;
-    std::shared_ptr<LessonLoader> lessonLoader;
+    std::shared_ptr<LessonRepository> lessonRepository;
 
     // Helper function to send a message to a client
     bool sendMessage(int clientFd, const protocol::Message& msg);
-
-    // Parse lesson type string to enum
+    
+    // Helper to parse lesson type string
     LessonType parseLessonType(const std::string& typeStr);
 
 public:
     /**
      * Constructor
      * @param sm - Shared pointer to SessionManager for token validation
-     * @param ll - Shared pointer to LessonLoader for database operations
+     * @param lr - Shared pointer to LessonRepository for database operations
      */
-    LessonHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<LessonLoader> ll);
+    LessonController(std::shared_ptr<SessionManager> sm, std::shared_ptr<LessonRepository> lr);
 
     /**
      * Handle LESSON_LIST_REQUEST message
@@ -46,7 +46,7 @@ public:
      * 1. Parse session token from payload
      * 2. Validate token/session
      * 3. Parse optional filters (topic, level)
-     * 4. Load lessons from database via LessonLoader
+     * 4. Load lessons from database via LessonRepository
      * 5. Apply filters if provided
      * 6. Serialize lesson list
      * 7. Send LESSON_LIST_SUCCESS with serialized data
@@ -81,4 +81,4 @@ public:
 
 } // namespace server
 
-#endif // LESSON_HANDLER_H
+#endif // LESSON_CONTROLLER_H

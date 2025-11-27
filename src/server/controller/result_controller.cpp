@@ -1,5 +1,6 @@
-#include "server/result_handler.h"
+#include "server/controller/result_controller.h"
 #include "common/payloads.h"
+#include "common/utils.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,20 +13,24 @@ namespace server {
 // Constructor
 // ============================================================================
 
-ResultHandler::ResultHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<Database> db)
-    : sessionManager(sm), db(db) {}
+ResultController::ResultController(std::shared_ptr<SessionManager> sessionMgr, 
+                               std::shared_ptr<Database> database)
+    : sessionManager(sessionMgr), db(database) {
+}
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-bool ResultHandler::sendMessage(int clientFd, const protocol::Message& msg) {
+bool ResultController::sendMessage(int clientFd, const protocol::Message& msg) {
     try {
         std::vector<uint8_t> serialized = msg.serialize();
         ssize_t bytesSent = send(clientFd, serialized.data(), serialized.size(), 0);
         
         if (bytesSent < 0) {
-            logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd));
+            if (logger::serverLogger) {
+                logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd));
+            }
             return false;
         }
         
@@ -40,7 +45,7 @@ bool ResultHandler::sendMessage(int clientFd, const protocol::Message& msg) {
 // Message Handlers
 // ============================================================================
 
-void ResultHandler::handleResultRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleResultRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling result request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -73,9 +78,10 @@ void ResultHandler::handleResultRequest(int clientFd, const protocol::Message& m
     std::string responsePayload;
 
     if (result && PQntuples(result) > 0) {
-        std::string score = PQgetvalue(result, 0, 0);
-        std::string feedback = PQgetvalue(result, 0, 1);
-        protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, responsePayload);
+        Payloads::ResultDTO dto;
+        dto.score = PQgetvalue(result, 0, 0);
+        dto.feedback = PQgetvalue(result, 0, 1);
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, dto.serialize());
         sendMessage(clientFd, response);
     } else {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Result not found");
@@ -87,7 +93,7 @@ void ResultHandler::handleResultRequest(int clientFd, const protocol::Message& m
     }
 }
 
-void ResultHandler::handleDoneUndoneListRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling done/undone list request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -114,8 +120,16 @@ void ResultHandler::handleDoneUndoneListRequest(int clientFd, const protocol::Me
     std::string responsePayload;
 
     if (result) {
+        std::vector<std::string> serializedDtos;
         for (int i = 0; i < PQntuples(result); ++i) {
-            responsePayload += std::string(PQgetvalue(result, i, 0)) + "," + std::string(PQgetvalue(result, i, 1)) + ";";
+            Payloads::ResultSummaryDTO dto;
+            dto.targetId = PQgetvalue(result, i, 0);
+            dto.score = PQgetvalue(result, i, 1);
+            serializedDtos.push_back(dto.serialize());
+        }
+        std::string responsePayload = std::to_string(serializedDtos.size());
+        if (!serializedDtos.empty()) {
+             responsePayload += ";" + utils::join(serializedDtos, ';');
         }
         protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, responsePayload);
         sendMessage(clientFd, response);

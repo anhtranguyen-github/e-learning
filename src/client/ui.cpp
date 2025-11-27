@@ -1,5 +1,7 @@
 #include "client/ui.h"
 #include "common/logger.h"
+#include "common/payloads.h"
+#include "common/utils.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -329,16 +331,19 @@ void UI::parseLessonList(const std::string& payload) {
     // Format: <count>;<lesson1_meta>;<lesson2_meta>;...
     // Lesson metadata: <id>|<title>|<topic>|<level>
     
-    size_t pos = 0;
-    size_t nextPos = payload.find(';');
-    
-    if (nextPos == std::string::npos) {
+    auto parts = utils::split(payload, ';');
+    if (parts.empty()) {
         std::cout << "No lessons found.\n";
         return;
     }
     
-    std::string countStr = payload.substr(0, nextPos);
-    int count = std::stoi(countStr);
+    int count = 0;
+    try {
+        count = std::stoi(parts[0]);
+    } catch (...) {
+        std::cout << "Invalid response format.\n";
+        return;
+    }
     
     std::cout << "Total lessons: " << count << "\n\n";
     
@@ -347,84 +352,39 @@ void UI::parseLessonList(const std::string& payload) {
         return;
     }
     
-    pos = nextPos + 1;
-    
-    for (int i = 0; i < count && pos < payload.length(); ++i) {
-        nextPos = payload.find(';', pos);
-        std::string lessonMeta;
+    for (size_t i = 1; i < parts.size(); ++i) {
+        Payloads::LessonMetadataDTO dto;
+        dto.deserialize(parts[i]);
         
-        if (nextPos == std::string::npos) {
-            lessonMeta = payload.substr(pos);
-        } else {
-            lessonMeta = payload.substr(pos, nextPos - pos);
-        }
-        
-        // Parse lesson metadata: <id>|<title>|<topic>|<level>
-        size_t p1 = lessonMeta.find('|');
-        size_t p2 = lessonMeta.find('|', p1 + 1);
-        size_t p3 = lessonMeta.find('|', p2 + 1);
-        
-        if (p1 != std::string::npos && p2 != std::string::npos && p3 != std::string::npos) {
-            std::string id = lessonMeta.substr(0, p1);
-            std::string title = lessonMeta.substr(p1 + 1, p2 - p1 - 1);
-            std::string topic = lessonMeta.substr(p2 + 1, p3 - p2 - 1);
-            std::string level = lessonMeta.substr(p3 + 1);
-            
-            std::cout << "[" << id << "] " << title << "\n";
-            std::cout << "    Topic: " << topic << " | Level: " << level << "\n\n";
-        }
-        
-        pos = (nextPos == std::string::npos) ? payload.length() : nextPos + 1;
+        std::cout << "[" << dto.id << "] " << dto.title << "\n";
+        std::cout << "    Topic: " << dto.topic << " | Level: " << dto.level << "\n\n";
     }
 }
 
 void UI::displayLessonContent(const std::string& payload) {
-    // Format depends on lesson type:
-    // VIDEO|<url>
-    // AUDIO|<url>
-    // TEXT|<content>
-    // VOCABULARY|<word1>,<word2>,...
-    // GRAMMAR|<rule1>,<rule2>,...
-    // FULL|ID:<id>|TITLE:<title>|...
+    Payloads::LessonDTO dto;
+    dto.deserialize(payload);
     
-    size_t pipePos = payload.find('|');
-    if (pipePos == std::string::npos) {
-        std::cout << "Invalid lesson content format.\n";
-        return;
-    }
-    
-    std::string type = payload.substr(0, pipePos);
-    std::string content = payload.substr(pipePos + 1);
-    
-    std::cout << "Content Type: " << type << "\n";
+    std::cout << "Lesson: " << dto.title << " (ID: " << dto.id << ")\n";
+    std::cout << "Topic: " << dto.topic << " | Level: " << dto.level << "\n";
     std::cout << "----------------------------------------\n";
     
-    if (type == "VIDEO" || type == "AUDIO") {
-        std::cout << "URL: " << content << "\n";
-    } else if (type == "TEXT") {
-        std::cout << content << "\n";
-    } else if (type == "VOCABULARY" || type == "GRAMMAR") {
-        std::cout << "Items:\n";
-        size_t pos = 0;
-        while (pos < content.length()) {
-            size_t commaPos = content.find(',', pos);
-            std::string item;
-            if (commaPos == std::string::npos) {
-                item = content.substr(pos);
-                pos = content.length();
-            } else {
-                item = content.substr(pos, commaPos - pos);
-                pos = commaPos + 1;
-            }
-            if (!item.empty()) {
-                std::cout << "  - " << item << "\n";
-            }
+    if (!dto.videoUrl.empty()) std::cout << "VIDEO: " << dto.videoUrl << "\n";
+    if (!dto.audioUrl.empty()) std::cout << "AUDIO: " << dto.audioUrl << "\n";
+    if (!dto.textContent.empty()) std::cout << "TEXT:\n" << dto.textContent << "\n";
+    
+    if (!dto.vocabulary.empty()) {
+        std::cout << "\nVOCABULARY:\n";
+        for (const auto& item : dto.vocabulary) {
+            std::cout << "  - " << item << "\n";
         }
-    } else if (type == "FULL") {
-        // Parse full content with multiple fields
-        std::cout << content << "\n";
-    } else {
-        std::cout << "Unknown type: " << content << "\n";
+    }
+    
+    if (!dto.grammar.empty()) {
+        std::cout << "\nGRAMMAR:\n";
+        for (const auto& item : dto.grammar) {
+            std::cout << "  - " << item << "\n";
+        }
     }
     
     std::cout << "----------------------------------------\n";

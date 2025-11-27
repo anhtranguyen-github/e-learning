@@ -1,10 +1,11 @@
-#ifndef EXERCISE_HANDLER_H
-#define EXERCISE_HANDLER_H
+#ifndef EXERCISE_CONTROLLER_H
+#define EXERCISE_CONTROLLER_H
 
 #include "common/protocol.h"
 #include "server/session.h"
-#include "server/exercise_loader.h"
+#include "server/repository/exercise_repository.h"
 #include <memory>
+#include <string>
 
 namespace server {
 
@@ -14,24 +15,23 @@ namespace server {
  * This class processes EXERCISE_LIST_REQUEST and STUDY_EXERCISE_REQUEST messages,
  * validates session tokens, loads exercises from database, and sends responses.
  */
-class ExerciseHandler {
+class ExerciseController {
 private:
     std::shared_ptr<SessionManager> sessionManager;
-    std::shared_ptr<ExerciseLoader> exerciseLoader;
+    std::shared_ptr<ExerciseRepository> exerciseRepository;
 
-    // Helper function to send a message to a client
     bool sendMessage(int clientFd, const protocol::Message& msg);
 
-    // Parse exercise type string to enum
+    // Helper to parse exercise type string
     ExerciseType parseExerciseType(const std::string& typeStr);
 
 public:
     /**
      * Constructor
      * @param sm - Shared pointer to SessionManager for token validation
-     * @param el - Shared pointer to ExerciseLoader for database operations
+     * @param er - Shared pointer to ExerciseRepository for database operations
      */
-    ExerciseHandler(std::shared_ptr<SessionManager> sm, std::shared_ptr<ExerciseLoader> el);
+    ExerciseController(std::shared_ptr<SessionManager> sm, std::shared_ptr<ExerciseRepository> er);
 
     /**
      * Handle EXERCISE_LIST_REQUEST message
@@ -46,7 +46,7 @@ public:
      * 1. Parse session token from payload
      * 2. Validate token/session
      * 3. Parse optional filters (type, level, lesson_id)
-     * 4. Load exercises from database via ExerciseLoader
+     * 4. Load exercises from database via ExerciseRepository
      * 5. Apply filters if provided
      * 6. Serialize exercise list
      * 7. Send EXERCISE_LIST_SUCCESS with serialized data
@@ -89,4 +89,4 @@ public:
 
 } // namespace server
 
-#endif // EXERCISE_HANDLER_H
+#endif // EXERCISE_CONTROLLER_H

@@ -22,14 +22,14 @@ Server::Server(int port, const std::string& dbConn)
     }
     
     // Initialize managers
-    userManager = std::make_shared<server::UserManager>(*database);
+    connectionManager = std::make_shared<server::ConnectionManager>();
     sessionManager = std::make_shared<server::SessionManager>(database);
 
-    handlerRegistry = std::make_shared<server::HandlerRegistry>(sessionManager, *userManager, database);
+    handlerRegistry = std::make_shared<server::HandlerRegistry>(sessionManager, connectionManager, database);
 
     this->clientHandler = std::make_shared<server::ClientHandler>(
         sessionManager,
-        userManager,
+        connectionManager,
         handlerRegistry);
         
     if (logger::serverLogger) {

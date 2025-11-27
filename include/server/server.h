@@ -3,7 +3,7 @@
 
 #include "server/session.h"
 #include "server/database.h"
-#include "server/user_manager.h"
+#include "server/connection_manager.h"
 #include "server/handler_registry.h"
 #include "server/client_handler.h"
 #include <vector>
@@ -18,7 +18,7 @@ private:
     std::string dbConnInfo;
     
     std::shared_ptr<server::Database> database;
-    std::shared_ptr<server::UserManager> userManager;
+    std::shared_ptr<server::ConnectionManager> connectionManager;
     std::shared_ptr<server::SessionManager> sessionManager;
     std::shared_ptr<server::ClientHandler> clientHandler;
     std::shared_ptr<server::HandlerRegistry> handlerRegistry;

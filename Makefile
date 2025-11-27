@@ -16,19 +16,25 @@ COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp $(SRC_DIR)
 SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/database.cpp \
              $(SRC_DIR)/server/database_utils.cpp \
-             $(SRC_DIR)/server/user_manager.cpp \
-             $(SRC_DIR)/server/lesson_loader.cpp \
-             $(SRC_DIR)/server/exercise_loader.cpp \
-             $(SRC_DIR)/server/exam_loader.cpp \
-             $(SRC_DIR)/server/lesson_handler.cpp \
-             $(SRC_DIR)/server/exercise_handler.cpp \
-             $(SRC_DIR)/server/submission_handler.cpp \
-             $(SRC_DIR)/server/result_handler.cpp \
-             $(SRC_DIR)/server/exam_handler.cpp \
-             $(SRC_DIR)/server/chat_handler.cpp \
+             $(SRC_DIR)/server/connection_manager.cpp \
              $(SRC_DIR)/server/handler_registry.cpp \
              $(SRC_DIR)/server/client_handler.cpp \
-             $(SRC_DIR)/server/session.cpp
+             $(SRC_DIR)/server/session.cpp \
+             $(SRC_DIR)/server/model/lesson.cpp \
+             $(SRC_DIR)/server/model/exercise.cpp \
+             $(SRC_DIR)/server/model/exam.cpp \
+             $(SRC_DIR)/server/model/user.cpp \
+             $(SRC_DIR)/server/repository/lesson_repository.cpp \
+             $(SRC_DIR)/server/repository/exercise_repository.cpp \
+             $(SRC_DIR)/server/repository/exam_repository.cpp \
+             $(SRC_DIR)/server/repository/user_repository.cpp \
+             $(SRC_DIR)/server/controller/lesson_controller.cpp \
+             $(SRC_DIR)/server/controller/exercise_controller.cpp \
+             $(SRC_DIR)/server/controller/submission_controller.cpp \
+             $(SRC_DIR)/server/controller/result_controller.cpp \
+             $(SRC_DIR)/server/controller/exam_controller.cpp \
+             $(SRC_DIR)/server/controller/chat_controller.cpp \
+             $(SRC_DIR)/server/controller/user_controller.cpp
 
 
 CLIENT_SRC = $(SRC_DIR)/client/client.cpp $(SRC_DIR)/client/network.cpp \
@@ -50,6 +56,9 @@ all: directories $(SERVER_BIN) $(CLIENT_BIN)
 directories:
 	@mkdir -p $(BUILD_DIR)/common
 	@mkdir -p $(BUILD_DIR)/server
+	@mkdir -p $(BUILD_DIR)/server/model
+	@mkdir -p $(BUILD_DIR)/server/repository
+	@mkdir -p $(BUILD_DIR)/server/controller
 	@mkdir -p $(BUILD_DIR)/client
 	@mkdir -p $(BIN_DIR)
 	@mkdir -p logs
