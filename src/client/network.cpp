@@ -530,6 +530,30 @@ bool NetworkClient::requestExams() {
     return true;
 }
 
+bool NetworkClient::requestExam(int examId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request exam");
+        }
+        return false;
+    }
+
+    Payloads::ExamRequest req;
+    req.sessionToken = sessionToken;
+    req.examId = std::to_string(examId);
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::EXAM_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send exam request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::string& message) {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {

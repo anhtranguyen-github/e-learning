@@ -27,6 +27,7 @@ public:
     Q_INVOKABLE void requestExamList();
     Q_INVOKABLE void requestResultList();
     Q_INVOKABLE void requestExercise(int type, int id);
+    Q_INVOKABLE void requestExam(int id);
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
 
     bool isConnected() const;
@@ -45,6 +46,7 @@ signals:
     void examListReceived(const QString &listData);
     void resultListReceived(const QString &listData);
     void exerciseContentReceived(const QString &content);
+    void examContentReceived(const QString &content);
     void answerSubmissionResult(const QString &response);
 
 private slots:

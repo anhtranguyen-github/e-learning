@@ -32,7 +32,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     chatController = std::make_shared<ChatController>(sessionManager, connectionManager, db);
     lessonController = std::make_shared<LessonController>(sessionManager, lessonRepo);
     exerciseController = std::make_shared<ExerciseController>(sessionManager, exerciseRepo);
-    submissionController = std::make_shared<SubmissionController>(sessionManager, db);
+    submissionController = std::make_shared<SubmissionController>(sessionManager, db, exerciseRepo, examRepo);
     resultController = std::make_shared<ResultController>(sessionManager, db);
     examController = std::make_shared<ExamController>(sessionManager, examRepo);
 

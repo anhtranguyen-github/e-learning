@@ -60,7 +60,7 @@ bool ExamRepository::parseExamFromRow(PGresult* result, int row, Exam& exam) con
         exam.setType(safeGetValue(result, row, "type"));
         exam.setLevel(safeGetValue(result, row, "level"));
         
-        std::string questionsJson = safeGetValue(result, row, "questions");
+        std::string questionsJson = safeGetValue(result, row, "question");
         exam.setQuestions(parseJsonArray(questionsJson));
 
         return true;

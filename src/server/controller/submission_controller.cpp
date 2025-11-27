@@ -13,8 +13,11 @@ namespace server {
 // Constructor
 // ============================================================================
 
-SubmissionController::SubmissionController(std::shared_ptr<SessionManager> sessionMgr, std::shared_ptr<Database> database)
-    : sessionManager(sessionMgr), db(database) {}
+SubmissionController::SubmissionController(std::shared_ptr<SessionManager> sessionMgr, 
+                                           std::shared_ptr<Database> database,
+                                           std::shared_ptr<ExerciseRepository> exRepo,
+                                           std::shared_ptr<ExamRepository> eRepo)
+    : sessionManager(sessionMgr), db(database), exerciseRepo(exRepo), examRepo(eRepo) {}
 
 // ============================================================================
 // Helper Functions
@@ -69,9 +72,47 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
 
     sessionManager->update_session(sessionToken);
 
-    std::string query = "INSERT INTO results (user_id, target_type, target_id, feedback) VALUES (" +
+    // Grading Logic
+    std::string status = "graded";
+    double score = 0.0;
+    std::string feedback = "";
+
+    if (targetType == "exercise") {
+        Exercise exercise = exerciseRepo->loadExerciseById(targetId);
+        if (exercise.getExerciseId() != -1) {
+            std::string type = exercise.getType();
+            // Subjective types need instructor review
+            if (type == "rewrite_sentence" || type == "essay" || type == "speaking" || type == "write_paragraph") {
+                status = "pending";
+                score = 0.0; // Placeholder
+                feedback = "Pending instructor review";
+            } else {
+                // Objective types (if any in exercises table)
+                // Simple string comparison for now
+                if (userAnswer == exercise.getAnswer()) {
+                    score = 100.0;
+                    feedback = "Correct!";
+                } else {
+                    score = 0.0;
+                    feedback = "Incorrect. Correct answer: " + exercise.getAnswer();
+                }
+            }
+        }
+    } else if (targetType == "exam") {
+        Exam exam = examRepo->loadExamById(targetId);
+        if (exam.getExamId() != -1) {
+            // Exams are objective but we currently lack answer key in Exam model
+            // For now, we mark as graded but with 0 score, or we could mark pending if we want manual check
+            // Assuming auto-grading is required:
+            status = "graded";
+            score = 0.0; // Cannot verify without answer key
+            feedback = "Exam submitted.";
+        }
+    }
+
+    std::string query = "INSERT INTO results (user_id, target_type, target_id, score, feedback, status) VALUES (" +
                         std::to_string(userId) + ", '" + targetType + "', " + std::to_string(targetId) +
-                        ", '" + userAnswer + "')";
+                        ", " + std::to_string(score) + ", '" + userAnswer + "', '" + status + "')";
 
     PGresult* result = db->query(query);
 
@@ -85,7 +126,7 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
     } else {
         Payloads::GenericResponse resp;
         resp.success = true;
-        resp.message = "Submission received";
+        resp.message = feedback; // Send feedback to client
         protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, resp.serialize());
         sendMessage(clientFd, response);
     }

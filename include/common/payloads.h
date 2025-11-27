@@ -431,7 +431,7 @@ namespace Payloads {
             parts.push_back(title);
             parts.push_back(type);
             parts.push_back(level);
-            parts.push_back(utils::join(questions, ','));
+            parts.push_back(utils::join(questions, '^'));
             return utils::join(parts, '|');
         }
 
@@ -442,7 +442,7 @@ namespace Payloads {
             if (parts.size() >= 3) title = parts[2];
             if (parts.size() >= 4) type = parts[3];
             if (parts.size() >= 5) level = parts[4];
-            if (parts.size() >= 6) questions = utils::split(parts[5], ',');
+            if (parts.size() >= 6) questions = utils::split(parts[5], '^');
         }
     };
 

@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS results (
     feedback TEXT,
     graded_by VARCHAR(50) DEFAULT 'machine',
     graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) CHECK (status IN ('pending', 'graded')) DEFAULT 'graded'
 );
 
 CREATE TABLE IF NOT EXISTS game_items (

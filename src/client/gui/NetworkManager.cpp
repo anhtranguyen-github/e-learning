@@ -120,6 +120,14 @@ void NetworkManager::requestExercise(int type, int id) {
     }
 }
 
+void NetworkManager::requestExam(int id) {
+    if (m_client->requestExam(id)) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request exam");
+    }
+}
+
 void NetworkManager::submitAnswer(const QString &targetType, int targetId, const QString &answer) {
     if (m_client->submitAnswer(targetType.toStdString(), targetId, answer.toStdString())) {
         // Success
@@ -196,6 +204,12 @@ void NetworkManager::checkMessages() {
                 case protocol::MsgCode::WRITE_PARAGRAPH_FAILURE:
                 case protocol::MsgCode::SPEAKING_TOPIC_FAILURE:
                     emit errorOccurred("Failed to get exercise content");
+                    break;
+                case protocol::MsgCode::EXAM_SUCCESS:
+                    emit examContentReceived(QString::fromStdString(msg.toString()));
+                    break;
+                case protocol::MsgCode::EXAM_FAILURE:
+                    emit errorOccurred("Failed to get exam content: " + QString::fromStdString(msg.toString()));
                     break;
                 case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS:
                 case protocol::MsgCode::SUBMIT_ANSWER_FAILURE:

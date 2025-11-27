@@ -8,10 +8,14 @@ Page {
     
     header: Header {
         title: "Study Lesson"
-        onBackClicked: stackView.pop()
+        onBackClicked: {
+            // mediaPlayer.stop()
+            stackView.pop()
+        }
     }
 
     property int lessonId
+    property var lessonData: ({})
 
     Component.onCompleted: {
         networkManager.requestStudyLesson(lessonId, "FULL")
@@ -20,9 +24,37 @@ Page {
     Connections {
         target: networkManager
         function onLessonContentReceived(content) {
-            contentArea.text = content
+            // Parse DTO: id|title|topic|level|videoUrl|audioUrl|textContent|vocab|grammar
+            var parts = content.split('|');
+            if (parts.length >= 7) {
+                lessonData = {
+                    id: parts[0],
+                    title: parts[1],
+                    topic: parts[2],
+                    level: parts[3],
+                    videoUrl: parts[4],
+                    audioUrl: parts[5],
+                    textContent: parts[6],
+                    vocabulary: parts.length > 7 ? parts[7] : "",
+                    grammar: parts.length > 8 ? parts[8] : ""
+                };
+                
+                contentArea.text = lessonData.textContent;
+                
+                /*
+                if (lessonData.videoUrl) {
+                    mediaPlayer.source = lessonData.videoUrl;
+                } else if (lessonData.audioUrl) {
+                    mediaPlayer.source = lessonData.audioUrl;
+                }
+                */
+            } else {
+                contentArea.text = content; // Fallback
+            }
         }
     }
+
+
 
     RowLayout {
         anchors.fill: parent
@@ -56,15 +88,10 @@ Page {
                     flat: true
                     background: Rectangle { color: parent.down ? "#e0e0e0" : "transparent" }
                     contentItem: Text { text: parent.text; color: Style.primaryColor; font.bold: true }
-                    onClicked: networkManager.requestStudyLesson(lessonId, "FULL")
-                }
-                Button {
-                    text: "Text Only"
-                    Layout.fillWidth: true
-                    flat: true
-                    background: Rectangle { color: parent.down ? "#e0e0e0" : "transparent" }
-                    contentItem: Text { text: parent.text; color: Style.primaryColor; font.bold: true }
-                    onClicked: networkManager.requestStudyLesson(lessonId, "TEXT")
+                    onClicked: {
+                        contentArea.text = lessonData.textContent
+                        videoContainer.visible = !!lessonData.videoUrl
+                    }
                 }
                 Button {
                     text: "Vocabulary"
@@ -72,7 +99,10 @@ Page {
                     flat: true
                     background: Rectangle { color: parent.down ? "#e0e0e0" : "transparent" }
                     contentItem: Text { text: parent.text; color: Style.primaryColor; font.bold: true }
-                    onClicked: networkManager.requestStudyLesson(lessonId, "VOCABULARY")
+                    onClicked: {
+                        contentArea.text = lessonData.vocabulary ? lessonData.vocabulary.split(',').join('\n') : "No vocabulary"
+                        videoContainer.visible = false
+                    }
                 }
                 Button {
                     text: "Grammar"
@@ -80,7 +110,10 @@ Page {
                     flat: true
                     background: Rectangle { color: parent.down ? "#e0e0e0" : "transparent" }
                     contentItem: Text { text: parent.text; color: Style.primaryColor; font.bold: true }
-                    onClicked: networkManager.requestStudyLesson(lessonId, "GRAMMAR")
+                    onClicked: {
+                        contentArea.text = lessonData.grammar ? lessonData.grammar.split(',').join('\n') : "No grammar"
+                        videoContainer.visible = false
+                    }
                 }
                 
                 Item { Layout.fillHeight: true } // Spacer
@@ -96,20 +129,61 @@ Page {
             border.color: "#e0e0e0"
             border.width: 1
 
-            ScrollView {
+            ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: Style.margin
-                
-                TextArea {
-                    id: contentArea
-                    readOnly: true
-                    wrapMode: Text.WordWrap
-                    text: "Loading..."
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.bodySize
-                    color: Style.textColor
-                    background: null
-                    selectByMouse: true
+                spacing: 10
+
+                // Video/Audio Player Area
+                Rectangle {
+                    id: videoContainer
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: visible ? 300 : 0
+                    visible: !!lessonData.videoUrl || !!lessonData.audioUrl
+                    color: "black"
+                    
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Multimedia content not supported in this environment"
+                        color: "white"
+                    }
+                    
+                    /*
+                    VideoOutput {
+                        anchors.fill: parent
+                        source: mediaPlayer
+                        visible: !!lessonData.videoUrl
+                    }
+                    
+                    // Simple controls
+                    RowLayout {
+                        anchors.bottom: parent.bottom
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.margins: 10
+                        
+                        Button {
+                            text: mediaPlayer.playbackState === MediaPlayer.PlayingState ? "Pause" : "Play"
+                            onClicked: mediaPlayer.playbackState === MediaPlayer.PlayingState ? mediaPlayer.pause() : mediaPlayer.play()
+                        }
+                    }
+                    */
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    
+                    TextArea {
+                        id: contentArea
+                        readOnly: true
+                        wrapMode: Text.WordWrap
+                        text: "Loading..."
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.bodySize
+                        color: Style.textColor
+                        background: null
+                        selectByMouse: true
+                    }
                 }
             }
         }

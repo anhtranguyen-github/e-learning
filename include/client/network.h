@@ -64,6 +64,7 @@ public:
     // Exercise and exam requests
     bool requestExercises();
     bool requestExams();
+    bool requestExam(int examId);
 
     // Chat
     bool sendPrivateMessage(const std::string& recipient, const std::string& message);
