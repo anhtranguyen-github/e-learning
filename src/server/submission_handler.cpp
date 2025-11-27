@@ -1,4 +1,5 @@
 #include "server/submission_handler.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -43,25 +44,20 @@ void SubmissionHandler::handleSubmission(int clientFd, const protocol::Message& 
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling submission from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
-    // Payload: <token>;<target_type>;<target_id>;<user_answer>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
+    Payloads::SubmitAnswerRequest req;
+    req.deserialize(payload);
 
-    if (parts.size() < 4) {
-        // Assuming a generic failure message for now
-        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Invalid submission format");
+    std::string sessionToken = req.sessionToken;
+    std::string targetType = req.targetType;
+    int targetId = 0;
+    try {
+        targetId = std::stoi(req.targetId);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Invalid target ID");
         sendMessage(clientFd, response);
         return;
     }
-
-    std::string sessionToken = parts[0];
-    std::string targetType = parts[1];
-    int targetId = std::stoi(parts[2]);
-    std::string userAnswer = parts[3];
+    std::string userAnswer = req.answer;
 
     int userId = sessionManager->get_user_id_by_session(sessionToken);
     if (userId == -1) {

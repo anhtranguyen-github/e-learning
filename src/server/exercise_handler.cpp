@@ -1,4 +1,5 @@
 #include "server/exercise_handler.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -62,29 +63,13 @@ void ExerciseHandler::handleExerciseListRequest(int clientFd, const protocol::Me
         logger::serverLogger->debug("[DEBUG] Handling EXERCISE_LIST_REQUEST from fd=" + std::to_string(clientFd) + ", payload: " + payload);
     }
     
-    // Parse payload: <session_token>[;<type>;<level>;<lesson_id>]
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    Payloads::ExerciseListRequest req;
+    req.deserialize(payload);
     
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
-    
-    if (parts.empty()) {
-        std::string errorMsg = "Empty payload in EXERCISE_LIST_REQUEST from fd=" + std::to_string(clientFd);
-        if (logger::serverLogger) {
-            logger::serverLogger->error("[ERROR] " + errorMsg);
-        }
-        protocol::Message response(protocol::MsgCode::EXERCISE_LIST_FAILURE, errorMsg);
-        sendMessage(clientFd, response);
-        return;
-    }
-    
-    std::string sessionToken = parts[0];
-    std::string type = parts.size() > 1 ? parts[1] : "";
-    std::string level = parts.size() > 2 ? parts[2] : "";
-    int lessonId = parts.size() > 3 ? std::stoi(parts[3]) : -1;
+    std::string sessionToken = req.sessionToken;
+    std::string type = req.type;
+    std::string level = req.level;
+    int lessonId = req.lessonId.empty() ? -1 : std::stoi(req.lessonId);
     
     if (logger::serverLogger) {
         logger::serverLogger->debug("[DEBUG] Parsed request - token: " + sessionToken +
@@ -163,28 +148,12 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
         logger::serverLogger->debug("Handling STUDY_EXERCISE_REQUEST from fd=" + std::to_string(clientFd));
     }
     
-    // Parse payload: <session_token>;<exercise_id>;<exercise_type>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    Payloads::StudyExerciseRequest req;
+    req.deserialize(payload);
     
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
-    
-    if (parts.size() < 3) {
-        if (logger::serverLogger) {
-            logger::serverLogger->error("Invalid payload in STUDY_EXERCISE_REQUEST from fd=" +
-                                       std::to_string(clientFd));
-        }
-        protocol::Message response(protocol::MsgCode::STUDY_EXERCISE_FAILURE, "Invalid request format");
-        sendMessage(clientFd, response);
-        return;
-    }
-    
-    std::string sessionToken = parts[0];
-    std::string exerciseIdStr = parts[1];
-    std::string exerciseTypeStr = parts[2];
+    std::string sessionToken = req.sessionToken;
+    std::string exerciseIdStr = req.exerciseId;
+    std::string exerciseTypeStr = req.exerciseType;
     
     // Validate session token
     if (!sessionManager->is_session_valid(sessionToken)) {
@@ -252,26 +221,14 @@ void ExerciseHandler::handleStudyExerciseRequest(int clientFd, const protocol::M
 void ExerciseHandler::handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
-    // Parse payload: <session_token>;<exercise_id>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    Payloads::SpecificExerciseRequest req;
+    req.deserialize(payload);
     
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
+    std::string sessionToken = req.sessionToken;
+    std::string exerciseIdStr = req.exerciseId;
     
     protocol::MsgCode successCode = static_cast<protocol::MsgCode>(static_cast<int>(msg.code) + 1);
     protocol::MsgCode failureCode = static_cast<protocol::MsgCode>(static_cast<int>(msg.code) + 2);
-
-    if (parts.size() < 2) {
-        protocol::Message response(failureCode, "Invalid request format");
-        sendMessage(clientFd, response);
-        return;
-    }
-    
-    std::string sessionToken = parts[0];
-    std::string exerciseIdStr = parts[1];
     
     if (!sessionManager->is_session_valid(sessionToken)) {
         protocol::Message response(failureCode, "Invalid session");

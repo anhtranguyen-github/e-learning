@@ -1,4 +1,5 @@
 #include "server/lesson_handler.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -64,28 +65,13 @@ void LessonHandler::handleLessonListRequest(int clientFd, const protocol::Messag
                                   ", payload: " + payload);
     }
     
-    // Parse payload: <session_token>[;<topic>;<level>]
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    // Deserialize request using Payloads
+    Payloads::LessonListRequest req;
+    req.deserialize(payload);
     
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
-    
-    if (parts.empty()) {
-        std::string errorMsg = "Empty payload in LESSON_LIST_REQUEST from fd=" + std::to_string(clientFd);
-        if (logger::serverLogger) {
-            logger::serverLogger->error("[ERROR] " + errorMsg);
-        }
-        protocol::Message response(protocol::MsgCode::LESSON_LIST_FAILURE, errorMsg);
-        sendMessage(clientFd, response);
-        return;
-    }
-    
-    std::string sessionToken = parts[0];
-    std::string topic = parts.size() > 1 ? parts[1] : "";
-    std::string level = parts.size() > 2 ? parts[2] : "";
+    std::string sessionToken = req.sessionToken;
+    std::string topic = req.topic;
+    std::string level = req.level;
     
     if (logger::serverLogger) {
         logger::serverLogger->debug("[DEBUG] Parsed request - token: " + sessionToken + 
@@ -163,28 +149,13 @@ void LessonHandler::handleStudyLessonRequest(int clientFd, const protocol::Messa
         logger::serverLogger->debug("Handling STUDY_LESSON_REQUEST from fd=" + std::to_string(clientFd));
     }
     
-    // Parse payload: <session_token>;<lesson_id>;<lesson_type>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    // Deserialize request using Payloads
+    Payloads::StudyLessonRequest req;
+    req.deserialize(payload);
     
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
-    
-    if (parts.size() < 3) {
-        if (logger::serverLogger) {
-            logger::serverLogger->error("Invalid payload in STUDY_LESSON_REQUEST from fd=" + 
-                                       std::to_string(clientFd));
-        }
-        protocol::Message response(protocol::MsgCode::STUDY_LESSON_FAILURE, "Invalid request format");
-        sendMessage(clientFd, response);
-        return;
-    }
-    
-    std::string sessionToken = parts[0];
-    std::string lessonIdStr = parts[1];
-    std::string lessonTypeStr = parts[2];
+    std::string sessionToken = req.sessionToken;
+    std::string lessonIdStr = req.lessonId;
+    std::string lessonTypeStr = req.lessonType;
     
     // Validate session token
     if (!sessionManager->is_session_valid(sessionToken)) {

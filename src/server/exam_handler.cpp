@@ -1,4 +1,5 @@
 #include "server/exam_handler.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include <json/json.h>
 #include "common/utils.h"
@@ -16,29 +17,13 @@ void ExamHandler::handleGetExams(int clientFd, const protocol::Message &msg) {
                                   ", payload: " + payload);
     }
 
-    // Parse payload: <session_token>[;<type>;<level>;<lesson_id>]
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
+    Payloads::ExamListRequest req;
+    req.deserialize(payload);
 
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
-
-    if (parts.empty()) {
-        std::string errorMsg = "Empty payload in EXAM_LIST_REQUEST from fd=" + std::to_string(clientFd);
-        if (logger::serverLogger) {
-            logger::serverLogger->error("[ERROR] " + errorMsg);
-        }
-        protocol::Message response(protocol::MsgCode::EXAM_LIST_FAILURE, errorMsg);
-        sendMessage(clientFd, response);
-        return;
-    }
-
-    std::string sessionToken = parts[0];
-    std::string type = parts.size() > 1 ? parts[1] : "";
-    std::string level = parts.size() > 2 ? parts[2] : "";
-    int lessonId = parts.size() > 3 ? std::stoi(parts[3]) : -1;
+    std::string sessionToken = req.sessionToken;
+    std::string type = req.type;
+    std::string level = req.level;
+    int lessonId = req.lessonId.empty() ? -1 : std::stoi(req.lessonId);
 
     if (logger::serverLogger) {
         logger::serverLogger->debug("[DEBUG] Parsed request - token: " + sessionToken +

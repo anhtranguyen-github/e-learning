@@ -1,4 +1,5 @@
 #include "server/chat_handler.h"
+#include "common/payloads.h"
 #include "server/client_handler.h"
 #include "server/user_manager.h"
 #include "server/database.h"
@@ -29,21 +30,33 @@ void ChatHandler::handle_chat_message(ClientHandler* client, const protocol::Mes
 
 void ChatHandler::handle_private_message(ClientHandler* client, const protocol::Message& msg) {
     std::string payload = msg.toString();
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
+    Payloads::PrivateMessageRequest req;
+    req.deserialize(payload);
 
-    if (parts.size() < 3) {
-        protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Invalid message format");
-        client->send_message(error_msg);
-        return;
-    }
+    std::string sessionToken = req.sessionToken;
+    std::string recipient_username = req.recipient;
+    std::string message_content = req.message;
 
-    std::string recipient_username = parts[1];
-    std::string message_content = parts[2];
+    // Validate session (ChatHandler doesn't seem to have SessionManager directly injected in constructor? 
+    // Wait, it takes UserManager and Database. It seems ChatHandler assumes the client is already authenticated/identified by ClientHandler?
+    // The original code parsed sessionToken but didn't seem to use it for validation, it used client->get_user_id().
+    // Let's check the original code again.
+    // Original: 
+    // std::string recipient_username = parts[1];
+    // std::string message_content = parts[2];
+    // It seems the original code expected <token>;<recipient>;<message> but treated parts[0] as token?
+    // Actually, looking at `handle_private_message`:
+    // parts[1] is recipient, parts[2] is message. parts[0] is presumably token.
+    // But it uses `client->get_user_id()` for sender_id.
+    // So the token in payload might be redundant or used for double check?
+    // The original code didn't validate token explicitly in this method.
+    // I will stick to extracting the fields.
+    
+    if (recipient_username.empty() || message_content.empty()) {
+         protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Invalid message format");
+         client->send_message(error_msg);
+         return;
+    }
 
     int sender_id = client->get_user_id();
     int recipient_id = user_manager_.get_user_id(recipient_username);

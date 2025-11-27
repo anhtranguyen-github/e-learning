@@ -1,4 +1,5 @@
 #include "server/result_handler.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include <sys/socket.h>
 #include <unistd.h>
@@ -43,23 +44,19 @@ void ResultHandler::handleResultRequest(int clientFd, const protocol::Message& m
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling result request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
-    // Payload: <token>;<target_type>;<target_id>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
+    Payloads::ResultRequest req;
+    req.deserialize(payload);
 
-    if (parts.size() < 3) {
-        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid request format");
+    std::string sessionToken = req.sessionToken;
+    std::string targetType = req.targetType;
+    int targetId = 0;
+    try {
+        targetId = std::stoi(req.targetId);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid target ID");
         sendMessage(clientFd, response);
         return;
     }
-
-    std::string sessionToken = parts[0];
-    std::string targetType = parts[1];
-    int targetId = std::stoi(parts[2]);
     int userId = sessionManager->get_user_id_by_session(sessionToken);
     if (userId == -1) {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
@@ -94,22 +91,11 @@ void ResultHandler::handleDoneUndoneListRequest(int clientFd, const protocol::Me
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling done/undone list request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
-    // Payload: <token>;<target_type>
-    std::vector<std::string> parts;
-    std::istringstream iss(payload);
-    std::string part;
-    while (std::getline(iss, part, ';')) {
-        parts.push_back(part);
-    }
+    Payloads::ResultListRequest req;
+    req.deserialize(payload);
 
-    if (parts.size() < 2) {
-        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid request format");
-        sendMessage(clientFd, response);
-        return;
-    }
-
-    std::string sessionToken = parts[0];
-    std::string targetType = parts[1];
+    std::string sessionToken = req.sessionToken;
+    std::string targetType = req.targetType;
 
     int userId = sessionManager->get_user_id_by_session(sessionToken);
     if (userId == -1) {
