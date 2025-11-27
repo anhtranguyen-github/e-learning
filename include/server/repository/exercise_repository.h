@@ -17,7 +17,7 @@ private:
     std::shared_ptr<Database> db;
     bool parseExerciseFromRow(PGresult* result, int row, Exercise& exercise) const;
     // Helper to parse JSON array from PostgreSQL JSONB field
-    std::vector<std::string> parseJsonArray(const std::string& jsonStr) const;
+    std::vector<Question> parseQuestions(const std::string& jsonStr) const;
 
 public:
     ExerciseRepository(std::shared_ptr<Database> database);

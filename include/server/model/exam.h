@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "server/model/question.h"
+
 namespace server {
 
 // Exam content types for selective loading
@@ -21,7 +23,7 @@ private:
     std::string title;
     std::string type; // e.g., "quiz", "final_exam"
     std::string level;
-    std::vector<std::string> questions;
+    std::vector<Question> questions;
 
 public:
     Exam() : examId(-1), lessonId(-1) {}
@@ -35,7 +37,7 @@ public:
     std::string getTitle() const { return title; }
     std::string getType() const { return type; }
     std::string getLevel() const { return level; }
-    std::vector<std::string> getQuestions() const { return questions; }
+    std::vector<Question> getQuestions() const { return questions; }
 
     // Setters
     void setExamId(int id) { examId = id; }
@@ -43,7 +45,7 @@ public:
     void setTitle(const std::string& t) { title = t; }
     void setType(const std::string& ty) { type = ty; }
     void setLevel(const std::string& l) { level = l; }
-    void setQuestions(const std::vector<std::string>& q) { questions = q; }
+    void setQuestions(const std::vector<Question>& q) { questions = q; }
 
     // Serialize only the requested content type for network transmission
     std::string serializeForNetwork(ExamType type) const;

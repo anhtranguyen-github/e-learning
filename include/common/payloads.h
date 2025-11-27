@@ -361,10 +361,7 @@ namespace Payloads {
         std::string title;
         std::string type;
         std::string level;
-        std::string question;
-        std::vector<std::string> options;
-        std::string answer;
-        std::string explanation;
+        std::vector<std::string> questions;
 
         std::string serialize() const override {
             std::vector<std::string> parts;
@@ -373,10 +370,7 @@ namespace Payloads {
             parts.push_back(title);
             parts.push_back(type);
             parts.push_back(level);
-            parts.push_back(question);
-            parts.push_back(utils::join(options, ','));
-            parts.push_back(answer);
-            parts.push_back(explanation);
+            parts.push_back(utils::join(questions, '^'));
             return utils::join(parts, '|');
         }
 
@@ -387,10 +381,7 @@ namespace Payloads {
             if (parts.size() >= 3) title = parts[2];
             if (parts.size() >= 4) type = parts[3];
             if (parts.size() >= 5) level = parts[4];
-            if (parts.size() >= 6) question = parts[5];
-            if (parts.size() >= 7) options = utils::split(parts[6], ',');
-            if (parts.size() >= 8) answer = parts[7];
-            if (parts.size() >= 9) explanation = parts[8];
+            if (parts.size() >= 6) questions = utils::split(parts[5], '^');
         }
     };
 

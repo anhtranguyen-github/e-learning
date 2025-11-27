@@ -14,8 +14,8 @@ std::string Exam::serializeForNetwork(ExamType type) const {
         case ExamType::QUESTIONS:
             oss << "QUESTIONS|";
             for (size_t i = 0; i < questions.size(); ++i) {
-                if (i > 0) oss << ",";
-                oss << questions[i];
+                if (i > 0) oss << "^";
+                oss << questions[i].toJsonString();
             }
             break;
             
@@ -28,8 +28,8 @@ std::string Exam::serializeForNetwork(ExamType type) const {
             oss << "LEVEL:" << level << "|";
             oss << "QUESTIONS:";
             for (size_t i = 0; i < questions.size(); ++i) {
-                if (i > 0) oss << ",";
-                oss << questions[i];
+                if (i > 0) oss << "^";
+                oss << questions[i].toJsonString();
             }
             break;
     }
@@ -50,7 +50,9 @@ Payloads::ExamDTO Exam::toDTO() const {
     dto.title = title;
     dto.type = type;
     dto.level = level;
-    dto.questions = questions;
+    for (const auto& q : questions) {
+        dto.questions.push_back(q.toJsonString());
+    }
     return dto;
 }
 

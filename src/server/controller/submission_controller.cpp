@@ -87,37 +87,66 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
                 score = 0.0; // Placeholder
                 feedback = "Pending instructor review";
             } else {
-                // Objective types (if any in exercises table)
-                // Simple string comparison for now
-                if (userAnswer == exercise.getAnswer()) {
-                    score = 100.0;
-                    feedback = "Correct!";
+                // Objective types
+                std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
+                std::vector<Question> questions = exercise.getQuestions();
+                
+                int correctCount = 0;
+                size_t totalQuestions = questions.size();
+                
+                if (totalQuestions > 0) {
+                    for (size_t i = 0; i < totalQuestions; ++i) {
+                        std::string correct = questions[i].getAnswer();
+                        std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
+                        
+                        if (user == correct) {
+                            correctCount++;
+                        }
+                    }
+                    score = (static_cast<double>(correctCount) / totalQuestions) * 100.0;
+                    feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(totalQuestions) + " correct.";
                 } else {
+                    // Fallback for empty questions (shouldn't happen with valid data)
                     score = 0.0;
-                    feedback = "Incorrect. Correct answer: " + exercise.getAnswer();
+                    feedback = "No questions found.";
                 }
             }
         }
     } else if (targetType == "exam") {
         Exam exam = examRepo->loadExamById(targetId);
         if (exam.getExamId() != -1) {
-            // Exams are objective but we currently lack answer key in Exam model
-            // For now, we mark as graded but with 0 score, or we could mark pending if we want manual check
-            // Assuming auto-grading is required:
+            std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
+            std::vector<Question> questions = exam.getQuestions();
+            
+            int correctCount = 0;
+            
+            for (size_t i = 0; i < questions.size(); ++i) {
+                std::string correct = questions[i].getAnswer();
+                std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
+                
+                // Simple string comparison (case-sensitive for now)
+                if (user == correct) {
+                    correctCount++;
+                }
+            }
+            
+            if (!questions.empty()) {
+                score = (static_cast<double>(correctCount) / questions.size()) * 100.0;
+            }
+            
             status = "graded";
-            score = 0.0; // Cannot verify without answer key
-            feedback = "Exam submitted.";
+            feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(questions.size()) + " correct.";
         }
     }
 
-    std::string query = "INSERT INTO results (user_id, target_type, target_id, score, feedback, status) VALUES (" +
+    std::string query = "INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status) VALUES (" +
                         std::to_string(userId) + ", '" + targetType + "', " + std::to_string(targetId) +
-                        ", " + std::to_string(score) + ", '" + userAnswer + "', '" + status + "')";
+                        ", " + std::to_string(score) + ", '" + userAnswer + "', '" + feedback + "', '" + status + "')";
 
-    PGresult* result = db->query(query);
+    bool success = db->execute(query);
 
-    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
-        logger::serverLogger->error("Failed to insert submission into database: " + std::string(PQresultErrorMessage(result)));
+    if (!success) {
+        logger::serverLogger->error("Failed to insert submission into database");
         Payloads::GenericResponse resp;
         resp.success = false;
         resp.message = "Failed to save submission";
@@ -129,10 +158,6 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
         resp.message = feedback; // Send feedback to client
         protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, resp.serialize());
         sendMessage(clientFd, response);
-    }
-
-    if (result) {
-        PQclear(result);
     }
 }
 

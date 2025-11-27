@@ -209,6 +209,10 @@ void ExerciseController::handleStudyExerciseRequest(int clientFd, const protocol
         return;
     }
     
+    if (logger::serverLogger) {
+        logger::serverLogger->info("ExerciseController: Found exercise " + std::to_string(exerciseId) + ", serializing...");
+    }
+    
     // Serialize only the requested content type
     // Serialize using DTO
     Payloads::ExerciseDTO dto = exercise.toDTO();
@@ -242,6 +246,9 @@ void ExerciseController::handleSpecificExerciseRequest(int clientFd, const proto
     protocol::MsgCode failureCode = static_cast<protocol::MsgCode>(static_cast<int>(msg.code) + 2);
     
     if (!sessionManager->is_session_valid(sessionToken)) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("ExerciseController: Invalid session token for specific exercise request from fd=" + std::to_string(clientFd));
+        }
         protocol::Message response(failureCode, "Invalid session");
         sendMessage(clientFd, response);
         return;
@@ -253,14 +260,24 @@ void ExerciseController::handleSpecificExerciseRequest(int clientFd, const proto
     try {
         exerciseId = std::stoi(exerciseIdStr);
     } catch (...) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("ExerciseController: Invalid exercise ID '" + exerciseIdStr + "' in specific exercise request from fd=" + std::to_string(clientFd));
+        }
         protocol::Message response(failureCode, "Invalid exercise ID");
         sendMessage(clientFd, response);
         return;
     }
     
+    if (logger::serverLogger) {
+        logger::serverLogger->info("ExerciseController: Handling specific exercise request for ID: " + std::to_string(exerciseId));
+    }
+    
     Exercise exercise = exerciseRepository->loadExerciseById(exerciseId);
     
     if (exercise.getExerciseId() == -1) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("ExerciseController: Exercise " + std::to_string(exerciseId) + " not found for specific request from fd=" + std::to_string(clientFd));
+        }
         protocol::Message response(failureCode, "Exercise not found");
         sendMessage(clientFd, response);
         return;

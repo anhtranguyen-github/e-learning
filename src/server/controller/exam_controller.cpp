@@ -124,17 +124,33 @@ void ExamController::handleExamRequest(int clientFd, const protocol::Message &ms
     try {
         examId = std::stoi(req.examId);
     } catch (...) {
+        std::string errorMsg = "Invalid exam ID format in EXAM_REQUEST from fd=" + std::to_string(clientFd) + ", ID: " + req.examId;
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("[WARN] " + errorMsg);
+        }
         protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Invalid exam ID");
         sendMessage(clientFd, response);
         return;
     }
 
+    if (logger::serverLogger) {
+        logger::serverLogger->info("[INFO] ExamController: Handling exam request for ID: " + std::to_string(examId) + " from fd=" + std::to_string(clientFd));
+    }
+
     Exam exam = examRepository->loadExamById(examId);
     
-    if (exam.getExamId() == -1) {
+    if (exam.getExamId() == -1) { // Assuming -1 indicates exam not found
+        std::string errorMsg = "Exam not found for ID: " + std::to_string(examId) + " requested by fd=" + std::to_string(clientFd);
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("[WARN] " + errorMsg);
+        }
         protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Exam not found");
         sendMessage(clientFd, response);
         return;
+    }
+
+    if (logger::serverLogger) {
+        logger::serverLogger->info("[INFO] ExamController: Found exam ID " + std::to_string(examId) + ", serializing for fd=" + std::to_string(clientFd));
     }
 
     Payloads::ExamDTO dto = exam.toDTO();

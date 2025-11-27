@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import "."
 
 Page {
+    id: root
     background: Rectangle { color: Style.backgroundColor }
     
     header: Header {
@@ -14,20 +15,30 @@ Page {
     property int exerciseId
     property string exerciseTypeStr
     property string targetType: "exercise"
-    property var examData: ({})
+    property var exerciseData: ({ questions: [] })
+    property var examData: ({ questions: [] })
     property int currentQuestionIndex: 0
+    
+    readonly property int questionCount: {
+        if (root.examData && root.examData.questions && Array.isArray(root.examData.questions)) {
+            return root.examData.questions.length;
+        }
+        return 0;
+    }
 
     Component.onCompleted: {
         if (targetType === "exam") {
             networkManager.requestExam(exerciseId)
         } else {
             var code = 170;
-            if (exerciseTypeStr.indexOf("MULTIPLE") !== -1) code = 170;
-            else if (exerciseTypeStr.indexOf("FILL") !== -1) code = 180;
-            else if (exerciseTypeStr.indexOf("ORDER") !== -1) code = 190;
-            else if (exerciseTypeStr.indexOf("REWRITE") !== -1) code = 200;
-            else if (exerciseTypeStr.indexOf("PARAGRAPH") !== -1) code = 210;
-            else if (exerciseTypeStr.indexOf("SPEAKING") !== -1) code = 220;
+            var typeUpper = exerciseTypeStr.toUpperCase();
+            
+            if (typeUpper.indexOf("MULTIPLE") !== -1) code = 170;
+            else if (typeUpper.indexOf("FILL") !== -1) code = 180;
+            else if (typeUpper.indexOf("ORDER") !== -1) code = 190;
+            else if (typeUpper.indexOf("REWRITE") !== -1) code = 200;
+            else if (typeUpper.indexOf("PARAGRAPH") !== -1 || typeUpper.indexOf("ESSAY") !== -1) code = 210;
+            else if (typeUpper.indexOf("SPEAKING") !== -1) code = 220;
             
             networkManager.requestExercise(code, exerciseId)
         }
@@ -36,64 +47,39 @@ Page {
     Connections {
         target: networkManager
         function onExerciseContentReceived(content) {
-            // Parse DTO: id|lessonId|title|type|level|question|options|answer|explanation
+            console.log("DoExerciseScreen: Received exercise content: " + content)
+            // Parse DTO: id|lessonId|title|type|level|questions(caret separated json strings)
             var parts = content.split('|');
             if (parts.length >= 6) {
-                exerciseData = {
+                var questionsStr = parts.slice(5).join('|'); 
+                var questions = questionsStr.split('^');
+                
+                root.exerciseData = {
                     id: parts[0],
                     lessonId: parts[1],
                     title: parts[2],
                     type: parts[3],
                     level: parts[4],
-                    question: parts[5],
-                    options: parts.length > 6 ? parts[6].split(',') : [],
-                    answer: parts.length > 7 ? parts[7] : "",
-                    explanation: parts.length > 8 ? parts[8] : ""
+                    questions: questions
                 };
-                questionText.text = exerciseData.question;
                 
-                // Reset UI
-                answerField.text = "";
-                mcModel.clear();
-                if (exerciseData.options.length > 0) {
-                    for (var i = 0; i < exerciseData.options.length; i++) {
-                        mcModel.append({text: exerciseData.options[i]});
-                    }
-                }
-            } else {
-                questionText.text = content; // Fallback
+                // Use same data structure for both
+                root.examData = root.exerciseData;
+                
+                currentQuestionIndex = 0;
+                loadQuestion(0);
             }
         }
         
         function onExamContentReceived(content) {
-            // Parse ExamDTO: id|lessonId|title|type|level|questions(comma separated json strings)
+            console.log("DoExerciseScreen: Received exam content: " + content)
+            // Parse ExamDTO: id|lessonId|title|type|level|questions(caret separated json strings)
             var parts = content.split('|');
             if (parts.length >= 6) {
-                // Reconstruct questions array (might contain commas, so we need to be careful)
-                // Actually, the DTO joins questions with comma. But questions are JSON strings which might contain commas.
-                // This is a flaw in the DTO design. 
-                // However, for now, let's assume simple splitting or that the JSON doesn't contain the separator.
-                // A better way would be to use a different separator in DTO or JSON array.
-                // Given current implementation: utils::join(questions, ',')
-                // We will try to parse. If it fails, we might need to fix the backend DTO.
-                // But for the seed data, I used JSON strings.
-                
-                // Let's assume the questions part is everything after the 5th pipe
                 var questionsStr = parts.slice(5).join('|'); 
-                // Wait, if questions contain pipes? JSON shouldn't contain pipes usually.
-                
-                // Splitting by comma might break JSON objects.
-                // We should probably have used a better delimiter or JSON array for the whole DTO.
-                // But let's try to parse the whole string as a list of "Question 1", "Question 2" if it's simple text.
-                // If it's JSON, we have a problem.
-                
-                // WORKAROUND: For this task, I will assume the seed data questions are simple enough or I will fix the DTO separator.
-                // Actually, I can't easily fix the DTO separator everywhere without recompiling everything.
-                // Let's try to parse.
-                
                 var questions = questionsStr.split('^');
                 
-                examData = {
+                root.examData = {
                     id: parts[0],
                     lessonId: parts[1],
                     title: parts[2],
@@ -103,7 +89,7 @@ Page {
                 };
                 
                 currentQuestionIndex = 0;
-                loadExamQuestion(0);
+                loadQuestion(0);
             }
         }
 
@@ -117,7 +103,13 @@ Page {
         }
     }
     
-    function loadExamQuestion(index) {
+    property var userAnswers: []
+
+    function saveCurrentAnswer() {
+         userAnswers[currentQuestionIndex] = answerField.text
+    }
+
+    function loadQuestion(index) {
         if (!examData.questions || index >= examData.questions.length) return;
         
         var qStr = examData.questions[index];
@@ -136,146 +128,349 @@ Page {
             questionText.text = qStr; // Fallback to raw string
             mcModel.clear();
         }
-        answerField.text = "";
+        
+        // Restore answer
+        if (userAnswers[index] !== undefined) {
+            answerField.text = userAnswers[index]
+        } else {
+            answerField.text = ""
+        }
     }
 
     ListModel { id: mcModel }
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: Style.margin
-        spacing: Style.margin
+        // Question Overview Panel (Drawer)
+        Drawer {
+            id: overviewDrawer
+            width: Math.min(parent.width * 0.8, 300)
+            height: parent.height
+            edge: Qt.RightEdge
+            background: Rectangle { color: Style.backgroundColor }
 
-        // Question Area
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            color: Style.cardBackground
-            radius: Style.cornerRadius
-            border.color: "#e0e0e0"
-            border.width: 1
-
-            ScrollView {
+            ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: Style.margin
+                spacing: Style.margin
+
+                Label {
+                    text: "Questions Overview"
+                    font.pixelSize: Style.h3Size
+                    font.bold: true
+                    color: Style.primaryColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                GridView {
+                    id: questionGrid
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    cellWidth: 60
+                    cellHeight: 60
+                    clip: true
+                    model: root.questionCount
+                    
+                    delegate: Item {
+                        width: questionGrid.cellWidth
+                        height: questionGrid.cellHeight
+                        
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 50
+                            height: 50
+                            radius: 25
+                            color: {
+                                if (index === currentQuestionIndex) return Style.primaryColor
+                                if (userAnswers[index] !== undefined && userAnswers[index] !== "") return Style.successColor
+                                return "#e0e0e0"
+                            }
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: index + 1
+                                color: (index === currentQuestionIndex || (userAnswers[index] !== undefined && userAnswers[index] !== "")) ? "white" : Style.textColor
+                                font.bold: true
+                            }
+                            
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    saveCurrentAnswer()
+                                    loadQuestion(index)
+                                    overviewDrawer.close()
+                                }
+                            }
+                        }
+                    }
+                }
                 
-                TextArea {
-                    id: questionText
-                    readOnly: true
-                    wrapMode: Text.WordWrap
-                    text: "Loading..."
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.bodySize
-                    color: Style.textColor
-                    background: null
+                Button {
+                    text: "Submit All"
+                    Layout.fillWidth: true
+                    background: Rectangle {
+                        color: Style.primaryColor
+                        radius: Style.cornerRadius
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        saveCurrentAnswer()
+                        var finalAnswer = userAnswers.join('^')
+                        networkManager.submitAnswer(targetType, exerciseId, finalAnswer)
+                        overviewDrawer.close()
+                    }
                 }
             }
         }
 
-        // Answer Area
+        // Main Content
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 10
+            anchors.fill: parent
+            anchors.margins: Style.margin
+            spacing: Style.margin
 
-            // Multiple Choice UI
-            ListView {
-                visible: mcModel.count > 0
-                Layout.fillWidth: true
-                Layout.preferredHeight: contentHeight
-                model: mcModel
-                delegate: RadioButton {
-                    text: model.text
-                    onCheckedChanged: if (checked) answerField.text = text
-                }
-            }
-
-            // Text Input UI (Fill-in, Rewrite, Order)
-            TextField {
-                id: answerField
-                visible: !mcModel.count && exerciseTypeStr.indexOf("PARAGRAPH") === -1
-                placeholderText: "Type your answer here..."
-                Layout.fillWidth: true
-                font.pixelSize: Style.bodySize
-                background: Rectangle {
-                    color: Style.cardBackground
-                    radius: Style.cornerRadius
-                    border.color: answerField.activeFocus ? Style.primaryColor : "#e0e0e0"
-                    border.width: 1
-                }
-                padding: 12
-            }
-
-            // Paragraph UI
-            TextArea {
-                id: paragraphField
-                visible: exerciseTypeStr.indexOf("PARAGRAPH") !== -1
-                placeholderText: "Write your paragraph here..."
-                Layout.fillWidth: true
-                Layout.preferredHeight: 150
-                font.pixelSize: Style.bodySize
-                background: Rectangle {
-                    color: Style.cardBackground
-                    radius: Style.cornerRadius
-                    border.color: parent.activeFocus ? Style.primaryColor : "#e0e0e0"
-                    border.width: 1
-                }
-                onTextChanged: answerField.text = text
-            }
-
+            // Header with Overview Toggle
             RowLayout {
                 Layout.fillWidth: true
-                visible: targetType === "exam"
                 
-                Button {
-                    text: "Previous"
-                    enabled: currentQuestionIndex > 0
-                    onClicked: loadExamQuestion(--currentQuestionIndex)
+                Text {
+                    text: "Question " + (currentQuestionIndex + 1) + " of " + root.questionCount
+                    font.pixelSize: Style.h3Size
+                    font.bold: true
+                    color: Style.primaryColor
                 }
                 
                 Item { Layout.fillWidth: true }
                 
                 Button {
-                    text: currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0) ? "Next" : "Submit Exam"
-                    onClicked: {
-                        if (currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0)) {
-                            // Save answer logic here if needed
-                            loadExamQuestion(++currentQuestionIndex)
-                        } else {
-                            networkManager.submitAnswer(targetType, exerciseId, "Exam Submitted")
-                        }
+                    text: "Overview"
+                    onClicked: overviewDrawer.open()
+                    background: Rectangle {
+                        color: "transparent"
+                        border.color: Style.primaryColor
+                        border.width: 1
+                        radius: Style.cornerRadius
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: Style.primaryColor
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }
 
-            Button {
-                visible: targetType !== "exam"
-                text: "Submit Answer"
+            // Question Area
+            Rectangle {
                 Layout.fillWidth: true
-                font.pixelSize: Style.bodySize
-                background: Rectangle {
-                    color: Style.primaryColor
-                    radius: Style.cornerRadius
-                }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-                onClicked: {
-                    networkManager.submitAnswer(targetType, exerciseId, answerField.text)
+                Layout.fillHeight: true
+                color: Style.cardBackground
+                radius: Style.cornerRadius
+                border.color: "#e0e0e0"
+                border.width: 1
+                
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: Style.margin
+                    
+                    TextArea {
+                        id: questionText
+                        readOnly: true
+                        wrapMode: Text.WordWrap
+                        text: "Loading..."
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.bodySize
+                        color: Style.textColor
+                        background: null
+                    }
                 }
             }
 
-            Text {
-                id: resultText
+            // Answer Area
+            ColumnLayout {
                 Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pixelSize: Style.bodySize
-                font.bold: true
-                horizontalAlignment: Text.AlignHCenter
+                spacing: 15
+
+                // Multiple Choice UI
+                ListView {
+                    visible: mcModel.count > 0
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: contentHeight
+                    model: mcModel
+                    delegate: RadioButton {
+                        text: model.text
+                        font.pixelSize: Style.bodySize
+                        onCheckedChanged: if (checked) answerField.text = text
+                        // Auto-select if answer matches
+                        Component.onCompleted: {
+                            if (answerField.text === text) checked = true;
+                        }
+                        Connections {
+                            target: answerField
+                            function onTextChanged() {
+                                if (answerField.text === text) checked = true;
+                            }
+                        }
+                    }
+                }
+
+                // Text Input UI (Fill-in, Rewrite, Order)
+                TextField {
+                    id: answerField
+                    visible: !mcModel.count && 
+                             exerciseTypeStr.toUpperCase().indexOf("PARAGRAPH") === -1 && 
+                             exerciseTypeStr.toUpperCase().indexOf("ESSAY") === -1 &&
+                             exerciseTypeStr.toUpperCase().indexOf("SPEAKING") === -1
+                    placeholderText: "Type your answer here..."
+                    Layout.fillWidth: true
+                    font.pixelSize: Style.bodySize
+                    background: Rectangle {
+                        color: Style.cardBackground
+                        radius: Style.cornerRadius
+                        border.color: answerField.activeFocus ? Style.primaryColor : "#e0e0e0"
+                        border.width: 1
+                    }
+                    padding: 12
+                }
+
+                // Paragraph UI
+                TextArea {
+                    id: paragraphField
+                    visible: exerciseTypeStr.toUpperCase().indexOf("PARAGRAPH") !== -1 || 
+                             exerciseTypeStr.toUpperCase().indexOf("ESSAY") !== -1
+                    placeholderText: "Write your paragraph here..."
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 150
+                    font.pixelSize: Style.bodySize
+                    background: Rectangle {
+                        color: Style.cardBackground
+                        radius: Style.cornerRadius
+                        border.color: parent.activeFocus ? Style.primaryColor : "#e0e0e0"
+                        border.width: 1
+                    }
+                    onTextChanged: answerField.text = text
+                    // Sync back from answerField
+                    Connections {
+                        target: answerField
+                        function onTextChanged() {
+                            if (paragraphField.visible && paragraphField.text !== answerField.text) {
+                                paragraphField.text = answerField.text
+                            }
+                        }
+                    }
+                }
+
+                // Speaking UI (Placeholder)
+                ColumnLayout {
+                    visible: exerciseTypeStr.toUpperCase().indexOf("SPEAKING") !== -1
+                    Layout.fillWidth: true
+                    spacing: 10
+                    
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        width: 70
+                        height: 70
+                        radius: 35
+                        color: isRecording ? "#ff4444" : "#e0e0e0"
+                        
+                        property bool isRecording: false
+                        
+                        Text {
+                            anchors.centerIn: parent
+                            text: parent.isRecording ? "STOP" : "REC"
+                            color: parent.isRecording ? "white" : "#333333"
+                            font.bold: true
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                parent.isRecording = !parent.isRecording
+                                if (!parent.isRecording) {
+                                    answerField.text = "[Audio Recording Submitted]"
+                                }
+                            }
+                        }
+                    }
+                    
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: parent.children[0].isRecording ? "Recording..." : "Tap to record"
+                        color: Style.textColor
+                        font.pixelSize: Style.smallSize
+                    }
+                }
+
+                // Navigation Buttons (Simplified)
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 20
+                    
+                    Button {
+                        text: "Previous"
+                        enabled: currentQuestionIndex > 0
+                        Layout.preferredWidth: 120
+                        background: Rectangle {
+                            color: parent.enabled ? "white" : "#f0f0f0"
+                            border.color: parent.enabled ? Style.primaryColor : "#cccccc"
+                            border.width: 1
+                            radius: Style.cornerRadius
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: parent.enabled ? Style.primaryColor : "#999999"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.bold: true
+                        }
+                        onClicked: {
+                            saveCurrentAnswer()
+                            loadQuestion(--currentQuestionIndex)
+                        }
+                    }
+                    
+                    Item { Layout.fillWidth: true }
+                    
+                    Button {
+                        text: currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0) ? "Next" : "Submit"
+                        Layout.preferredWidth: 120
+                        background: Rectangle {
+                            color: parent.enabled ? Style.primaryColor : "#cccccc"
+                            radius: Style.cornerRadius
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.bold: true
+                        }
+                        onClicked: {
+                            saveCurrentAnswer()
+                            if (currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0)) {
+                                loadQuestion(++currentQuestionIndex)
+                            } else {
+                                // Join answers with caret delimiter
+                                var finalAnswer = userAnswers.join('^')
+                                networkManager.submitAnswer(targetType, exerciseId, finalAnswer)
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    id: resultText
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Style.bodySize
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    visible: text !== ""
+                }
             }
         }
-    }
 }

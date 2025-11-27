@@ -17,7 +17,7 @@ private:
     std::shared_ptr<Database> db;
     bool parseExamFromRow(PGresult* result, int row, Exam& exam) const;
     // Helper to parse JSON array from PostgreSQL JSONB field
-    std::vector<std::string> parseJsonArray(const std::string& jsonStr) const;
+    std::vector<Question> parseQuestions(const std::string& jsonStr) const;
 
 public:
     ExamRepository(std::shared_ptr<Database> database);

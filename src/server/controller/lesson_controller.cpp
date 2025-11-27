@@ -203,7 +203,7 @@ void LessonController::handleStudyLessonRequest(int clientFd, const protocol::Me
     std::string responsePayload = dto.serialize();
     
     protocol::Message response(protocol::MsgCode::STUDY_LESSON_SUCCESS, responsePayload);
-    sendMessage(clientFd, response);
+    // sendMessage(clientFd, response); // Removed duplicate call
     
     if (sendMessage(clientFd, response)) {
         if (logger::serverLogger) {

@@ -13,8 +13,8 @@ namespace server {
 ExamRepository::ExamRepository(std::shared_ptr<Database> database) : db(database) {
 }
 
-std::vector<std::string> ExamRepository::parseJsonArray(const std::string& jsonStr) const {
-    std::vector<std::string> result;
+std::vector<Question> ExamRepository::parseQuestions(const std::string& jsonStr) const {
+    std::vector<Question> result;
     
     if (jsonStr.empty() || jsonStr == "null") {
         return result;
@@ -27,7 +27,13 @@ std::vector<std::string> ExamRepository::parseJsonArray(const std::string& jsonS
         if (reader.parse(jsonStr, root) && root.isArray()) {
             for (const auto& item : root) {
                 if (item.isString()) {
-                    result.push_back(item.asString());
+                    // Double encoded JSON string
+                    Json::Value innerRoot;
+                    if (reader.parse(item.asString(), innerRoot)) {
+                        result.push_back(Question::fromJson(innerRoot));
+                    }
+                } else if (item.isObject()) {
+                    result.push_back(Question::fromJson(item));
                 }
             }
         }
@@ -61,7 +67,7 @@ bool ExamRepository::parseExamFromRow(PGresult* result, int row, Exam& exam) con
         exam.setLevel(safeGetValue(result, row, "level"));
         
         std::string questionsJson = safeGetValue(result, row, "question");
-        exam.setQuestions(parseJsonArray(questionsJson));
+        exam.setQuestions(parseQuestions(questionsJson));
 
         return true;
     } catch (const std::exception& e) {

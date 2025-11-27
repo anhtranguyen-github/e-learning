@@ -13,50 +13,47 @@ std::string Exercise::serializeForNetwork(ExerciseType type) const {
     
     switch (type) {
         case ExerciseType::QUESTION:
-            oss << "QUESTION|" << question;
+            oss << "QUESTION|" << (questions.empty() ? "" : questions[0].getText());
             break;
             
         case ExerciseType::OPTIONS:
             oss << "OPTIONS|";
-            for (size_t i = 0; i < options.size(); ++i) {
-                if (i > 0) oss << ",";
-                oss << options[i];
+            if (!questions.empty()) {
+                for (size_t i = 0; i < questions[0].getOptions().size(); ++i) {
+                    if (i > 0) oss << ",";
+                    oss << questions[0].getOptions()[i];
+                }
             }
             break;
             
         case ExerciseType::ANSWER:
-            oss << "ANSWER|" << answer;
+            oss << "ANSWER|" << (questions.empty() ? "" : questions[0].getAnswer());
             break;
             
         case ExerciseType::EXPLANATION:
-            oss << "EXPLANATION|" << explanation;
+            oss << "EXPLANATION|" << (questions.empty() ? "" : questions[0].getExplanation());
             break;
             
         case ExerciseType::FULL:
-            oss << "FULL|";
-            oss << "ID:" << exerciseId << "|";
-            oss << "LESSON_ID:" << lessonId << "|";
-            oss << "TITLE:" << title << "|";
-            oss << "TYPE:" << this->type << "|"; // Use this->type (string member) instead of enum parameter
-            oss << "LEVEL:" << level << "|";
-            oss << "QUESTION:" << question << "|";
-            oss << "OPTIONS:";
-            for (size_t i = 0; i < options.size(); ++i) {
-                if (i > 0) oss << ",";
-                oss << options[i];
+        default:
+            // Format: id;lesson_id;title;type;level;question_count;question1_json^question2_json...
+            std::stringstream ss;
+            ss << exerciseId << ";" << lessonId << ";" << title << ";" << this->type << ";" << level << ";";
+            
+            ss << questions.size() << ";";
+            for (size_t i = 0; i < questions.size(); ++i) {
+                ss << questions[i].toJsonString();
+                if (i < questions.size() - 1) ss << "^";
             }
-            oss << "|ANSWER:" << answer << "|";
-            oss << "EXPLANATION:" << explanation;
-            break;
+            
+            return ss.str();
     }
     
     return oss.str();
 }
 
 std::string Exercise::serializeMetadata() const {
-    std::ostringstream oss;
-    oss << exerciseId << "|" << lessonId << "|" << title << "|" << type << "|" << level;
-    return oss.str();
+    return std::to_string(exerciseId) + ";" + std::to_string(lessonId) + ";" + title + ";" + type + ";" + level;
 }
 
 Payloads::ExerciseDTO Exercise::toDTO() const {
@@ -66,10 +63,11 @@ Payloads::ExerciseDTO Exercise::toDTO() const {
     dto.title = title;
     dto.type = type;
     dto.level = level;
-    dto.question = question;
-    dto.options = options;
-    dto.answer = answer;
-    dto.explanation = explanation;
+    
+    for (const auto& q : questions) {
+        dto.questions.push_back(q.toJsonString());
+    }
+    
     return dto;
 }
 

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "server/model/question.h"
+
 namespace server {
 
 // Exercise content types for selective loading
@@ -24,10 +26,7 @@ private:
     std::string title;
     std::string type; // e.g., "multiple_choice", "fill_in_the_blank"
     std::string level;
-    std::string question;
-    std::vector<std::string> options;
-    std::string answer;
-    std::string explanation;
+    std::vector<Question> questions;
 
 public:
     Exercise() : exerciseId(-1), lessonId(-1) {}
@@ -41,10 +40,13 @@ public:
     std::string getTitle() const { return title; }
     std::string getType() const { return type; }
     std::string getLevel() const { return level; }
-    std::string getQuestion() const { return question; }
-    std::vector<std::string> getOptions() const { return options; }
-    std::string getAnswer() const { return answer; }
-    std::string getExplanation() const { return explanation; }
+    std::vector<Question> getQuestions() const { return questions; }
+    
+    // Proxy getters for backward compatibility (returns first question if available)
+    std::string getQuestion() const { return questions.empty() ? "" : questions[0].getText(); }
+    std::vector<std::string> getOptions() const { return questions.empty() ? std::vector<std::string>() : questions[0].getOptions(); }
+    std::string getAnswer() const { return questions.empty() ? "" : questions[0].getAnswer(); }
+    std::string getExplanation() const { return questions.empty() ? "" : questions[0].getExplanation(); }
 
     // Setters
     void setExerciseId(int id) { exerciseId = id; }
@@ -52,10 +54,25 @@ public:
     void setTitle(const std::string& t) { title = t; }
     void setType(const std::string& ty) { type = ty; }
     void setLevel(const std::string& l) { level = l; }
-    void setQuestion(const std::string& q) { question = q; }
-    void setOptions(const std::vector<std::string>& opts) { options = opts; }
-    void setAnswer(const std::string& ans) { answer = ans; }
-    void setExplanation(const std::string& exp) { explanation = exp; }
+    void setQuestions(const std::vector<Question>& q) { questions = q; }
+    
+    // Proxy setters (sets first question)
+    void setQuestion(const std::string& q) { 
+        if (questions.empty()) questions.push_back(Question());
+        questions[0].setText(q); 
+    }
+    void setOptions(const std::vector<std::string>& opts) { 
+        if (questions.empty()) questions.push_back(Question());
+        questions[0].setOptions(opts); 
+    }
+    void setAnswer(const std::string& ans) { 
+        if (questions.empty()) questions.push_back(Question());
+        questions[0].setAnswer(ans); 
+    }
+    void setExplanation(const std::string& exp) { 
+        if (questions.empty()) questions.push_back(Question());
+        questions[0].setExplanation(exp); 
+    }
 
     // Serialize only the requested content type for network transmission
     std::string serializeForNetwork(ExerciseType type) const;

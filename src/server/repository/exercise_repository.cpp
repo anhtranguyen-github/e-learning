@@ -13,8 +13,8 @@ namespace server {
 ExerciseRepository::ExerciseRepository(std::shared_ptr<Database> database) : db(database) {
 }
 
-std::vector<std::string> ExerciseRepository::parseJsonArray(const std::string& jsonStr) const {
-    std::vector<std::string> result;
+std::vector<Question> ExerciseRepository::parseQuestions(const std::string& jsonStr) const {
+    std::vector<Question> result;
     
     if (jsonStr.empty() || jsonStr == "null") {
         return result;
@@ -26,14 +26,12 @@ std::vector<std::string> ExerciseRepository::parseJsonArray(const std::string& j
         
         if (reader.parse(jsonStr, root) && root.isArray()) {
             for (const auto& item : root) {
-                if (item.isString()) {
-                    result.push_back(item.asString());
-                }
+                result.push_back(Question::fromJson(item));
             }
         }
     } catch (const std::exception& e) {
         if (logger::serverLogger) {
-            logger::serverLogger->error("Error parsing JSON array: " + std::string(e.what()));
+            logger::serverLogger->error("Error parsing questions JSON: " + std::string(e.what()));
         }
     }
     
@@ -43,84 +41,81 @@ std::vector<std::string> ExerciseRepository::parseJsonArray(const std::string& j
 bool ExerciseRepository::parseExerciseFromRow(PGresult* result, int row, Exercise& exercise) const {
     try {
         int col_exercise_id = PQfnumber(result, "exercise_id");
-        if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] Column exercise_id index: " + std::to_string(col_exercise_id)); }
         exercise.setExerciseId(std::stoi(PQgetvalue(result, row, col_exercise_id)));
         
         // Handle nullable lesson_id
         int col_lesson_id = PQfnumber(result, "lesson_id");
-        if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] Column lesson_id index: " + std::to_string(col_lesson_id)); }
         if (PQgetisnull(result, row, col_lesson_id)) {
-            exercise.setLessonId(0); // Default value for null lesson_id
-            if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] lesson_id is null, setting to 0"); }
+            exercise.setLessonId(0);
         } else {
             exercise.setLessonId(std::stoi(PQgetvalue(result, row, col_lesson_id)));
-            if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] lesson_id: " + std::string(PQgetvalue(result, row, col_lesson_id))); }
         }
 
         // Handle non-nullable title
         int col_title = PQfnumber(result, "title");
-        if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] Column title index: " + std::to_string(col_title)); }
         if (PQgetisnull(result, row, col_title)) {
-            if (logger::serverLogger) {
-                logger::serverLogger->error("Error parsing exercise: 'title' is unexpectedly null at row " + std::to_string(row));
-            }
             return false;
         } else {
             exercise.setTitle(PQgetvalue(result, row, col_title));
-            if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] title: " + std::string(PQgetvalue(result, row, col_title))); }
         }
         
         // Handle nullable type
         int col_type = PQfnumber(result, "type");
-        if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] Column type index: " + std::to_string(col_type)); }
         if (PQgetisnull(result, row, col_type)) {
-            exercise.setType(""); // Default to empty string for null type
-            if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] type is null, setting to empty string"); }
+            exercise.setType("");
         } else {
             exercise.setType(PQgetvalue(result, row, col_type));
-            if (logger::serverLogger) { logger::serverLogger->debug("[DEBUG] type: " + std::string(PQgetvalue(result, row, col_type))); }
         }
         
         // Handle nullable level
         if (PQgetisnull(result, row, PQfnumber(result, "level"))) {
-            exercise.setLevel(""); // Default to empty string for null level
+            exercise.setLevel("");
         } else {
             exercise.setLevel(PQgetvalue(result, row, PQfnumber(result, "level")));
         }
 
-        // Handle non-nullable question
-        if (PQgetisnull(result, row, PQfnumber(result, "question"))) {
-            if (logger::serverLogger) {
-                logger::serverLogger->error("Error parsing exercise: 'question' is unexpectedly null at row " + std::to_string(row));
+        // Try to parse from 'questions' column first
+        int col_questions = PQfnumber(result, "questions");
+        if (col_questions != -1 && !PQgetisnull(result, row, col_questions)) {
+            exercise.setQuestions(parseQuestions(PQgetvalue(result, row, col_questions)));
+        } else {
+            // Fallback to legacy columns
+            Question q;
+            
+            // Handle non-nullable question
+            if (!PQgetisnull(result, row, PQfnumber(result, "question"))) {
+                q.setText(PQgetvalue(result, row, PQfnumber(result, "question")));
             }
-            return false;
-        } else {
-            exercise.setQuestion(PQgetvalue(result, row, PQfnumber(result, "question")));
-        }
-        
-        // Handle nullable options (JSONB)
-        std::string optionsJson;
-        if (PQgetisnull(result, row, PQfnumber(result, "options"))) {
-            optionsJson = "[]"; // Default to empty JSON array for null options
-        } else {
-            optionsJson = PQgetvalue(result, row, PQfnumber(result, "options"));
-        }
-        exercise.setOptions(parseJsonArray(optionsJson));
+            
+            // Handle nullable options (JSONB)
+            if (!PQgetisnull(result, row, PQfnumber(result, "options"))) {
+                std::string optionsJson = PQgetvalue(result, row, PQfnumber(result, "options"));
+                Json::Value root;
+                Json::Reader reader;
+                if (reader.parse(optionsJson, root) && root.isArray()) {
+                    std::vector<std::string> opts;
+                    for (const auto& item : root) {
+                        if (item.isString()) opts.push_back(item.asString());
+                    }
+                    q.setOptions(opts);
+                }
+            }
 
-        // Handle nullable answer
-        if (PQgetisnull(result, row, PQfnumber(result, "answer"))) {
-            exercise.setAnswer(""); // Default to empty string for null answer
-        } else {
-            exercise.setAnswer(PQgetvalue(result, row, PQfnumber(result, "answer")));
+            // Handle nullable answer
+            if (!PQgetisnull(result, row, PQfnumber(result, "answer"))) {
+                q.setAnswer(PQgetvalue(result, row, PQfnumber(result, "answer")));
+            }
+            
+            // Handle nullable explanation
+            if (!PQgetisnull(result, row, PQfnumber(result, "explanation"))) {
+                q.setExplanation(PQgetvalue(result, row, PQfnumber(result, "explanation")));
+            }
+            
+            // Set type from exercise type if needed, or leave empty
+            q.setType(exercise.getType());
+            
+            exercise.setQuestions({q});
         }
-        
-        // Handle nullable explanation
-        if (PQgetisnull(result, row, PQfnumber(result, "explanation"))) {
-            exercise.setExplanation(""); // Default to empty string for null explanation
-        } else {
-            exercise.setExplanation(PQgetvalue(result, row, PQfnumber(result, "explanation")));
-        }
-
 
         return true;
     } catch (const std::exception& e) {
