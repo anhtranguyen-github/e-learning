@@ -15,7 +15,6 @@ COMMON_SRC = $(SRC_DIR)/common/logger.cpp $(SRC_DIR)/common/utils.cpp $(SRC_DIR)
 
 SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/database.cpp \
-             $(SRC_DIR)/server/database_utils.cpp \
              $(SRC_DIR)/server/connection_manager.cpp \
              $(SRC_DIR)/server/request_router.cpp \
              $(SRC_DIR)/server/client_handler.cpp \
