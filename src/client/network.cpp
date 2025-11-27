@@ -1,4 +1,5 @@
 #include "client/network.h"
+#include "common/payloads.h"
 #include "common/logger.h"
 #include "common/utils.h"
 #include <sys/socket.h>
@@ -126,7 +127,10 @@ bool NetworkClient::login(const std::string& username, const std::string& passwo
     }
 
     // Send login request
-    std::string payload = username + ";" + password;
+    Payloads::LoginRequest req;
+    req.username = username;
+    req.password = password;
+    std::string payload = req.serialize();
     protocol::Message loginMsg(protocol::MsgCode::LOGIN_REQUEST, payload);
     
     if (!sendMessage(loginMsg)) {
@@ -349,11 +353,12 @@ bool NetworkClient::requestLessonList(const std::string& topic, const std::strin
         return false;
     }
 
-    // Build payload: <session_token>[;<topic>;<level>]
-    std::string payload = sessionToken;
-    if (!topic.empty() || !level.empty()) {
-        payload += ";" + topic + ";" + level;
-    }
+    // Build payload using Payloads
+    Payloads::LessonListRequest req;
+    req.sessionToken = sessionToken;
+    req.topic = topic;
+    req.level = level;
+    std::string payload = req.serialize();
 
     if (logger::clientLogger) {
         logger::clientLogger->debug("Sending LESSON_LIST_REQUEST with payload: " + payload);
@@ -384,8 +389,12 @@ bool NetworkClient::requestStudyLesson(int lessonId, const std::string& lessonTy
         return false;
     }
 
-    // Build payload: <session_token>;<lesson_id>;<lesson_type>
-    std::string payload = sessionToken + ";" + std::to_string(lessonId) + ";" + lessonType;
+    // Build payload using Payloads
+    Payloads::StudyLessonRequest req;
+    req.sessionToken = sessionToken;
+    req.lessonId = std::to_string(lessonId);
+    req.lessonType = lessonType;
+    std::string payload = req.serialize();
 
     // Send study lesson request
     protocol::Message msg(protocol::MsgCode::STUDY_LESSON_REQUEST, payload);
@@ -412,7 +421,10 @@ bool NetworkClient::requestExercise(protocol::MsgCode exerciseType, int exercise
         return false;
     }
 
-    std::string payload = sessionToken + ";" + std::to_string(exerciseId);
+    Payloads::SpecificExerciseRequest req;
+    req.sessionToken = sessionToken;
+    req.exerciseId = std::to_string(exerciseId);
+    std::string payload = req.serialize();
     protocol::Message msg(exerciseType, payload);
 
     if (!sendMessage(msg)) {
@@ -433,7 +445,12 @@ bool NetworkClient::submitAnswer(const std::string& targetType, int targetId, co
         return false;
     }
 
-    std::string payload = sessionToken + ";" + targetType + ";" + std::to_string(targetId) + ";" + answer;
+    Payloads::SubmitAnswerRequest req;
+    req.sessionToken = sessionToken;
+    req.targetType = targetType;
+    req.targetId = std::to_string(targetId);
+    req.answer = answer;
+    std::string payload = req.serialize();
     protocol::Message msg(protocol::MsgCode::SUBMIT_ANSWER_REQUEST, payload);
 
     if (!sendMessage(msg)) {
@@ -474,7 +491,11 @@ bool NetworkClient::requestExercises() {
         return false;
     }
 
-    protocol::Message msg(protocol::MsgCode::EXERCISE_LIST_REQUEST, sessionToken);
+    Payloads::ExerciseListRequest req;
+    req.sessionToken = sessionToken;
+    // Default empty filters for now as per original code
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::EXERCISE_LIST_REQUEST, payload);
 
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {
@@ -494,7 +515,10 @@ bool NetworkClient::requestExams() {
         return false;
     }
 
-    protocol::Message msg(protocol::MsgCode::EXAM_LIST_REQUEST, sessionToken);
+    Payloads::ExamListRequest req;
+    req.sessionToken = sessionToken;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::EXAM_LIST_REQUEST, payload);
 
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {
@@ -514,7 +538,11 @@ bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::
         return false;
     }
 
-    std::string payload = sessionToken + ";" + recipient + ";" + message;
+    Payloads::PrivateMessageRequest req;
+    req.sessionToken = sessionToken;
+    req.recipient = recipient;
+    req.message = message;
+    std::string payload = req.serialize();
     protocol::Message msg(protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST, payload);
 
     if (!sendMessage(msg)) {
@@ -535,7 +563,10 @@ bool NetworkClient::requestChatHistory(const std::string& otherUser) {
         return false;
     }
 
-    std::string payload = sessionToken + ";" + otherUser;
+    Payloads::ChatHistoryRequest req;
+    req.sessionToken = sessionToken;
+    req.otherUser = otherUser;
+    std::string payload = req.serialize();
     protocol::Message msg(protocol::MsgCode::CHAT_HISTORY_REQUEST, payload);
 
     if (!sendMessage(msg)) {
