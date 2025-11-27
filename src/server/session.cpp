@@ -53,7 +53,10 @@ int SessionManager::get_user_id_by_session(const std::string& session_id) {
 int SessionManager::get_user_id_by_fd(int client_fd) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (fd_to_session_id_.count(client_fd)) {
-        return get_user_id_by_session(fd_to_session_id_[client_fd]);
+        std::string session_id = fd_to_session_id_[client_fd];
+        if (sessions_.count(session_id)) {
+            return sessions_[session_id].user_id;
+        }
     }
     return -1;
 }

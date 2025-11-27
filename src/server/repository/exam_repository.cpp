@@ -40,15 +40,27 @@ std::vector<std::string> ExamRepository::parseJsonArray(const std::string& jsonS
     return result;
 }
 
+// Helper to safely get string value from PGresult
+static std::string safeGetValue(PGresult* res, int row, const char* colName) {
+    int colIndex = PQfnumber(res, colName);
+    if (colIndex == -1) return "";
+    char* val = PQgetvalue(res, row, colIndex);
+    return val ? std::string(val) : "";
+}
+
 bool ExamRepository::parseExamFromRow(PGresult* result, int row, Exam& exam) const {
     try {
-        exam.setExamId(std::stoi(PQgetvalue(result, row, PQfnumber(result, "exam_id"))));
-        exam.setLessonId(std::stoi(PQgetvalue(result, row, PQfnumber(result, "lesson_id"))));
-        exam.setTitle(PQgetvalue(result, row, PQfnumber(result, "title")));
-        exam.setType(PQgetvalue(result, row, PQfnumber(result, "type")));
-        exam.setLevel(PQgetvalue(result, row, PQfnumber(result, "level")));
+        std::string examIdStr = safeGetValue(result, row, "exam_id");
+        std::string lessonIdStr = safeGetValue(result, row, "lesson_id");
         
-        std::string questionsJson = PQgetvalue(result, row, PQfnumber(result, "questions"));
+        exam.setExamId(examIdStr.empty() ? 0 : std::stoi(examIdStr));
+        exam.setLessonId(lessonIdStr.empty() ? 0 : std::stoi(lessonIdStr));
+        
+        exam.setTitle(safeGetValue(result, row, "title"));
+        exam.setType(safeGetValue(result, row, "type"));
+        exam.setLevel(safeGetValue(result, row, "level"));
+        
+        std::string questionsJson = safeGetValue(result, row, "questions");
         exam.setQuestions(parseJsonArray(questionsJson));
 
         return true;

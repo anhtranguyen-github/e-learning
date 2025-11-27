@@ -17,7 +17,7 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/database.cpp \
              $(SRC_DIR)/server/database_utils.cpp \
              $(SRC_DIR)/server/connection_manager.cpp \
-             $(SRC_DIR)/server/handler_registry.cpp \
+             $(SRC_DIR)/server/request_router.cpp \
              $(SRC_DIR)/server/client_handler.cpp \
              $(SRC_DIR)/server/session.cpp \
              $(SRC_DIR)/server/model/lesson.cpp \

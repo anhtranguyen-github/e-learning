@@ -45,7 +45,7 @@ int UserRepository::getUserId(const std::string& username) {
     return -1;
 }
 
-User UserRepository::findById(int id) {
+User UserRepository::findById(int /*id*/) {
     // Placeholder implementation if needed later
     return User();
 }

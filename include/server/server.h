@@ -4,7 +4,7 @@
 #include "server/session.h"
 #include "server/database.h"
 #include "server/connection_manager.h"
-#include "server/handler_registry.h"
+#include "server/request_router.h"
 #include "server/client_handler.h"
 #include <vector>
 #include <set>
@@ -21,7 +21,7 @@ private:
     std::shared_ptr<server::ConnectionManager> connectionManager;
     std::shared_ptr<server::SessionManager> sessionManager;
     std::shared_ptr<server::ClientHandler> clientHandler;
-    std::shared_ptr<server::HandlerRegistry> handlerRegistry;
+    std::shared_ptr<server::RequestRouter> requestRouter;
 
     
     std::set<int> clientSockets;

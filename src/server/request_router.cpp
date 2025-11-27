@@ -1,4 +1,4 @@
-#include "server/handler_registry.h"
+#include "server/request_router.h"
 #include "server/controller/user_controller.h"
 #include "server/controller/chat_controller.h"
 #include "server/controller/lesson_controller.h"
@@ -11,12 +11,14 @@
 #include "server/repository/exercise_repository.h"
 #include "server/repository/exam_repository.h"
 #include "common/logger.h"
+#include "common/payloads.h"
+#include <sys/socket.h>
 
 namespace server {
 
-HandlerRegistry::HandlerRegistry(std::shared_ptr<SessionManager> sessionMgr,
-                               std::shared_ptr<ConnectionManager> connMgr,
-                               std::shared_ptr<Database> database)
+RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
+                             std::shared_ptr<ConnectionManager> connMgr,
+                             std::shared_ptr<Database> database)
     : sessionManager(sessionMgr), connectionManager(connMgr), db(database) {
     
     // Initialize Repositories
@@ -33,17 +35,61 @@ HandlerRegistry::HandlerRegistry(std::shared_ptr<SessionManager> sessionMgr,
     submissionController = std::make_shared<SubmissionController>(sessionManager, db);
     resultController = std::make_shared<ResultController>(sessionManager, db);
     examController = std::make_shared<ExamController>(sessionManager, examRepo);
+
+    // Register Default Middlewares
+    registerMiddleware(std::make_shared<LoggingMiddleware>());
+    registerMiddleware(std::make_shared<AuthMiddleware>(sessionManager));
 }
 
-void HandlerRegistry::handleMessage(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler) {
+void RequestRouter::registerMiddleware(std::shared_ptr<Middleware> middleware) {
+    middlewares.push_back(middleware);
+}
+
+void RequestRouter::sendErrorResponse(int clientFd, protocol::MsgCode code, const std::string& message) {
+    Payloads::GenericResponse resp;
+    resp.success = false;
+    resp.message = message;
+    
+    // Use the provided error code
+    protocol::Message error_msg(code, resp.serialize());
+    
+    std::vector<uint8_t> data = error_msg.serialize();
+    send(clientFd, data.data(), data.size(), 0);
+}
+
+void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler) {
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("RequestRouter handling message code: " + std::to_string(static_cast<int>(msg.code)));
+    }
+
+    // Execute Middlewares
+    std::string errorMsg;
+    for (const auto& middleware : middlewares) {
+        if (!middleware->handle(clientFd, msg, errorMsg)) {
+            if (logger::serverLogger) {
+                logger::serverLogger->warn("Middleware rejected request from fd=" + std::to_string(clientFd) + ": " + errorMsg);
+            }
+            sendErrorResponse(clientFd, protocol::MsgCode::GENERAL_FAILURE, errorMsg);
+            return;
+        }
+    }
+
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("Middleware passed, routing to controller");
+    }
+
     switch (msg.code) {
         // User / Auth
         case protocol::MsgCode::LOGIN_REQUEST:
             if (clientHandler) {
+                if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleLoginRequest");
                 userController->handleLoginRequest(clientFd, msg, clientHandler);
+            } else {
+                if (logger::serverLogger) logger::serverLogger->error("ClientHandler is null for LOGIN_REQUEST");
             }
             break;
         case protocol::MsgCode::LOGOUT_REQUEST:
+            if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleLogoutRequest");
             userController->handleLogoutRequest(clientFd, msg);
             break;
 

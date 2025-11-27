@@ -25,12 +25,12 @@ Server::Server(int port, const std::string& dbConn)
     connectionManager = std::make_shared<server::ConnectionManager>();
     sessionManager = std::make_shared<server::SessionManager>(database);
 
-    handlerRegistry = std::make_shared<server::HandlerRegistry>(sessionManager, connectionManager, database);
+    requestRouter = std::make_shared<server::RequestRouter>(sessionManager, connectionManager, database);
 
     this->clientHandler = std::make_shared<server::ClientHandler>(
         sessionManager,
         connectionManager,
-        handlerRegistry);
+        requestRouter);
         
     if (logger::serverLogger) {
         logger::serverLogger->info("Server components initialized successfully");

@@ -1,7 +1,7 @@
 #include "server/client_handler.h"
 #include "server/session.h"
 #include "server/connection_manager.h"
-#include "server/handler_registry.h"
+#include "server/request_router.h"
 #include "common/logger.h"
 #include "common/utils.h"
 #include <sys/socket.h>
@@ -13,8 +13,8 @@ namespace server {
 ClientHandler::ClientHandler(
     std::shared_ptr<SessionManager> sm,
     std::shared_ptr<ConnectionManager> cm,
-    std::shared_ptr<HandlerRegistry> hr)
-    : sessionManager_(sm), connectionManager_(cm), handlerRegistry_(hr) {}
+    std::shared_ptr<RequestRouter> rr)
+    : sessionManager_(sm), connectionManager_(cm), requestRouter_(rr) {}
 
 void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& data) {
     clientFd_ = clientFd;
@@ -44,8 +44,8 @@ void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& dat
                 break;
 
             default:
-                // Delegate all other messages (including LOGIN/LOGOUT) to the HandlerRegistry
-                handlerRegistry_->handleMessage(clientFd, msg, this);
+                // Delegate all other messages (including LOGIN/LOGOUT) to the RequestRouter
+                requestRouter_->handleMessage(clientFd, msg, this);
                 break;
         }
     } catch (const std::exception& e) {

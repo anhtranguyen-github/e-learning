@@ -11,13 +11,13 @@ namespace server {
 
 class SessionManager;
 class ConnectionManager;
-class HandlerRegistry;
+class RequestRouter;
 
 class ClientHandler {
 public:
     ClientHandler(std::shared_ptr<SessionManager> sm,
                   std::shared_ptr<ConnectionManager> cm,
-                  std::shared_ptr<HandlerRegistry> hr);
+                  std::shared_ptr<RequestRouter> rr);
 
     void processMessage(int clientFd, const std::vector<uint8_t>& data);
     void handleClientDisconnect(int clientFd);
@@ -27,7 +27,7 @@ public:
 private:
     std::shared_ptr<SessionManager> sessionManager_;
     std::shared_ptr<ConnectionManager> connectionManager_;
-    std::shared_ptr<HandlerRegistry> handlerRegistry_;
+    std::shared_ptr<RequestRouter> requestRouter_;
     int clientFd_;
 
     void handleHeartbeat(const protocol::Message& msg);

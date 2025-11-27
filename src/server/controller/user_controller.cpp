@@ -15,10 +15,19 @@ UserController::UserController(std::shared_ptr<UserRepository> userRepo,
 
 void UserController::sendMessage(int clientFd, const protocol::Message& msg) {
     std::vector<uint8_t> data = msg.serialize();
-    send(clientFd, data.data(), data.size(), 0);
+    ssize_t sent = send(clientFd, data.data(), data.size(), 0);
+    if (logger::serverLogger) {
+        if (sent < 0) {
+            logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd) + ", error=" + std::string(strerror(errno)));
+        } else {
+            logger::serverLogger->debug("Sent " + std::to_string(sent) + " bytes to fd=" + std::to_string(clientFd));
+        }
+    }
 }
 
 void UserController::handleLoginRequest(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler) {
+    if (logger::serverLogger) logger::serverLogger->debug("Handling login request for fd=" + std::to_string(clientFd));
+    
     std::string payload = msg.toString();
     std::string username, password;
     
@@ -31,8 +40,12 @@ void UserController::handleLoginRequest(int clientFd, const protocol::Message& m
         return;
     }
 
+    if (logger::serverLogger) logger::serverLogger->debug("Verifying credentials for user: " + username);
+
     // Verify credentials
     if (userRepo->verifyCredentials(username, password)) {
+        if (logger::serverLogger) logger::serverLogger->debug("Credentials verified, creating session");
+        
         // Get user ID
         int userId = userRepo->getUserId(username);
         
