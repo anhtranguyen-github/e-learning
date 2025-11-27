@@ -1,9 +1,16 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "."
 
 Page {
-    title: "Do Exercise"
+    background: Rectangle { color: Style.backgroundColor }
+    
+    header: Header {
+        title: targetType === "exam" ? "Do Exam" : "Do Exercise"
+        onBackClicked: stackView.pop()
+    }
+
     property int exerciseId
     property string exerciseTypeStr
     property string targetType: "exercise"
@@ -39,44 +46,88 @@ Page {
         }
         function onAnswerSubmissionResult(response) {
             resultText.text = response
+            resultText.color = response.indexOf("Correct") !== -1 ? Style.successColor : Style.errorColor
         }
     }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
+        anchors.margins: Style.margin
+        spacing: Style.margin
 
-        ScrollView {
+        // Question Area
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            TextArea {
-                id: questionText
-                readOnly: true
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: "#e0e0e0"
+            border.width: 1
+
+            ScrollView {
+                anchors.fill: parent
+                anchors.margins: Style.margin
+                
+                TextArea {
+                    id: questionText
+                    readOnly: true
+                    wrapMode: Text.WordWrap
+                    text: "Loading question..."
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.bodySize
+                    color: Style.textColor
+                    background: null
+                }
+            }
+        }
+
+        // Answer Area
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            TextField {
+                id: answerField
+                placeholderText: "Type your answer here..."
+                Layout.fillWidth: true
+                font.pixelSize: Style.bodySize
+                background: Rectangle {
+                    color: Style.cardBackground
+                    radius: Style.cornerRadius
+                    border.color: answerField.activeFocus ? Style.primaryColor : "#e0e0e0"
+                    border.width: 1
+                }
+                padding: 12
+            }
+
+            Button {
+                text: "Submit Answer"
+                Layout.fillWidth: true
+                font.pixelSize: Style.bodySize
+                background: Rectangle {
+                    color: Style.primaryColor
+                    radius: Style.cornerRadius
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    networkManager.submitAnswer(targetType, exerciseId, answerField.text)
+                }
+            }
+
+            Text {
+                id: resultText
+                Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: "Loading question..."
+                font.pixelSize: Style.bodySize
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
             }
-        }
-
-        TextField {
-            id: answerField
-            placeholderText: "Type your answer here..."
-            Layout.fillWidth: true
-        }
-
-        Button {
-            text: "Submit Answer"
-            Layout.fillWidth: true
-            onClicked: {
-                networkManager.submitAnswer(targetType, exerciseId, answerField.text)
-            }
-        }
-
-        Text {
-            id: resultText
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: "blue"
         }
     }
 }

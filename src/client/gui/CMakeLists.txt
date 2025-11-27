@@ -40,6 +40,6 @@ target_link_libraries(socker_client
     pthread
 )
 
-# Copy QML files to build directory (optional, but good for running from build)
+# Copy QML files and qmldir to build directory
 file(GLOB QML_FILES "*.qml")
-file(COPY ${QML_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${QML_FILES} "qmldir" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
