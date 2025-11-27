@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 
-set -e
-
 function build() {
-  echo "[BUILD] Compiling project..."
+  echo "[BUILD] Compiling Project..."
+  
+  echo "--- Building Server ---"
   make
+  
+  echo "--- Building Qt Client ---"
+  mkdir -p src/client/gui/build
+  # Use subshell to avoid changing directory for the main script
+  (
+    cd src/client/gui/build
+    cmake ..
+    make
+  )
 }
 
 function server() {
@@ -13,38 +22,28 @@ function server() {
 }
 
 function client() {
-  echo "[CLIENT] Starting client..."
-  ./bin/client "$@"
+  if [ ! -f "./src/client/gui/build/socker_client" ]; then
+    echo "[CLIENT] Binary not found. Building..."
+    build
+  fi
+  echo "[CLIENT] Starting Qt client..."
+  ./src/client/gui/build/socker_client "$@"
 }
 
 function clean() {
   echo "[CLEAN] Removing build artifacts..."
   make clean
-}
-
-function build_qt() {
-  echo "[BUILD QT] Compiling Qt client..."
-  mkdir -p src/client/gui/build
-  cd src/client/gui/build
-  cmake ..
-  make
-}
-
-function run_qt() {
-  echo "[RUN QT] Starting Qt client..."
-  ./src/client/gui/build/socker_client "$@"
+  rm -rf src/client/gui/build
 }
 
 function help() {
   echo "Usage: ./run.sh <command> [args]"
   echo
   echo "Commands:"
-  echo "  build           Build the project (make)"
+  echo "  build           Build both Server and Qt Client"
   echo "  server [port]   Run the server on optional port (default 8080)"
-  echo "  client [host] [port]  Run a client (default 127.0.0.1 8080)"
-  echo "  build_qt        Build the Qt client"
-  echo "  run_qt          Run the Qt client"
-  echo "  clean           Clean build artifacts (make clean)"
+  echo "  client          Run the Qt client"
+  echo "  clean           Clean all build artifacts"
   echo "  help            Show this help message"
 }
 
@@ -55,10 +54,6 @@ case "$1" in
     shift; server "$@" ;;
   client)
     shift; client "$@" ;;
-  build_qt)
-    shift; build_qt "$@" ;;
-  run_qt)
-    shift; run_qt "$@" ;;
   clean)
     shift; clean ;;
   help | --help | -h | "")
