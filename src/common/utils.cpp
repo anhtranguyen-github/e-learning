@@ -37,6 +37,17 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
+std::string join(const std::vector<std::string>& v, char delimiter) {
+    std::stringstream ss;
+    for (size_t i = 0; i < v.size(); ++i) {
+        ss << v[i];
+        if (i != v.size() - 1) {
+            ss << delimiter;
+        }
+    }
+    return ss.str();
+}
+
 std::string extractCookie(const std::string& header, const std::string& cookieName) {
     // Look for "Cookie: session_id=<value>" or "session_id=<value>"
     size_t pos = header.find(cookieName + "=");

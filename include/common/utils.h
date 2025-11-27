@@ -13,6 +13,9 @@ std::string generateSessionToken();
 // Split string by delimiter
 std::vector<std::string> split(const std::string& str, char delimiter);
 
+// Join vector of strings by delimiter
+std::string join(const std::vector<std::string>& v, char delimiter);
+
 // Extract cookie value from header
 std::string extractCookie(const std::string& header, const std::string& cookieName);
 
