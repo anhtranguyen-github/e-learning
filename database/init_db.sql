@@ -30,10 +30,11 @@ CREATE TABLE IF NOT EXISTS exercises (
     exercise_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
     title VARCHAR(100) NOT NULL,
-    type VARCHAR(50) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking')),
+    type VARCHAR(50) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking', 'multiple_choice', 'fill_in_blank', 'order')),
     level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     options JSONB,
-    question TEXT NOT NULL,
+    question TEXT, -- Made nullable as we might use 'questions' instead
+    questions JSONB, -- New column for multiple questions
     answer TEXT,
     media_url TEXT,
     explanation TEXT,
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS results (
     target_type VARCHAR(50) CHECK (target_type IN ('exam','exercise')),
     target_id INT NOT NULL,
     score NUMERIC(5,2),
+    user_answer TEXT,
     feedback TEXT,
     graded_by VARCHAR(50) DEFAULT 'machine',
     graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

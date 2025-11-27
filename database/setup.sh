@@ -94,17 +94,14 @@ echo ""
 echo -e "${YELLOW}Step 5: Seeding database with test data...${NC}"
 SEEDED=false
 if [ -f "seed_db.sql" ]; then
-    read -p "Do you want to seed the database with test data? (y/n): " seed_choice
-    if [ "$seed_choice" = "y" ] || [ "$seed_choice" = "Y" ]; then
-        sudo -u postgres psql -d $DB_NAME -f seed_db.sql
-        if [ $? -eq 0 ]; then
-            SEEDED=true
-            echo -e "${GREEN}Database seeded successfully.${NC}"
-        else
-            echo -e "${RED}Failed to seed database.${NC}"
-        fi
+    # Auto-seed for now to ensure test data is present
+    echo -e "${YELLOW}Running seed_db.sql...${NC}"
+    sudo -u postgres psql -d $DB_NAME -f seed_db.sql
+    if [ $? -eq 0 ]; then
+        SEEDED=true
+        echo -e "${GREEN}Database seeded successfully.${NC}"
     else
-        echo -e "${YELLOW}Skipping seeding.${NC}"
+        echo -e "${RED}Failed to seed database.${NC}"
     fi
 else
     echo -e "${YELLOW}seed_db.sql not found, skipping seeding.${NC}"
@@ -138,3 +135,17 @@ if [ -f "db_test" ]; then
 else
     echo -e "${YELLOW}db_test not found. Attempting to build...${NC}"
     if command -v make &> /dev/null; then
+        make db_test
+        if [ -f "db_test" ]; then
+            ./db_test
+        else
+            echo -e "${RED}Failed to build db_test.${NC}"
+        fi
+    else
+        echo -e "${RED}Make not found. Cannot build db_test.${NC}"
+    fi
+fi
+
+echo ""
+echo -e "${GREEN}Database setup complete!${NC}"
+echo "You can now run the server."

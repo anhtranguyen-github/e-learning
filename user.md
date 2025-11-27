@@ -1,2 +1,7 @@
 user_1
-7c6a180b36896a0a8c02787eeafb0e4c
+password
+
+
+
+
+1 exercise or exam can have many questions, update  exam.cpp exercise.cpp and controller and repository, style the GUI too
