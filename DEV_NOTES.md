@@ -12,3 +12,6 @@
 ### Deadlock in `SessionManager`
 - **Issue**: `get_user_id_by_fd` locked `mutex_` and then called `get_user_id_by_session`, which attempted to lock `mutex_` again. Since `std::mutex` is not recursive, this caused a deadlock.
 - **Fix**: Modified `get_user_id_by_fd` to access the internal maps (`fd_to_session_id_` and `sessions_`) directly after locking, avoiding the nested method call.
+
+
+git show main:run.sh > old_run.sh

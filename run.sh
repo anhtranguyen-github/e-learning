@@ -4,7 +4,7 @@ function build() {
   echo "[BUILD] Compiling Project..."
   
   echo "--- Building Server ---"
-  make
+  make directories bin/server
   
   echo "--- Building Qt Client ---"
   mkdir -p src/client/gui/build
@@ -14,6 +14,11 @@ function build() {
     cmake ..
     make
   )
+}
+
+function build_console() {
+  echo "[BUILD_CONSOLE] Compiling Terminal Client..."
+  make directories bin/client
 }
 
 function server() {
@@ -30,6 +35,11 @@ function client() {
   ./src/client/gui/build/socker_client "$@"
 }
 
+function client_console() {
+  echo "[CLIENT_CONSOLE] Starting terminal client..."
+  ./bin/client "$@"
+}
+
 function clean() {
   echo "[CLEAN] Removing build artifacts..."
   make clean
@@ -40,9 +50,11 @@ function help() {
   echo "Usage: ./run.sh <command> [args]"
   echo
   echo "Commands:"
-  echo "  build           Build both Server and Qt Client"
+  echo "  build           Build Server and Qt Client"
+  echo "  build_console   Build Terminal Client"
   echo "  server [port]   Run the server on optional port (default 8080)"
   echo "  client          Run the Qt client"
+  echo "  client_console  Run the Terminal client"
   echo "  clean           Clean all build artifacts"
   echo "  help            Show this help message"
 }
@@ -50,10 +62,14 @@ function help() {
 case "$1" in
   build)
     shift; build "$@" ;;
+  build_console)
+    shift; build_console "$@" ;;
   server)
     shift; server "$@" ;;
   client)
     shift; client "$@" ;;
+  client_console)
+    shift; client_console "$@" ;;
   clean)
     shift; clean ;;
   help | --help | -h | "")
