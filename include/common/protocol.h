@@ -119,27 +119,63 @@ struct Message {
         return std::string(data.begin(), data.end());
     }
 
-    // Serialize: [2 bytes code][payload bytes...]
+    // Serialize: [4 bytes length][2 bytes code][payload bytes...]
+    // Length includes the 4 bytes of length field itself.
     std::vector<uint8_t> serialize() const {
         std::vector<uint8_t> packet;
-        packet.reserve(2 + data.size());
+        uint32_t total_len = 4 + 2 + data.size();
+        packet.reserve(total_len);
+        
+        uint32_t len_net = htonl(total_len);
+        uint8_t* p_len = reinterpret_cast<uint8_t*>(&len_net);
+        packet.insert(packet.end(), p_len, p_len + 4);
+
         uint16_t code_net = htons(static_cast<uint16_t>(code));
-        uint8_t* p = reinterpret_cast<uint8_t*>(&code_net);
-        packet.insert(packet.end(), p, p + 2);
+        uint8_t* p_code = reinterpret_cast<uint8_t*>(&code_net);
+        packet.insert(packet.end(), p_code, p_code + 2);
+        
         packet.insert(packet.end(), data.begin(), data.end());
         return packet;
     }
 
     // Deserialize from buffer
+    // Expects buffer to start with a complete message.
     static Message deserialize(const std::vector<uint8_t>& buffer) {
-        if (buffer.size() < 2) {
+        if (buffer.size() < 6) { // 4 bytes length + 2 bytes code
             throw std::runtime_error("Invalid packet: too short");
         }
+        
+        uint32_t len_net;
+        std::memcpy(&len_net, buffer.data(), 4);
+        uint32_t total_len = ntohl(len_net);
+        
+        if (buffer.size() < total_len) {
+            throw std::runtime_error("Invalid packet: incomplete");
+        }
+
         uint16_t code_net;
-        std::memcpy(&code_net, buffer.data(), 2);
+        std::memcpy(&code_net, buffer.data() + 4, 2);
         MsgCode c = static_cast<MsgCode>(ntohs(code_net));
-        std::vector<uint8_t> payload(buffer.begin() + 2, buffer.end());
+        
+        // Payload starts at offset 6, length is total_len - 6
+        std::vector<uint8_t> payload(buffer.begin() + 6, buffer.begin() + total_len);
         return Message(c, payload);
+    }
+
+    // Helper to check if buffer has a full message
+    // Returns 0 if not enough data to determine length, or if incomplete.
+    // Returns total message length if complete message is present.
+    static uint32_t getFullLength(const std::vector<uint8_t>& buffer) {
+        if (buffer.size() < 4) return 0;
+        
+        uint32_t len_net;
+        std::memcpy(&len_net, buffer.data(), 4);
+        uint32_t total_len = ntohl(len_net);
+        
+        if (buffer.size() >= total_len) {
+            return total_len;
+        }
+        return 0;
     }
 };
 

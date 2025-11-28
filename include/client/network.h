@@ -24,7 +24,11 @@ private:
     bool sendData(const std::vector<uint8_t>& data);
     
     // Receive raw data
+    // Receive raw data
     std::vector<uint8_t> receiveData();
+    
+    // Buffer for incoming data
+    std::vector<uint8_t> receiveBuffer;
 
 public:
     NetworkClient(const std::string& host = "127.0.0.1", int port = 8080);
@@ -47,6 +51,9 @@ public:
     // Message sending/receiving
     bool sendMessage(const protocol::Message& msg);
     protocol::Message receiveMessage();
+    
+    // Non-blocking poll for messages
+    std::vector<protocol::Message> pollMessages();
 
     // Session management
     std::string getSessionToken() const { return sessionToken; }

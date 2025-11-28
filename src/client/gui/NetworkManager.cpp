@@ -142,86 +142,71 @@ void NetworkManager::checkMessages() {
         return;
     }
 
-    int sockfd = m_client->getSocketFd();
-    if (sockfd < 0) return;
-
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(sockfd, &readfds);
+    std::vector<protocol::Message> messages = m_client->pollMessages();
     
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0; // Non-blocking check
-    
-    if (select(sockfd + 1, &readfds, nullptr, nullptr, &timeout) > 0) {
-        try {
-            protocol::Message msg = m_client->receiveMessage();
-            qDebug() << "Received message code:" << (int)msg.code;
-            
-            switch (msg.code) {
-                case protocol::MsgCode::LESSON_LIST_SUCCESS:
-                    emit lessonListReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::LESSON_LIST_FAILURE:
-                    emit errorOccurred("Failed to get lesson list: " + QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::STUDY_LESSON_SUCCESS:
-                    emit lessonContentReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::STUDY_LESSON_FAILURE:
-                    emit errorOccurred("Failed to get lesson content: " + QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::EXERCISE_LIST_SUCCESS:
-                    emit exerciseListReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::EXERCISE_LIST_FAILURE:
-                    emit errorOccurred("Failed to get exercise list");
-                    break;
-                case protocol::MsgCode::EXAM_LIST_SUCCESS:
-                    emit examListReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::EXAM_LIST_FAILURE:
-                    emit errorOccurred("Failed to get exam list");
-                    break;
-                case protocol::MsgCode::RESULT_LIST_SUCCESS:
-                    emit resultListReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::RESULT_LIST_FAILURE:
-                    emit errorOccurred("Failed to get results");
-                    break;
-                case protocol::MsgCode::MULTIPLE_CHOICE_SUCCESS:
-                case protocol::MsgCode::FILL_IN_SUCCESS:
-                case protocol::MsgCode::SENTENCE_ORDER_SUCCESS:
-                case protocol::MsgCode::REWRITE_SENTENCE_SUCCESS:
-                case protocol::MsgCode::WRITE_PARAGRAPH_SUCCESS:
-                case protocol::MsgCode::SPEAKING_TOPIC_SUCCESS:
-                    emit exerciseContentReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::MULTIPLE_CHOICE_FAILURE:
-                case protocol::MsgCode::FILL_IN_FAILURE:
-                case protocol::MsgCode::SENTENCE_ORDER_FAILURE:
-                case protocol::MsgCode::REWRITE_SENTENCE_FAILURE:
-                case protocol::MsgCode::WRITE_PARAGRAPH_FAILURE:
-                case protocol::MsgCode::SPEAKING_TOPIC_FAILURE:
-                    emit errorOccurred("Failed to get exercise content");
-                    break;
-                case protocol::MsgCode::EXAM_SUCCESS:
-                    emit examContentReceived(QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::EXAM_FAILURE:
-                    emit errorOccurred("Failed to get exam content: " + QString::fromStdString(msg.toString()));
-                    break;
-                case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS:
-                case protocol::MsgCode::SUBMIT_ANSWER_FAILURE:
-                    emit answerSubmissionResult(QString::fromStdString(msg.toString()));
-                    break;
-                default:
-                    qDebug() << "Unhandled message code:" << (int)msg.code;
-                    break;
-            }
-            
-        } catch (const std::exception& e) {
-            qDebug() << "Error receiving message:" << e.what();
+    for (const auto& msg : messages) {
+        qDebug() << "Received message code:" << (int)msg.code;
+        
+        switch (msg.code) {
+            case protocol::MsgCode::LESSON_LIST_SUCCESS:
+                emit lessonListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::LESSON_LIST_FAILURE:
+                emit errorOccurred("Failed to get lesson list: " + QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::STUDY_LESSON_SUCCESS:
+                emit lessonContentReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::STUDY_LESSON_FAILURE:
+                emit errorOccurred("Failed to get lesson content: " + QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::EXERCISE_LIST_SUCCESS:
+                emit exerciseListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::EXERCISE_LIST_FAILURE:
+                emit errorOccurred("Failed to get exercise list");
+                break;
+            case protocol::MsgCode::EXAM_LIST_SUCCESS:
+                emit examListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::EXAM_LIST_FAILURE:
+                emit errorOccurred("Failed to get exam list");
+                break;
+            case protocol::MsgCode::RESULT_LIST_SUCCESS:
+                emit resultListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::RESULT_LIST_FAILURE:
+                emit errorOccurred("Failed to get results");
+                break;
+            case protocol::MsgCode::MULTIPLE_CHOICE_SUCCESS:
+            case protocol::MsgCode::FILL_IN_SUCCESS:
+            case protocol::MsgCode::SENTENCE_ORDER_SUCCESS:
+            case protocol::MsgCode::REWRITE_SENTENCE_SUCCESS:
+            case protocol::MsgCode::WRITE_PARAGRAPH_SUCCESS:
+            case protocol::MsgCode::SPEAKING_TOPIC_SUCCESS:
+                emit exerciseContentReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::MULTIPLE_CHOICE_FAILURE:
+            case protocol::MsgCode::FILL_IN_FAILURE:
+            case protocol::MsgCode::SENTENCE_ORDER_FAILURE:
+            case protocol::MsgCode::REWRITE_SENTENCE_FAILURE:
+            case protocol::MsgCode::WRITE_PARAGRAPH_FAILURE:
+            case protocol::MsgCode::SPEAKING_TOPIC_FAILURE:
+                emit errorOccurred("Failed to get exercise content");
+                break;
+            case protocol::MsgCode::EXAM_SUCCESS:
+                emit examContentReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::EXAM_FAILURE:
+                emit errorOccurred("Failed to get exam content: " + QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS:
+            case protocol::MsgCode::SUBMIT_ANSWER_FAILURE:
+                emit answerSubmissionResult(QString::fromStdString(msg.toString()));
+                break;
+            default:
+                qDebug() << "Unhandled message code:" << (int)msg.code;
+                break;
         }
     }
 }

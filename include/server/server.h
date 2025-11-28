@@ -8,6 +8,7 @@
 #include "server/client_handler.h"
 #include <vector>
 #include <set>
+#include <map>
 #include <memory>
 
 class Server {
@@ -25,6 +26,7 @@ private:
 
     
     std::set<int> clientSockets;
+    std::map<int, std::vector<uint8_t>> clientBuffers;
     
     // Initialize server socket
     bool initSocket();

@@ -129,9 +129,9 @@ int Server::acceptClient() {
 }
 
 void Server::handleClientData(int clientFd) {
-    std::vector<uint8_t> buffer(4096);
+    std::vector<uint8_t> tempBuffer(4096);
     
-    ssize_t received = recv(clientFd, buffer.data(), buffer.size(), 0);
+    ssize_t received = recv(clientFd, tempBuffer.data(), tempBuffer.size(), 0);
     
     if (received <= 0) {
         if (received == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
@@ -141,15 +141,38 @@ void Server::handleClientData(int clientFd) {
         return;
     }
 
-    buffer.resize(received);
+    tempBuffer.resize(received);
     
-    // Process the message
-    clientHandler->processMessage(clientFd, buffer);
+    // Append to client buffer
+    std::vector<uint8_t>& buffer = clientBuffers[clientFd];
+    buffer.insert(buffer.end(), tempBuffer.begin(), tempBuffer.end());
+    
+    // Process all complete messages
+    while (true) {
+        uint32_t msgLen = protocol::Message::getFullLength(buffer);
+        
+        if (msgLen == 0) {
+            // Not enough data for a full message yet
+            break;
+        }
+        
+        // Extract message data
+        std::vector<uint8_t> msgData(buffer.begin(), buffer.begin() + msgLen);
+        
+        // Remove from buffer
+        buffer.erase(buffer.begin(), buffer.begin() + msgLen);
+        
+        // Process the message
+        // Note: processMessage now expects the full serialized message including length prefix
+        // because we modified deserialize to handle it.
+        clientHandler->processMessage(clientFd, msgData);
+    }
 }
 
 void Server::removeClient(int clientFd) {
     clientHandler->handleClientDisconnect(clientFd);
     clientSockets.erase(clientFd);
+    clientBuffers.erase(clientFd);
     close(clientFd);
 }
 

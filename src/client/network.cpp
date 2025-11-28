@@ -272,13 +272,30 @@ bool NetworkClient::sendMessage(const protocol::Message& msg) {
 }
 
 protocol::Message NetworkClient::receiveMessage() {
-    std::vector<uint8_t> data = receiveData();
+    // Check if we already have a complete message in buffer
+    uint32_t msgLen = protocol::Message::getFullLength(receiveBuffer);
     
-    if (data.empty()) {
-        throw std::runtime_error("No data received");
+    while (msgLen == 0) {
+        // Need more data
+        std::vector<uint8_t> newData = receiveData();
+        if (newData.empty()) {
+            // Check again, maybe receiveData timed out but we have partial data?
+            // Actually receiveData throws if no data received after timeout?
+            // The original receiveData returned empty vector on timeout.
+            // But receiveMessage threw runtime_error if empty.
+            // We should probably throw if we can't get a full message.
+            throw std::runtime_error("Timeout waiting for message");
+        }
+        
+        receiveBuffer.insert(receiveBuffer.end(), newData.begin(), newData.end());
+        msgLen = protocol::Message::getFullLength(receiveBuffer);
     }
     
-    return protocol::Message::deserialize(data);
+    // Extract message
+    std::vector<uint8_t> msgData(receiveBuffer.begin(), receiveBuffer.begin() + msgLen);
+    receiveBuffer.erase(receiveBuffer.begin(), receiveBuffer.begin() + msgLen);
+    
+    return protocol::Message::deserialize(msgData);
 }
 
 bool NetworkClient::sendData(const std::vector<uint8_t>& data) {
@@ -313,6 +330,52 @@ bool NetworkClient::sendData(const std::vector<uint8_t>& data) {
     }
     
     return true;
+}
+
+std::vector<protocol::Message> NetworkClient::pollMessages() {
+    std::vector<protocol::Message> messages;
+    
+    if (sockfd < 0) return messages;
+
+    // Try to read data without blocking
+    std::vector<uint8_t> buffer(4096);
+    ssize_t received = recv(sockfd, buffer.data(), buffer.size(), 0);
+    
+    if (received > 0) {
+        buffer.resize(received);
+        receiveBuffer.insert(receiveBuffer.end(), buffer.begin(), buffer.end());
+    } else if (received == 0) {
+        // Disconnected?
+        connected = false;
+        return messages;
+    } else {
+        // Error or EWOULDBLOCK
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            // Real error
+            connected = false;
+            return messages;
+        }
+    }
+    
+    // Process all complete messages in buffer
+    while (true) {
+        uint32_t msgLen = protocol::Message::getFullLength(receiveBuffer);
+        
+        if (msgLen == 0) {
+            break;
+        }
+        
+        std::vector<uint8_t> msgData(receiveBuffer.begin(), receiveBuffer.begin() + msgLen);
+        receiveBuffer.erase(receiveBuffer.begin(), receiveBuffer.begin() + msgLen);
+        
+        try {
+            messages.push_back(protocol::Message::deserialize(msgData));
+        } catch (...) {
+            // Should not happen if getFullLength returned > 0
+        }
+    }
+    
+    return messages;
 }
 
 std::vector<uint8_t> NetworkClient::receiveData() {
