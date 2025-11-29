@@ -131,6 +131,16 @@ VALUES (2, 'exercise', 2, 0.0, 'My essay', 'Pending instructor review', 'pending
 \echo 'Results:'
 SELECT COUNT(*) AS total FROM results;
 
+\echo '--- Inserting Chat Messages ---'
+INSERT INTO chat_messages (sender_id, receiver_id, content, message_type) VALUES
+(1, 2, 'Hello Student, how are you?', 'TEXT'),
+(2, 1, 'I am doing well, thank you!', 'TEXT'),
+(1, 2, 'Do you have any questions about the lesson?', 'TEXT'),
+(2, 1, 'Not yet, I will ask if I do.', 'TEXT');
+
+\echo 'Messages:'
+SELECT COUNT(*) AS total FROM chat_messages;
+
 \echo '--- Seeding Complete ---'
 -- =====================================
 -- SAMPLE LESSON DATA

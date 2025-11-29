@@ -95,10 +95,11 @@ namespace Payloads {
     struct PrivateMessageRequest : public ISerializable {
         std::string sessionToken;
         std::string recipient;
-        std::string message;
+        std::string messageType; // "TEXT" or "AUDIO"
+        std::string content;
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {sessionToken, recipient, message};
+            std::vector<std::string> parts = {sessionToken, recipient, messageType, content};
             return utils::join(parts, ';');
         }
 
@@ -106,7 +107,8 @@ namespace Payloads {
             auto parts = utils::split(raw, ';');
             if (parts.size() >= 1) sessionToken = parts[0];
             if (parts.size() >= 2) recipient = parts[1];
-            if (parts.size() >= 3) message = parts[2];
+            if (parts.size() >= 3) messageType = parts[2];
+            if (parts.size() >= 4) content = parts[3];
         }
     };
 
@@ -607,6 +609,106 @@ namespace Payloads {
                     q.deserialize(qRaw);
                     questions.push_back(q);
                 }
+            }
+        }
+    };
+
+    struct ChatMessageDTO : public ISerializable {
+        std::string sender;
+        std::string messageType;
+        std::string content;
+        std::string timestamp;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {sender, messageType, content, timestamp};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sender = parts[0];
+            if (parts.size() >= 2) messageType = parts[1];
+            if (parts.size() >= 3) content = parts[2];
+            if (parts.size() >= 4) timestamp = parts[3];
+        }
+    };
+
+    struct ChatHistoryDTO {
+        std::vector<ChatMessageDTO> messages;
+
+        std::string serialize() const {
+            std::string result;
+            for (size_t i = 0; i < messages.size(); ++i) {
+                result += messages[i].serialize();
+                if (i < messages.size() - 1) result += "|";
+            }
+            return result;
+        }
+
+        void deserialize(const std::string& data) {
+            messages.clear();
+            std::stringstream ss(data);
+            std::string segment;
+            while (std::getline(ss, segment, '|')) {
+                ChatMessageDTO msg;
+                msg.deserialize(segment);
+                messages.push_back(msg);
+            }
+        }
+    };
+
+    struct RecentChatsRequest {
+        std::string sessionToken;
+
+        std::string serialize() const {
+            return sessionToken;
+        }
+
+        void deserialize(const std::string& data) {
+            sessionToken = data;
+        }
+    };
+
+    struct RecentChatDTO {
+        int userId;
+        std::string username;
+        std::string lastMessage;
+        std::string timestamp;
+
+        std::string serialize() const {
+            return std::to_string(userId) + ";" + username + ";" + lastMessage + ";" + timestamp;
+        }
+
+        void deserialize(const std::string& data) {
+            std::stringstream ss(data);
+            std::string segment;
+            std::getline(ss, segment, ';'); userId = std::stoi(segment);
+            std::getline(ss, username, ';');
+            std::getline(ss, lastMessage, ';');
+            std::getline(ss, timestamp, ';');
+        }
+    };
+
+    struct RecentChatsDTO {
+        std::vector<RecentChatDTO> chats;
+
+        std::string serialize() const {
+            std::string result;
+            for (size_t i = 0; i < chats.size(); ++i) {
+                result += chats[i].serialize();
+                if (i < chats.size() - 1) result += "|";
+            }
+            return result;
+        }
+
+        void deserialize(const std::string& data) {
+            chats.clear();
+            std::stringstream ss(data);
+            std::string segment;
+            while (std::getline(ss, segment, '|')) {
+                RecentChatDTO chat;
+                chat.deserialize(segment);
+                chats.push_back(chat);
             }
         }
     };

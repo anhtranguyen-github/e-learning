@@ -77,8 +77,9 @@ public:
     bool requestExam(int examId);
 
     // Chat
-    bool sendPrivateMessage(const std::string& recipient, const std::string& message);
+    bool sendPrivateMessage(const std::string& recipient, const std::string& content, const std::string& type = "TEXT");
     bool requestChatHistory(const std::string& otherUser);
+    bool requestRecentChats();
 
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }

@@ -1,101 +1,204 @@
 #include "server/controller/chat_controller.h"
-#include "server/client_handler.h"
 #include "common/logger.h"
-#include "common/payloads.h"
-#include "common/utils.h"
-#include <sys/socket.h>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <sstream>
-#include <vector>
+#include <sys/socket.h>
 
 namespace server {
 
-ChatController::ChatController(std::shared_ptr<SessionManager> sessionMgr, 
-                           std::shared_ptr<ConnectionManager> connMgr,
-                           std::shared_ptr<Database> database)
-    : sessionManager(sessionMgr), connectionManager(connMgr), db(database) {
-}
+ChatController::ChatController(std::shared_ptr<ChatRepository> chatRepo,
+                               std::shared_ptr<UserRepository> userRepo,
+                               std::shared_ptr<ConnectionManager> connMgr,
+                               std::shared_ptr<SessionManager> sessionMgr)
+    : chatRepository(chatRepo), userRepository(userRepo), connectionManager(connMgr), sessionManager(sessionMgr) {}
 
-void ChatController::sendMessage(int clientFd, const protocol::Message& msg) {
-    std::vector<uint8_t> data = msg.serialize();
+void ChatController::handleSendPrivateMessage(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("handleSendPrivateMessage: Raw payload=" + payload);
+    }
+
+    Payloads::PrivateMessageRequest req;
+    try {
+        req.deserialize(payload);
+    } catch (const std::exception& e) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("handleSendPrivateMessage: Deserialization failed: " + std::string(e.what()));
+        }
+        protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Invalid message format");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("handleSendPrivateMessage: recipient=" + req.recipient + ", content=" + req.content);
+    }
+
+    int senderId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (senderId == -1) {
+        if (logger::serverLogger) logger::serverLogger->warn("handleSendPrivateMessage: Invalid session token");
+        protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Invalid session");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    User sender = userRepository->findById(senderId);
+    if (sender.getId() == -1) {
+        if (logger::serverLogger) logger::serverLogger->warn("handleSendPrivateMessage: Sender not found for ID " + std::to_string(senderId));
+        protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Sender not found");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    int receiverId = userRepository->getUserId(req.recipient);
+    if (receiverId == -1) {
+        if (logger::serverLogger) logger::serverLogger->warn("handleSendPrivateMessage: Recipient not found: " + req.recipient);
+        protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Recipient not found");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+    User receiver = userRepository->findById(receiverId);
+
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("Handling send message: senderId=" + std::to_string(senderId) + 
+                                   ", receiverId=" + std::to_string(receiverId) + 
+                                   ", content=" + req.content);
+    }
+
+    // Create ChatMessage object
+    ChatMessage chatMsg;
+    chatMsg.setSenderId(senderId);
+    chatMsg.setReceiverId(receiverId);
+    chatMsg.setContent(req.content);
+    chatMsg.setMessageType(req.messageType.empty() ? "TEXT" : req.messageType);
+    chatMsg.setIsRead(false);
+
+    // Save to DB
+    int msgId = chatRepository->saveMessage(chatMsg);
+    if (msgId == -1) {
+        protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_FAILURE, "Failed to save message");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    // Get timestamp
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S");
+    std::string timestamp = ss.str();
+
+    // Prepare push notification payload
+    Payloads::ChatMessageDTO pushDto;
+    pushDto.sender = sender.getUsername();
+    pushDto.messageType = chatMsg.getMessageType();
+    pushDto.content = chatMsg.getContent();
+    pushDto.timestamp = timestamp;
+    
+    std::string pushPayload = pushDto.serialize();
+    protocol::Message pushMsg(protocol::MsgCode::CHAT_PRIVATE_RECEIVE, pushPayload);
+
+    // Send to recipient if online
+    connectionManager->sendToUser(receiverId, pushMsg);
+
+    // Send success to sender
+    protocol::Message response(protocol::MsgCode::CHAT_MESSAGE_SUCCESS, "Message sent");
+    std::vector<uint8_t> data = response.serialize();
     send(clientFd, data.data(), data.size(), 0);
 }
 
-void ChatController::handle_private_message(int clientFd, const protocol::Message& msg) {
+void ChatController::handleGetChatHistory(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
-    Payloads::PrivateMessageRequest req;
+    Payloads::ChatHistoryRequest req;
     req.deserialize(payload);
 
-    std::string sessionToken = req.sessionToken;
-    std::string recipient_username = req.recipient;
-    std::string message_content = req.message;
-
-    if (recipient_username.empty() || message_content.empty()) {
-         Payloads::GenericResponse resp;
-         resp.success = false;
-         resp.message = "Invalid message format";
-         protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, resp.serialize());
-         sendMessage(clientFd, error_msg);
-         return;
-    }
-
-    int sender_id = sessionManager->get_user_id_by_session(sessionToken);
-    if (sender_id == -1) {
-        Payloads::GenericResponse resp;
-        resp.success = false;
-        resp.message = "Invalid session";
-        protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, resp.serialize());
-        sendMessage(clientFd, error_msg);
+    int userId1 = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId1 == -1) {
+        protocol::Message response(protocol::MsgCode::CHAT_HISTORY_FAILURE, "Invalid session");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
         return;
     }
 
-    sessionManager->update_session(sessionToken);
+    int userId2 = userRepository->getUserId(req.otherUser);
+    if (userId2 == -1) {
+        protocol::Message response(protocol::MsgCode::CHAT_HISTORY_FAILURE, "User not found");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
 
-    // Get recipient ID directly from DB since ConnectionManager doesn't handle auth/users anymore
-    int recipient_id = -1;
-    std::string query = "SELECT user_id FROM users WHERE username = $1";
-    const char* values[] = {recipient_username.c_str()};
-    PGresult* res = db->execParams(query, 1, values);
+    std::vector<ChatMessage> history = chatRepository->getChatHistory(userId1, userId2);
     
-    if (res && PQntuples(res) == 1) {
-        recipient_id = std::stoi(PQgetvalue(res, 0, 0));
-    }
-    if (res) PQclear(res);
-
-    if (recipient_id == -1) {
-        Payloads::GenericResponse resp;
-        resp.success = false;
-        resp.message = "Recipient not found";
-        protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, resp.serialize());
-        sendMessage(clientFd, error_msg);
-        return;
-    }
-
-    // Forward message if recipient is online
-    auto recipient_client = connectionManager->get_client(recipient_id);
-    if (recipient_client) {
-        protocol::Message forward_msg(protocol::MsgCode::CHAT_PRIVATE_RECEIVE, std::to_string(sender_id) + ":" + message_content);
-        recipient_client->send_message(forward_msg);
+    // Convert to DTOs
+    Payloads::ChatHistoryDTO historyDto;
+    for (const auto& m : history) {
+        Payloads::ChatMessageDTO dto;
+        if (m.getSenderId() == userId1) {
+            User user = userRepository->findById(userId1);
+            dto.sender = (user.getId() != -1) ? user.getUsername() : "Unknown";
+        } else {
+            dto.sender = req.otherUser;
+        }
         
-        Payloads::GenericResponse resp;
-        resp.success = true;
-        resp.message = "Message sent";
-        protocol::Message success_msg(protocol::MsgCode::CHAT_MESSAGE_SUCCESS, resp.serialize());
-        sendMessage(clientFd, success_msg);
-    } else {
-        Payloads::GenericResponse resp;
-        resp.success = false;
-        resp.message = "Recipient is offline";
-        protocol::Message error_msg(protocol::MsgCode::CHAT_MESSAGE_FAILURE, resp.serialize());
-        sendMessage(clientFd, error_msg);
+        dto.messageType = m.getMessageType();
+        dto.content = m.getContent();
+        dto.timestamp = m.getTimestamp();
+        historyDto.messages.push_back(dto);
     }
+
+    protocol::Message response(protocol::MsgCode::CHAT_HISTORY_SUCCESS, historyDto.serialize());
+    std::vector<uint8_t> data = response.serialize();
+    send(clientFd, data.data(), data.size(), 0);
 }
 
-void ChatController::handle_chat_history(int clientFd, const protocol::Message& /*msg*/) {
-    Payloads::GenericResponse resp;
-    resp.success = false;
-    resp.message = "Chat history is disabled";
-    protocol::Message error_msg(protocol::MsgCode::CHAT_HISTORY_FAILURE, resp.serialize());
-    sendMessage(clientFd, error_msg);
+void ChatController::handleGetRecentChats(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    Payloads::RecentChatsRequest req;
+    req.deserialize(payload);
+
+    int userId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId == -1) {
+        protocol::Message response(protocol::MsgCode::RECENT_CHATS_FAILURE, "Invalid session");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    std::vector<ChatMessage> recentChats = chatRepository->getRecentChats(userId);
+    
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("getRecentChats returned " + std::to_string(recentChats.size()) + " messages for userId=" + std::to_string(userId));
+    }
+
+    // Convert to DTOs
+    // We need a DTO that holds a list of recent chats summaries.
+    // Since we don't have a specific RecentChatsDTO, we can reuse a string format or create a DTO.
+    // The client expects "userId;username;lastMessage;timestamp|..."
+    
+    std::stringstream ss;
+    for (const auto& m : recentChats) {
+        int otherId = (m.getSenderId() == userId) ? m.getReceiverId() : m.getSenderId();
+        User otherUser = userRepository->findById(otherId);
+        std::string otherUsername = (otherUser.getId() != -1) ? otherUser.getUsername() : "Unknown";
+        
+        ss << otherId << ";" 
+           << otherUsername << ";" 
+           << m.getContent() << ";" 
+           << m.getTimestamp() << "|";
+    }
+    
+    protocol::Message response(protocol::MsgCode::RECENT_CHATS_SUCCESS, ss.str());
+    std::vector<uint8_t> data = response.serialize();
+    send(clientFd, data.data(), data.size(), 0);
 }
 
 } // namespace server

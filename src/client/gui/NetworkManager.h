@@ -32,6 +32,9 @@ public:
     Q_INVOKABLE void requestPendingSubmissions();
     Q_INVOKABLE void requestResultDetail(const QString &targetType, const QString &targetId);
     Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback);
+    Q_INVOKABLE void sendPrivateMessage(const QString &recipient, const QString &content, const QString &type = "TEXT");
+    Q_INVOKABLE void requestChatHistory(const QString &otherUser);
+    Q_INVOKABLE void requestRecentChats();
 
     bool isConnected() const;
     bool isLoggedIn() const;
@@ -58,6 +61,12 @@ signals:
     void gradeSubmissionSuccess(const QString &message);
     void gradeSubmissionFailure(const QString &message);
     void examAlreadyTaken(const QString &message);
+    
+    void chatMessageReceived(const QString &sender, const QString &content, const QString &type, const QString &timestamp);
+    void chatHistoryReceived(const QString &historyData);
+    void recentChatsReceived(const QString &chatsData);
+    void chatMessageSent(const QString &message);
+    void chatError(const QString &message);
 
 private slots:
     void checkMessages();

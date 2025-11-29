@@ -1,32 +1,39 @@
-#ifndef CHAT_CONTROLLER_H
-#define CHAT_CONTROLLER_H
+#ifndef SERVER_CONTROLLER_CHAT_CONTROLLER_H
+#define SERVER_CONTROLLER_CHAT_CONTROLLER_H
 
-#include "common/protocol.h"
-#include "server/session.h"
+#include "server/repository/chat_repository.h"
 #include "server/connection_manager.h"
-#include "server/database.h"
+#include "server/session.h"
+#include "server/repository/user_repository.h"
+#include "common/payloads.h"
+#include "common/protocol.h"
 #include <memory>
-#include <string>
 
 namespace server {
 
 class ChatController {
 private:
-    std::shared_ptr<SessionManager> sessionManager;
+    std::shared_ptr<ChatRepository> chatRepository;
+    std::shared_ptr<UserRepository> userRepository;
     std::shared_ptr<ConnectionManager> connectionManager;
-    std::shared_ptr<Database> db;
-
-    void sendMessage(int clientFd, const protocol::Message& msg);
+    std::shared_ptr<SessionManager> sessionManager;
 
 public:
-    ChatController(std::shared_ptr<SessionManager> sessionMgr, 
-                std::shared_ptr<ConnectionManager> connMgr,
-                std::shared_ptr<Database> database);
+    ChatController(std::shared_ptr<ChatRepository> chatRepo,
+                   std::shared_ptr<UserRepository> userRepo,
+                   std::shared_ptr<ConnectionManager> connMgr,
+                   std::shared_ptr<SessionManager> sessionMgr);
 
-    void handle_private_message(int clientFd, const protocol::Message& msg);
-    void handle_chat_history(int clientFd, const protocol::Message& msg);
+    // Handle SEND_CHAT_PRIVATE_REQUEST
+    void handleSendPrivateMessage(int clientFd, const protocol::Message& msg);
+
+    // Handle CHAT_HISTORY_REQUEST
+    void handleGetChatHistory(int clientFd, const protocol::Message& msg);
+
+    // Handle RECENT_CHATS_REQUEST
+    void handleGetRecentChats(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server
 
-#endif // CHAT_CONTROLLER_H
+#endif // SERVER_CONTROLLER_CHAT_CONTROLLER_H

@@ -28,6 +28,7 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/repository/exam_repository.cpp \
              $(SRC_DIR)/server/repository/user_repository.cpp \
              $(SRC_DIR)/server/repository/result_repository.cpp \
+             $(SRC_DIR)/server/repository/chat_repository.cpp \
              $(SRC_DIR)/server/controller/lesson_controller.cpp \
              $(SRC_DIR)/server/controller/exercise_controller.cpp \
              $(SRC_DIR)/server/controller/submission_controller.cpp \

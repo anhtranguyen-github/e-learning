@@ -14,7 +14,7 @@ This document outlines the standard process for adding, updating, or refactoring
 
 ## 3. Database Schema & Seeding
 *   **Location:** `database/init_db.sql`, `database/seed.sql`
-*   **Action:** Update `init_db.sql` for schema changes and `seed.sql` for initial data.
+*   **Action:** Update `init_db.sql` for schema changes and `seed.sql` for initial data. **Note:** You must re-seed the database if the schema changes.
 *   **Purpose:** Ensures the database structure matches your Model and has test data.
 
 ## 4. Data Persistence (Repository)
@@ -36,3 +36,8 @@ This document outlines the standard process for adding, updating, or refactoring
 *   **Location:** `src/client/gui/*.qml`
 *   **Action:** Connect UI components to `NetworkManager` signals to display data.
 *   **Purpose:** The visual layer the user interacts with. It should be dumb and only display data provided by the NetworkManager.
+
+## 8. Build & Run
+*   **File:** `./run.sh`
+*   **Action:** Run this script to build the executable.
+*   **Purpose:** Automates the build process for the project.

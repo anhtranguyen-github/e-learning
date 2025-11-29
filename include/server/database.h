@@ -30,6 +30,7 @@ public:
     void printResult(PGresult* res);
     
     std::mutex& getMutex() { return dbMutex; }
+    PGconn* getConnection() const { return conn; }
 };
 
 } // namespace server

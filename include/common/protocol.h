@@ -106,6 +106,9 @@ enum class MsgCode : uint16_t {
     CHAT_HISTORY_REQUEST = 304,
     CHAT_HISTORY_SUCCESS = 305,
     CHAT_HISTORY_FAILURE = 306,
+    RECENT_CHATS_REQUEST = 307,
+    RECENT_CHATS_SUCCESS = 308,
+    RECENT_CHATS_FAILURE = 309,
 
     // Heartbeat and Disconnect (900-909)
     HEARTBEAT = 900,

@@ -696,7 +696,7 @@ bool NetworkClient::requestExam(int examId) {
     return true;
 }
 
-bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::string& message) {
+bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::string& content, const std::string& type) {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {
             logger::clientLogger->error("Not logged in - cannot send private message");
@@ -707,7 +707,8 @@ bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::
     Payloads::PrivateMessageRequest req;
     req.sessionToken = sessionToken;
     req.recipient = recipient;
-    req.message = message;
+    req.content = content;
+    req.messageType = type;
     std::string payload = req.serialize();
     protocol::Message msg(protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST, payload);
 
@@ -738,6 +739,31 @@ bool NetworkClient::requestChatHistory(const std::string& otherUser) {
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {
             logger::clientLogger->error("Failed to send chat history request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+
+
+bool NetworkClient::requestRecentChats() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request recent chats");
+        }
+        return false;
+    }
+
+    Payloads::RecentChatsRequest req;
+    req.sessionToken = sessionToken;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::RECENT_CHATS_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send recent chats request");
         }
         return false;
     }

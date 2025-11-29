@@ -22,6 +22,7 @@ public:
     void update_session(const std::string& session_id);
     int get_user_id_by_session(const std::string& session_id);
     int get_user_id_by_fd(int client_fd);
+    std::vector<int> get_fds_by_user_id(int user_id);
     void remove_session_by_fd(int client_fd);
 
 private:

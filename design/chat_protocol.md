@@ -7,8 +7,8 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 
 | Message Name | Code | Description | Payload Structure |
 | :--- | :--- | :--- | :--- |
-| `SEND_CHAT_PRIVATE_REQUEST` | 300 | Send a private message. | `sessionToken;recipient;message` |
-| `CHAT_PRIVATE_RECEIVE` | 301 | Receive a private message (push). | `sender;message;timestamp` (implied) |
+| `SEND_CHAT_PRIVATE_REQUEST` | 300 | Send a private message. | `sessionToken;recipient;messageType;content` |
+| `CHAT_PRIVATE_RECEIVE` | 301 | Receive a private message (push). | `sender;messageType;content;timestamp` |
 | `CHAT_MESSAGE_SUCCESS` | 302 | Message sent successfully. | `success_message` |
 | `CHAT_MESSAGE_FAILURE` | 303 | Failed to send message. | `error_message` |
 | `CHAT_HISTORY_REQUEST` | 304 | Request chat history with a user. | `sessionToken;otherUser` |
@@ -18,8 +18,10 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 ## Payload Definitions
 
 ### PrivateMessageRequest
-- **Fields**: `sessionToken`, `recipient`, `message`
-- **Serialization**: `sessionToken;recipient;message`
+### PrivateMessageRequest
+- **Fields**: `sessionToken`, `recipient`, `messageType`, `content`
+- **Serialization**: `sessionToken;recipient;messageType;content`
+- **Note**: `messageType` can be "TEXT" or "AUDIO". If "AUDIO", `content` is a Base64 encoded string of the audio file.
 
 ### ChatHistoryRequest
 - **Fields**: `sessionToken`, `otherUser`
@@ -27,22 +29,36 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 
 ## Example Flow
 
-### Sending a Message
+### Sending a Message (Text)
 1.  **Client A** sends `SEND_CHAT_PRIVATE_REQUEST`:
     ```
     Code: 300
-    Payload: "tokenA;UserB;Hello there!"
+    Payload: "tokenA;UserB;TEXT;Hello there!"
     ```
-2.  **Server** forwards to **Client B** as `CHAT_PRIVATE_RECEIVE` (if online) or stores it.
+2.  **Server** forwards to **Client B** as `CHAT_PRIVATE_RECEIVE`:
     ```
     Code: 301
-    Payload: "UserA;Hello there!"
+    Payload: "UserA;TEXT;Hello there!;2023-10-27 10:00:00"
     ```
-3.  **Server** responds to **Client A** with `CHAT_MESSAGE_SUCCESS`:
+
+### Sending a Message (Audio)
+1.  **Client A** records audio, saves to temp file, reads bytes, and Base64 encodes them.
+2.  **Client A** sends `SEND_CHAT_PRIVATE_REQUEST`:
     ```
-    Code: 302
-    Payload: "Message sent"
+    Code: 300
+    Payload: "tokenA;UserB;AUDIO;<Base64EncodedAudioData>"
     ```
+3.  **Server** receives, decodes (optional, or stores as blob/file), and forwards to **Client B**.
+4.  **Client B** receives `CHAT_PRIVATE_RECEIVE`:
+    ```
+    Code: 301
+    Payload: "UserA;AUDIO;<Base64EncodedAudioData>;2023-10-27 10:05:00"
+    ```
+5.  **Client B** detects `AUDIO` type:
+    - Decodes Base64 data to binary.
+    - Checks **User Settings** for "Audio Download Folder".
+    - Saves file as `audio_timestamp_sender.wav` in that folder.
+    - Displays an audio player in the chat UI pointing to that local file.
 
 ### Retrieving History
 1.  **Client** sends `CHAT_HISTORY_REQUEST`:
@@ -53,6 +69,6 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 2.  **Server** responds with `CHAT_HISTORY_SUCCESS`:
     ```
     Code: 305
-    Payload: "UserB:Hi|UserA:Hello|UserB:How are you?" 
+    Payload: "UserB|TEXT|Hi|time^UserA|AUDIO|<Base64Data>|time" 
     ```
-    *(Note: History format depends on implementation, typically a list of serialized message objects).*
+

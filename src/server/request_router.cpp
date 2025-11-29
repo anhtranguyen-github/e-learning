@@ -27,10 +27,11 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     auto lessonRepo = std::make_shared<LessonRepository>(db);
     auto exerciseRepo = std::make_shared<ExerciseRepository>(db);
     auto examRepo = std::make_shared<ExamRepository>(db);
+    auto chatRepo = std::make_shared<ChatRepository>(db);
 
     // Initialize Controllers
     userController = std::make_shared<UserController>(userRepo, sessionManager, connectionManager);
-    chatController = std::make_shared<ChatController>(sessionManager, connectionManager, db);
+    chatController = std::make_shared<ChatController>(chatRepo, userRepo, connectionManager, sessionManager);
     lessonController = std::make_shared<LessonController>(sessionManager, lessonRepo);
     exerciseController = std::make_shared<ExerciseController>(sessionManager, exerciseRepo);
     submissionController = std::make_shared<SubmissionController>(sessionManager, resultRepo, exerciseRepo, examRepo);
@@ -96,10 +97,13 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
 
         // Chat
         case protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST:
-            chatController->handle_private_message(clientFd, msg);
+            chatController->handleSendPrivateMessage(clientFd, msg);
             break;
         case protocol::MsgCode::CHAT_HISTORY_REQUEST:
-            chatController->handle_chat_history(clientFd, msg);
+            chatController->handleGetChatHistory(clientFd, msg);
+            break;
+        case protocol::MsgCode::RECENT_CHATS_REQUEST:
+            chatController->handleGetRecentChats(clientFd, msg);
             break;
 
         // Lesson

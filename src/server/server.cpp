@@ -22,8 +22,9 @@ Server::Server(int port, const std::string& dbConn)
     }
     
     // Initialize managers
-    connectionManager = std::make_shared<server::ConnectionManager>();
+    // Initialize managers
     sessionManager = std::make_shared<server::SessionManager>(database);
+    connectionManager = std::make_shared<server::ConnectionManager>(sessionManager);
 
     // Initialize Repositories
     resultRepository = std::make_shared<server::ResultRepository>(database);

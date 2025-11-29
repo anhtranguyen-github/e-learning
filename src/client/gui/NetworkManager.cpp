@@ -1,5 +1,11 @@
 #include "NetworkManager.h"
+#include "common/payloads.h"
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
+#include <QDateTime>
+#include <QCryptographicHash>
 
 NetworkManager::NetworkManager(QObject *parent)
     : QObject(parent), m_client(std::make_unique<client::NetworkClient>()) {
@@ -162,6 +168,56 @@ void NetworkManager::requestResultDetail(const QString &targetType, const QStrin
     }
 }
 
+void NetworkManager::sendPrivateMessage(const QString &recipient, const QString &content, const QString &type) {
+    // If type is AUDIO, content is expected to be Base64 encoded audio data
+    // We don't need to do anything special here, just pass it.
+    // But if the UI passes a file path, we might need to read and encode it?
+    // The requirement says "Implement audio recording and Base64 encoding/decoding (Client)".
+    // If the UI (QML) records audio, it likely saves to a file.
+    // So `content` might be a file path.
+    // If `type` is AUDIO and `content` looks like a file path, read and encode it.
+    
+    std::string finalContent = content.toStdString();
+    
+    if (type == "AUDIO") {
+        QFile file(content);
+        if (file.exists()) {
+            if (file.open(QIODevice::ReadOnly)) {
+                QByteArray fileData = file.readAll();
+                finalContent = fileData.toBase64().toStdString();
+                file.close();
+            } else {
+                emit chatError("Failed to read audio file");
+                return;
+            }
+        } else {
+            // Assume it's already base64 or raw content if not a file
+        }
+    }
+
+    if (m_client->sendPrivateMessage(recipient.toStdString(), finalContent, type.toStdString())) {
+        emit chatMessageSent(content); // Emit original content (e.g. file path or text) so UI can show it
+    } else {
+        emit chatError("Failed to send message");
+    }
+}
+
+void NetworkManager::requestChatHistory(const QString &otherUser) {
+    if (m_client->requestChatHistory(otherUser.toStdString())) {
+        // Success
+    } else {
+        emit chatError("Failed to request chat history");
+    }
+}
+
+void NetworkManager::requestRecentChats() {
+    if (m_client->requestRecentChats()) {
+        // Success
+    } else {
+        emit chatError("Failed to request recent chats");
+    }
+}
+
 void NetworkManager::checkMessages() {
     if (!m_client->isConnected()) {
         m_pollTimer->stop();
@@ -279,6 +335,96 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::GRADE_SUBMISSION_FAILURE:
                 emit gradeSubmissionFailure(QString::fromStdString(msg.toString()));
                 break;
+            
+            // Chat
+            case protocol::MsgCode::CHAT_MESSAGE_SUCCESS:
+                // Message sent successfully
+                // We already emitted chatMessageSent optimistically, or we can do it here.
+                break;
+            case protocol::MsgCode::CHAT_MESSAGE_FAILURE:
+                emit chatError("Failed to send message: " + QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::CHAT_PRIVATE_RECEIVE: {
+                Payloads::ChatMessageDTO dto;
+                dto.deserialize(msg.toString());
+                
+                QString content = QString::fromStdString(dto.content);
+                if (dto.messageType == "AUDIO") {
+                    // Save audio to file
+                    QByteArray audioData = QByteArray::fromBase64(dto.content.c_str());
+                    QString downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+                    QDir dir(downloadsPath);
+                    if (!dir.exists()) dir.mkpath(".");
+                    
+                    QString fileName = QString("audio_%1_%2.wav").arg(QString::fromStdString(dto.sender)).arg(QDateTime::currentMSecsSinceEpoch());
+                    QString filePath = dir.filePath(fileName);
+                    
+                    QFile file(filePath);
+                    if (file.open(QIODevice::WriteOnly)) {
+                        file.write(audioData);
+                        file.close();
+                        content = filePath; // Update content to be the file path
+                    } else {
+                        qDebug() << "Failed to save audio file:" << filePath;
+                    }
+                }
+                
+                emit chatMessageReceived(QString::fromStdString(dto.sender), content, QString::fromStdString(dto.messageType), QString::fromStdString(dto.timestamp));
+                break;
+            }
+            case protocol::MsgCode::CHAT_HISTORY_SUCCESS: {
+                Payloads::ChatHistoryDTO historyDto;
+                historyDto.deserialize(msg.toString());
+                
+                // Process history to save audio files if needed
+                // We need to reconstruct the DTO with file paths instead of Base64
+                // But ChatHistoryDTO contains a vector of ChatMessageDTO.
+                // We can iterate and modify, then serialize again? Or just emit the modified list?
+                // The signal expects a string (serialized data).
+                // If we modify the content, we need to re-serialize.
+                
+                for (auto& dto : historyDto.messages) {
+                    if (dto.messageType == "AUDIO") {
+                        // Check if we already have this file? 
+                        // Generating a unique name based on timestamp/sender might duplicate if we fetch history multiple times.
+                        // Ideally, we should hash the content or use message ID (but DTO doesn't have ID).
+                        // For now, let's save it again or check if existing.
+                        // To avoid re-saving, we could check if content is already a path? No, it's Base64 from server.
+                        
+                        QByteArray audioData = QByteArray::fromBase64(dto.content.c_str());
+                        QString downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+                        QDir dir(downloadsPath);
+                        if (!dir.exists()) dir.mkpath(".");
+                        
+                        // Use a hash of content for filename to avoid duplicates
+                        QString hash = QString(QCryptographicHash::hash(audioData, QCryptographicHash::Md5).toHex());
+                        QString fileName = QString("audio_%1.wav").arg(hash);
+                        QString filePath = dir.filePath(fileName);
+                        
+                        QFile file(filePath);
+                        if (!file.exists()) {
+                            if (file.open(QIODevice::WriteOnly)) {
+                                file.write(audioData);
+                                file.close();
+                            }
+                        }
+                        dto.content = filePath.toStdString();
+                    }
+                }
+                
+                emit chatHistoryReceived(QString::fromStdString(historyDto.serialize()));
+                break;
+            }
+            case protocol::MsgCode::CHAT_HISTORY_FAILURE:
+                emit chatError("Failed to get chat history");
+                break;
+            case protocol::MsgCode::RECENT_CHATS_SUCCESS:
+                emit recentChatsReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::RECENT_CHATS_FAILURE:
+                emit chatError("Failed to get recent chats");
+                break;
+
             default:
                 qDebug() << "Unhandled message code:" << (int)msg.code;
                 break;

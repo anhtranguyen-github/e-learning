@@ -68,4 +68,17 @@ void SessionManager::remove_session_by_fd(int client_fd) {
     }
 }
 
+std::vector<int> SessionManager::get_fds_by_user_id(int user_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<int> fds;
+    for (const auto& pair : fd_to_session_id_) {
+        int fd = pair.first;
+        std::string session_id = pair.second;
+        if (sessions_.count(session_id) && sessions_[session_id].user_id == user_id) {
+            fds.push_back(fd);
+        }
+    }
+    return fds;
+}
+
 } // namespace server

@@ -17,6 +17,7 @@ Page {
         ListElement { name: "Exercises"; icon: "✍️"; page: "ExerciseListScreen.qml"; color: "#1cc88a" }
         ListElement { name: "Exams"; icon: "📝"; page: "ExamListScreen.qml"; color: "#36b9cc" }
         ListElement { name: "My Results"; icon: "📊"; page: "ResultListScreen.qml"; color: "#f6c23e" }
+        ListElement { name: "Chat"; icon: "💬"; page: "ChatScreen.qml"; color: "#8e44ad" }
         ListElement { name: "Logout"; icon: "🚪"; page: "LOGOUT"; color: "#e74a3b" }
     }
 
