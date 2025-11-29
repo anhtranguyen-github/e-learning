@@ -93,13 +93,19 @@ Page {
             }
         }
 
-        function onAnswerSubmissionResult(response) {
-            resultText.text = response
-            if (response.indexOf("Correct") !== -1 || response.indexOf("received") !== -1 || response.indexOf("submitted") !== -1) {
-                resultText.color = Style.successColor
-            } else {
-                resultText.color = Style.errorColor
-            }
+        function onAnswerSubmissionSuccess(tType, tId) {
+            // Redirect to ResultDetailScreen
+            // Note: tType and tId might be empty if we didn't pass them back from C++
+            // But we have them in local properties: targetType and exerciseId (which is targetId)
+            stackView.replace("ResultDetailScreen.qml", {
+                "targetType": targetType,
+                "targetId": exerciseId
+            })
+        }
+
+        function onAnswerSubmissionFailure(message) {
+            resultText.text = message
+            resultText.color = Style.errorColor
         }
     }
     

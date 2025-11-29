@@ -138,7 +138,8 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
 bool ResultRepository::getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail) {
     // 1. Fetch result data
     std::string query = "SELECT score, feedback, user_answer FROM results WHERE user_id = " + std::to_string(userId) +
-                        " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId);
+                        " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId) +
+                        " ORDER BY submitted_at DESC LIMIT 1";
     
     PGresult* res = db->query(query);
     if (!res || PQntuples(res) == 0) {
@@ -210,6 +211,16 @@ bool ResultRepository::getResultDetail(int userId, const std::string& targetType
     }
 
     return true;
+}
+
+bool ResultRepository::hasResult(int userId, const std::string& targetType, int targetId) {
+    std::string query = "SELECT 1 FROM results WHERE user_id = " + std::to_string(userId) +
+                        " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId) + " LIMIT 1";
+    
+    PGresult* res = db->query(query);
+    bool exists = (res && PQntuples(res) > 0);
+    if (res) PQclear(res);
+    return exists;
 }
 
 } // namespace server

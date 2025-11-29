@@ -75,6 +75,15 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
 
     sessionManager->update_session(sessionToken);
 
+    // Check if exam already taken
+    if (targetType == "exam") {
+        if (resultRepo->hasResult(userId, targetType, targetId)) {
+            protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Exam already taken");
+            sendMessage(clientFd, response);
+            return;
+        }
+    }
+
     double score = 0.0;
     std::string feedback = "Submission received";
     std::string status = "graded";

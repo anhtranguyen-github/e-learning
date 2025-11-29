@@ -52,6 +52,8 @@ signals:
     void exerciseContentReceived(const QString &content);
     void examContentReceived(const QString &content);
     void answerSubmissionResult(const QString &response);
+    void answerSubmissionSuccess(const QString &targetType, const QString &targetId);
+    void answerSubmissionFailure(const QString &message);
     void pendingSubmissionsReceived(const QString &listData);
     void gradeSubmissionSuccess(const QString &message);
     void gradeSubmissionFailure(const QString &message);

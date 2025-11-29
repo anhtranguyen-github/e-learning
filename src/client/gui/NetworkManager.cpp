@@ -232,9 +232,20 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::EXAM_FAILURE:
                 emit errorOccurred("Failed to get exam content: " + QString::fromStdString(msg.toString()));
                 break;
-            case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS:
+            case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS: {
+                // Parse response to get targetType and targetId if possible, or just emit success
+                // The payload is ResultDTO: score|feedback
+                // Wait, we need targetType and targetId to redirect.
+                // The server response currently only contains score and feedback.
+                // We need to store the last submitted targetType and targetId in NetworkManager or pass it back.
+                // Or we can just emit success and let the UI handle it (since UI knows what it submitted).
+                emit answerSubmissionResult(QString::fromStdString(msg.toString()));
+                emit answerSubmissionSuccess("", ""); // UI will use its own stored values
+                break;
+            }
             case protocol::MsgCode::SUBMIT_ANSWER_FAILURE:
                 emit answerSubmissionResult(QString::fromStdString(msg.toString()));
+                emit answerSubmissionFailure(QString::fromStdString(msg.toString()));
                 break;
             case protocol::MsgCode::PENDING_SUBMISSIONS_SUCCESS:
                 // Reusing RESULT_LIST_SUCCESS logic or separate signal?

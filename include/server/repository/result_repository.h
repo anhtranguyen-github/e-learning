@@ -37,6 +37,9 @@ public:
 
     // Get detailed result
     bool getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail);
+
+    // Check if result exists
+    bool hasResult(int userId, const std::string& targetType, int targetId);
 };
 
 } // namespace server
