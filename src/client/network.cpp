@@ -583,7 +583,11 @@ bool NetworkClient::requestResultList() {
         return false;
     }
 
-    protocol::Message msg(protocol::MsgCode::RESULT_LIST_REQUEST, sessionToken);
+    Payloads::ResultListRequest req;
+    req.sessionToken = sessionToken;
+    req.targetType = ""; // Fetch all
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::RESULT_LIST_REQUEST, payload);
 
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {

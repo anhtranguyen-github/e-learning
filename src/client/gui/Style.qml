@@ -19,6 +19,11 @@ QtObject {
     property int subHeadingSize: 18
     property int bodySize: 14
     property int smallSize: 12
+    
+    // Standard Headings
+    property int h1Size: 24
+    property int h2Size: 20
+    property int h3Size: 18
 
     // Dimensions
     property int margin: 16

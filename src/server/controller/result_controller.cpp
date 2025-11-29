@@ -91,22 +91,42 @@ void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol:
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling done/undone list request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
+    logger::serverLogger->debug("Deserializing payload");
     Payloads::ResultListRequest req;
     req.deserialize(payload);
 
     std::string sessionToken = req.sessionToken;
     std::string targetType = req.targetType;
+    logger::serverLogger->debug("SessionToken: " + sessionToken + ", TargetType: " + targetType);
 
+    if (!sessionManager) {
+        logger::serverLogger->error("SessionManager is null!");
+        return;
+    }
+
+    logger::serverLogger->debug("Getting user ID");
     int userId = sessionManager->get_user_id_by_session(sessionToken);
+    logger::serverLogger->debug("User ID: " + std::to_string(userId));
+
     if (userId == -1) {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
         sendMessage(clientFd, response);
         return;
     }
 
+    logger::serverLogger->debug("Updating session");
     sessionManager->update_session(sessionToken);
 
+    if (!resultRepo) {
+        logger::serverLogger->error("ResultRepository is null in handleDoneUndoneListRequest");
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Internal server error");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    logger::serverLogger->debug("Calling resultRepo->getResultsByUser");
     std::vector<Payloads::ResultSummaryDTO> results = resultRepo->getResultsByUser(userId, targetType);
+    logger::serverLogger->debug("resultRepo->getResultsByUser returned " + std::to_string(results.size()) + " results");
     
     std::vector<std::string> serializedDtos;
     for (const auto& dto : results) {

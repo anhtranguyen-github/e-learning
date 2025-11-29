@@ -46,21 +46,40 @@ bool ResultRepository::getResult(int userId, const std::string& targetType, int 
 
 std::vector<Payloads::ResultSummaryDTO> ResultRepository::getResultsByUser(int userId, const std::string& targetType) {
     std::vector<Payloads::ResultSummaryDTO> results;
-    std::string query = "SELECT target_id, score, status, feedback FROM results WHERE user_id = " + std::to_string(userId) +
-                        " AND target_type = '" + targetType + "'";
+    std::string query = "SELECT target_id, score, status, feedback FROM results WHERE user_id = " + std::to_string(userId);
+    
+    if (!targetType.empty()) {
+        query += " AND target_type = '" + targetType + "'";
+    }
+
+    if (logger::serverLogger) logger::serverLogger->debug("Executing query: " + query);
 
     PGresult* result = db->query(query);
     
     if (result) {
-        for (int i = 0; i < PQntuples(result); ++i) {
+        int nTuples = PQntuples(result);
+        if (logger::serverLogger) logger::serverLogger->debug("Query returned " + std::to_string(nTuples) + " rows");
+
+        for (int i = 0; i < nTuples; ++i) {
             Payloads::ResultSummaryDTO dto;
-            dto.targetId = PQgetvalue(result, i, 0);
-            dto.score = PQgetvalue(result, i, 1);
-            dto.status = PQgetvalue(result, i, 2);
-            dto.feedback = PQgetvalue(result, i, 3);
+            
+            char* val = PQgetvalue(result, i, 0);
+            dto.targetId = val ? val : "";
+            
+            val = PQgetvalue(result, i, 1);
+            dto.score = val ? val : "0";
+            
+            val = PQgetvalue(result, i, 2);
+            dto.status = val ? val : "";
+            
+            val = PQgetvalue(result, i, 3);
+            dto.feedback = val ? val : "";
+            
             results.push_back(dto);
         }
         PQclear(result);
+    } else {
+        if (logger::serverLogger) logger::serverLogger->error("Query returned null result");
     }
     
     return results;
