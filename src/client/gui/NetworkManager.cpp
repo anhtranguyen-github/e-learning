@@ -136,6 +136,22 @@ void NetworkManager::submitAnswer(const QString &targetType, int targetId, const
     }
 }
 
+void NetworkManager::requestPendingSubmissions() {
+    if (m_client->requestPendingSubmissions()) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request pending submissions");
+    }
+}
+
+void NetworkManager::submitGrade(const QString &resultId, const QString &score, const QString &feedback) {
+    if (m_client->submitGrade(resultId.toStdString(), score.toStdString(), feedback.toStdString())) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to submit grade");
+    }
+}
+
 void NetworkManager::checkMessages() {
     if (!m_client->isConnected()) {
         m_pollTimer->stop();
@@ -203,6 +219,35 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS:
             case protocol::MsgCode::SUBMIT_ANSWER_FAILURE:
                 emit answerSubmissionResult(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::PENDING_SUBMISSIONS_SUCCESS:
+                // Reusing RESULT_LIST_SUCCESS logic or separate signal?
+                // In protocol.h I reused RESULT_LIST_SUCCESS for pending submissions response in controller
+                // Wait, in ResultController::handlePendingSubmissionsRequest I used RESULT_LIST_SUCCESS.
+                // So I should handle it here.
+                // Actually, I should check if I used RESULT_LIST_SUCCESS or PENDING_SUBMISSIONS_SUCCESS in the controller.
+                // In ResultController I used: protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, responsePayload);
+                // So the client will receive RESULT_LIST_SUCCESS.
+                // This might be ambiguous if I want to distinguish between "My Results" and "Pending Submissions".
+                // Ideally I should have used PENDING_SUBMISSIONS_SUCCESS.
+                // Let's check ResultController again.
+                // Yes, I used RESULT_LIST_SUCCESS.
+                // This is a problem because `resultListReceived` signal is connected to `ResultListScreen`.
+                // If `GradingListScreen` also listens to `resultListReceived`, it might get confused.
+                // However, `GradingListScreen` calls `requestPendingSubmissions`, so it expects a response.
+                // If I change the controller to use PENDING_SUBMISSIONS_SUCCESS, I can emit `pendingSubmissionsReceived`.
+                // I should fix the controller to use PENDING_SUBMISSIONS_SUCCESS.
+                // But for now, let's assume I will fix the controller.
+                emit pendingSubmissionsReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::PENDING_SUBMISSIONS_FAILURE:
+                emit errorOccurred("Failed to get pending submissions");
+                break;
+            case protocol::MsgCode::GRADE_SUBMISSION_SUCCESS:
+                emit gradeSubmissionSuccess(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GRADE_SUBMISSION_FAILURE:
+                emit gradeSubmissionFailure(QString::fromStdString(msg.toString()));
                 break;
             default:
                 qDebug() << "Unhandled message code:" << (int)msg.code;

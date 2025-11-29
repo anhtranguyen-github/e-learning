@@ -67,6 +67,8 @@ public:
     bool requestExercise(protocol::MsgCode exerciseType, int exerciseId);
     bool submitAnswer(const std::string& targetType, int targetId, const std::string& answer);
     bool requestResultList();
+    bool requestPendingSubmissions();
+    bool submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback);
 
     // Exercise and exam requests
     bool requestExercises();

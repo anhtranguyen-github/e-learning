@@ -11,3 +11,4 @@ database/*.o
 .idea/
 *.log
 .DS_Store
+./build_gui

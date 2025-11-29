@@ -29,6 +29,8 @@ public:
     Q_INVOKABLE void requestExercise(int type, int id);
     Q_INVOKABLE void requestExam(int id);
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
+    Q_INVOKABLE void requestPendingSubmissions();
+    Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback);
 
     bool isConnected() const;
     bool isLoggedIn() const;
@@ -48,6 +50,9 @@ signals:
     void exerciseContentReceived(const QString &content);
     void examContentReceived(const QString &content);
     void answerSubmissionResult(const QString &response);
+    void pendingSubmissionsReceived(const QString &listData);
+    void gradeSubmissionSuccess(const QString &message);
+    void gradeSubmissionFailure(const QString &message);
 
 private slots:
     void checkMessages();

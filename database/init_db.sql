@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS exams (
     exam_id SERIAL PRIMARY KEY,
     lesson_id INT REFERENCES lessons(lesson_id) ON DELETE CASCADE,
     title VARCHAR(100) NOT NULL,
-    type VARCHAR(50) CHECK (type IN ('multiple_choice', 'fill_blank', 'order_sentence')),
+    type VARCHAR(50) CHECK (type IN ('multiple_choice', 'fill_blank', 'order_sentence', 'mixed')),
     level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     question JSONB,
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,

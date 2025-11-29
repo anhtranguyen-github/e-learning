@@ -102,6 +102,35 @@ SELECT COUNT(*) AS total FROM exercises;
 \echo 'Exams:' 
 SELECT COUNT(*) AS total FROM exams;
 
+\echo '--- Inserting Subjective Exam ---'
+INSERT INTO exams (lesson_id, title, type, level, question, created_by)
+VALUES (1, 'Subjective Exam 1', 'mixed', 'intermediate', 
+    '[
+        {"text": "Explain the importance of grammar.", "type": "essay", "answer": "", "explanation": "Subjective"},
+        {"text": "Read this paragraph aloud.", "type": "speaking", "answer": "", "explanation": "Subjective"}
+    ]'::jsonb, 1);
+
+\echo '--- Inserting Results ---'
+-- 1. Graded Exam Result (Objective)
+INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status)
+VALUES (2, 'exam', 1, 100.0, 'A^Z', 'You got 2 out of 2 correct.', 'graded');
+
+-- 2. Pending Exam Result (Subjective)
+-- Assuming the subjective exam inserted above has ID 11 (since 10 were generated before)
+INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status)
+VALUES (2, 'exam', 11, 0.0, 'My essay answer^Audio file path', 'Pending instructor review', 'pending');
+
+-- 3. Graded Exercise Result
+INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status)
+VALUES (2, 'exercise', 1, 100.0, 'Answer text', 'Correct!', 'graded');
+
+-- 4. Pending Exercise Result
+INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status)
+VALUES (2, 'exercise', 2, 0.0, 'My essay', 'Pending instructor review', 'pending');
+
+\echo 'Results:'
+SELECT COUNT(*) AS total FROM results;
+
 \echo '--- Seeding Complete ---'
 -- =====================================
 -- SAMPLE LESSON DATA

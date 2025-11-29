@@ -14,10 +14,11 @@ namespace server {
 // ============================================================================
 
 SubmissionController::SubmissionController(std::shared_ptr<SessionManager> sessionMgr, 
-                                           std::shared_ptr<Database> database,
-                                           std::shared_ptr<ExerciseRepository> exRepo,
-                                           std::shared_ptr<ExamRepository> eRepo)
-    : sessionManager(sessionMgr), db(database), exerciseRepo(exRepo), examRepo(eRepo) {}
+                                           std::shared_ptr<ResultRepository> resultRepo,
+                                           std::shared_ptr<ExerciseRepository> exerciseRepo,
+                                           std::shared_ptr<ExamRepository> examRepo)
+    : sessionManager(sessionMgr), resultRepo(resultRepo), exerciseRepo(exerciseRepo), examRepo(examRepo) {
+}
 
 // ============================================================================
 // Helper Functions
@@ -29,7 +30,9 @@ bool SubmissionController::sendMessage(int clientFd, const protocol::Message& ms
         ssize_t bytesSent = send(clientFd, serialized.data(), serialized.size(), 0);
         
         if (bytesSent < 0) {
-            logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd));
+            if (logger::serverLogger) {
+                logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd));
+            }
             return false;
         }
         
@@ -72,44 +75,28 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
 
     sessionManager->update_session(sessionToken);
 
-    // Grading Logic
-    std::string status = "graded";
     double score = 0.0;
-    std::string feedback = "";
+    std::string feedback = "Submission received";
+    std::string status = "graded";
 
     if (targetType == "exercise") {
         Exercise exercise = exerciseRepo->loadExerciseById(targetId);
         if (exercise.getExerciseId() != -1) {
-            std::string type = exercise.getType();
-            // Subjective types need instructor review
-            if (type == "rewrite_sentence" || type == "essay" || type == "speaking" || type == "write_paragraph") {
-                status = "pending";
-                score = 0.0; // Placeholder
-                feedback = "Pending instructor review";
+            std::string correct = exercise.getAnswer();
+            if (userAnswer == correct) {
+                score = 100.0;
+                feedback = "Correct!";
             } else {
-                // Objective types
-                std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
-                std::vector<Question> questions = exercise.getQuestions();
-                
-                int correctCount = 0;
-                size_t totalQuestions = questions.size();
-                
-                if (totalQuestions > 0) {
-                    for (size_t i = 0; i < totalQuestions; ++i) {
-                        std::string correct = questions[i].getAnswer();
-                        std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
-                        
-                        if (user == correct) {
-                            correctCount++;
-                        }
-                    }
-                    score = (static_cast<double>(correctCount) / totalQuestions) * 100.0;
-                    feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(totalQuestions) + " correct.";
-                } else {
-                    // Fallback for empty questions (shouldn't happen with valid data)
-                    score = 0.0;
-                    feedback = "No questions found.";
-                }
+                score = 0.0;
+                feedback = "Incorrect. The correct answer is: " + correct;
+            }
+            
+            // Check for subjective types
+            std::string type = exercise.getType();
+            if (type == "essay" || type == "speaking" || type == "rewrite_sentence") {
+                status = "pending";
+                score = 0.0;
+                feedback = "Pending instructor review";
             }
         }
     } else if (targetType == "exam") {
@@ -119,8 +106,15 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
             std::vector<Question> questions = exam.getQuestions();
             
             int correctCount = 0;
-            
+            bool hasSubjective = false;
+
             for (size_t i = 0; i < questions.size(); ++i) {
+                std::string qType = questions[i].getType();
+                // Check for subjective types
+                if (qType == "essay" || qType == "speaking" || qType == "rewrite_sentence" || qType == "write_paragraph") {
+                    hasSubjective = true;
+                }
+
                 std::string correct = questions[i].getAnswer();
                 std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
                 
@@ -130,33 +124,65 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
                 }
             }
             
-            if (!questions.empty()) {
-                score = (static_cast<double>(correctCount) / questions.size()) * 100.0;
+            if (hasSubjective) {
+                status = "pending";
+                score = 0.0;
+                feedback = "Pending instructor review";
+            } else {
+                if (!questions.empty()) {
+                    score = (static_cast<double>(correctCount) / questions.size()) * 100.0;
+                }
+                status = "graded";
+                feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(questions.size()) + " correct.";
             }
-            
-            status = "graded";
-            feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(questions.size()) + " correct.";
         }
     }
 
-    std::string query = "INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status) VALUES (" +
-                        std::to_string(userId) + ", '" + targetType + "', " + std::to_string(targetId) +
-                        ", " + std::to_string(score) + ", '" + userAnswer + "', '" + feedback + "', '" + status + "')";
-
-    bool success = db->execute(query);
-
-    if (!success) {
-        logger::serverLogger->error("Failed to insert submission into database");
-        Payloads::GenericResponse resp;
-        resp.success = false;
-        resp.message = "Failed to save submission";
-        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, resp.serialize());
+    if (resultRepo->saveResult(userId, targetType, targetId, score, userAnswer, feedback, status)) {
+        Payloads::ResultDTO resultDto;
+        resultDto.score = std::to_string(score);
+        resultDto.feedback = feedback;
+        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, resultDto.serialize());
         sendMessage(clientFd, response);
     } else {
-        Payloads::GenericResponse resp;
-        resp.success = true;
-        resp.message = feedback; // Send feedback to client
-        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_SUCCESS, resp.serialize());
+        protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Failed to save result");
+        sendMessage(clientFd, response);
+    }
+}
+
+void SubmissionController::handleGradeSubmission(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    logger::serverLogger->debug("Handling grade submission from fd=" + std::to_string(clientFd));
+
+    Payloads::GradeSubmissionRequest req;
+    req.deserialize(payload);
+
+    // Verify admin/teacher role (simplified)
+    int userId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId == -1) {
+        protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_FAILURE, "Invalid or expired session");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    sessionManager->update_session(req.sessionToken);
+
+    int resultId = 0;
+    double score = 0.0;
+    try {
+        resultId = std::stoi(req.resultId);
+        score = std::stod(req.score);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_FAILURE, "Invalid result ID or score");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    if (resultRepo->updateResult(resultId, score, req.feedback, "graded")) {
+        protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_SUCCESS, "Grade updated successfully");
+        sendMessage(clientFd, response);
+    } else {
+        protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_FAILURE, "Failed to update grade");
         sendMessage(clientFd, response);
     }
 }

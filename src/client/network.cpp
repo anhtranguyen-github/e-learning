@@ -526,6 +526,55 @@ bool NetworkClient::submitAnswer(const std::string& targetType, int targetId, co
     return true;
 }
 
+bool NetworkClient::requestPendingSubmissions() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request pending submissions");
+        }
+        return false;
+    }
+
+    Payloads::PendingSubmissionsRequest req;
+    req.sessionToken = sessionToken;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send pending submissions request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot submit grade");
+        }
+        return false;
+    }
+
+    Payloads::GradeSubmissionRequest req;
+    req.sessionToken = sessionToken;
+    req.resultId = resultId;
+    req.score = score;
+    req.feedback = feedback;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GRADE_SUBMISSION_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send grade submission request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 bool NetworkClient::requestResultList() {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {

@@ -3,7 +3,7 @@
 
 #include "common/protocol.h"
 #include "server/session.h"
-#include "server/database.h"
+#include "server/repository/result_repository.h"
 #include "server/repository/exercise_repository.h"
 #include "server/repository/exam_repository.h"
 #include <memory>
@@ -14,7 +14,7 @@ namespace server {
 class SubmissionController {
 private:
     std::shared_ptr<SessionManager> sessionManager;
-    std::shared_ptr<Database> db;
+    std::shared_ptr<ResultRepository> resultRepo;
     std::shared_ptr<ExerciseRepository> exerciseRepo;
     std::shared_ptr<ExamRepository> examRepo;
 
@@ -22,11 +22,12 @@ private:
 
 public:
     SubmissionController(std::shared_ptr<SessionManager> sessionMgr, 
-                      std::shared_ptr<Database> database,
+                      std::shared_ptr<ResultRepository> resultRepo,
                       std::shared_ptr<ExerciseRepository> exerciseRepo,
                       std::shared_ptr<ExamRepository> examRepo);
 
     void handleSubmission(int clientFd, const protocol::Message& msg);
+    void handleGradeSubmission(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

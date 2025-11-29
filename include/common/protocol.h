@@ -73,6 +73,15 @@ enum class MsgCode : uint16_t {
     RESULT_LIST_SUCCESS = 261,
     RESULT_LIST_FAILURE = 262,
     RESULT_REQUEST = 265, // Added for single result request
+    
+    // Teacher Grading (266-269)
+    PENDING_SUBMISSIONS_REQUEST = 266,
+    PENDING_SUBMISSIONS_SUCCESS = 267,
+    PENDING_SUBMISSIONS_FAILURE = 268,
+    
+    GRADE_SUBMISSION_REQUEST = 269,
+    GRADE_SUBMISSION_SUCCESS = 253, // Reusing submission success range or new one
+    GRADE_SUBMISSION_FAILURE = 254,
 
     // Exam Management (270-289)
     EXAM_LIST_REQUEST = 270, // Re-adding this as it was removed earlier

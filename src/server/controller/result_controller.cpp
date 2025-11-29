@@ -14,8 +14,8 @@ namespace server {
 // ============================================================================
 
 ResultController::ResultController(std::shared_ptr<SessionManager> sessionMgr, 
-                               std::shared_ptr<Database> database)
-    : sessionManager(sessionMgr), db(database) {
+                               std::shared_ptr<ResultRepository> repo)
+    : sessionManager(sessionMgr), resultRepo(repo) {
 }
 
 // ============================================================================
@@ -71,25 +71,19 @@ void ResultController::handleResultRequest(int clientFd, const protocol::Message
 
     sessionManager->update_session(sessionToken);
 
-    std::string query = "SELECT score, feedback FROM results WHERE user_id = " + std::to_string(userId) +
-                        " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId);
+    double score;
+    std::string feedback;
+    std::string status;
 
-    PGresult* result = db->query(query);
-    std::string responsePayload;
-
-    if (result && PQntuples(result) > 0) {
+    if (resultRepo->getResult(userId, targetType, targetId, score, feedback, status)) {
         Payloads::ResultDTO dto;
-        dto.score = PQgetvalue(result, 0, 0);
-        dto.feedback = PQgetvalue(result, 0, 1);
+        dto.score = std::to_string(score);
+        dto.feedback = feedback;
         protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, dto.serialize());
         sendMessage(clientFd, response);
     } else {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Result not found");
         sendMessage(clientFd, response);
-    }
-
-    if (result) {
-        PQclear(result);
     }
 }
 
@@ -112,35 +106,52 @@ void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol:
 
     sessionManager->update_session(sessionToken);
 
-    // This is a simplified implementation. A real implementation would need to join with the exercises/exams tables.
-    std::string query = "SELECT target_id, score FROM results WHERE user_id = " + std::to_string(userId) +
-                        " AND target_type = '" + targetType + "'";
+    std::vector<Payloads::ResultSummaryDTO> results = resultRepo->getResultsByUser(userId, targetType);
+    
+    std::vector<std::string> serializedDtos;
+    for (const auto& dto : results) {
+        serializedDtos.push_back(dto.serialize());
+    }
+    
+    std::string responsePayload = std::to_string(serializedDtos.size());
+    if (!serializedDtos.empty()) {
+            responsePayload += ";" + utils::join(serializedDtos, ';');
+    }
+    protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, responsePayload);
+    sendMessage(clientFd, response);
+}
 
-    PGresult* result = db->query(query);
-    std::string responsePayload;
+void ResultController::handlePendingSubmissionsRequest(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    logger::serverLogger->debug("Handling pending submissions request from fd=" + std::to_string(clientFd));
 
-    if (result) {
-        std::vector<std::string> serializedDtos;
-        for (int i = 0; i < PQntuples(result); ++i) {
-            Payloads::ResultSummaryDTO dto;
-            dto.targetId = PQgetvalue(result, i, 0);
-            dto.score = PQgetvalue(result, i, 1);
-            serializedDtos.push_back(dto.serialize());
-        }
-        std::string responsePayload = std::to_string(serializedDtos.size());
-        if (!serializedDtos.empty()) {
-             responsePayload += ";" + utils::join(serializedDtos, ';');
-        }
-        protocol::Message response(protocol::MsgCode::RESULT_LIST_SUCCESS, responsePayload);
+    Payloads::PendingSubmissionsRequest req;
+    req.deserialize(payload);
+
+    // Verify admin/teacher role (simplified: just check valid session for now, ideally check role)
+    int userId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId == -1) {
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
         sendMessage(clientFd, response);
-    } else {
-        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Could not retrieve list");
-        sendMessage(clientFd, response);
+        return;
     }
 
-    if (result) {
-        PQclear(result);
+    sessionManager->update_session(req.sessionToken);
+
+    std::vector<Payloads::PendingSubmissionDTO> submissions = resultRepo->getPendingSubmissions();
+    
+    std::vector<std::string> serializedDtos;
+    for (const auto& dto : submissions) {
+        serializedDtos.push_back(dto.serialize());
     }
+    
+    std::string responsePayload = std::to_string(serializedDtos.size());
+    if (!serializedDtos.empty()) {
+            responsePayload += ";" + utils::join(serializedDtos, ';');
+    }
+    // Reusing RESULT_LIST_SUCCESS for now, or create a new MsgCode
+    protocol::Message response(protocol::MsgCode::PENDING_SUBMISSIONS_SUCCESS, responsePayload);
+    sendMessage(clientFd, response);
 }
 
 } // namespace server

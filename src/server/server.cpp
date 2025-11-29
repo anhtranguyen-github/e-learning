@@ -25,7 +25,10 @@ Server::Server(int port, const std::string& dbConn)
     connectionManager = std::make_shared<server::ConnectionManager>();
     sessionManager = std::make_shared<server::SessionManager>(database);
 
-    requestRouter = std::make_shared<server::RequestRouter>(sessionManager, connectionManager, database);
+    // Initialize Repositories
+    resultRepository = std::make_shared<server::ResultRepository>(database);
+
+    requestRouter = std::make_shared<server::RequestRouter>(sessionManager, connectionManager, database, resultRepository);
 
     this->clientHandler = std::make_shared<server::ClientHandler>(
         sessionManager,

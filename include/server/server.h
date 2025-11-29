@@ -21,6 +21,10 @@ private:
     std::shared_ptr<server::Database> database;
     std::shared_ptr<server::ConnectionManager> connectionManager;
     std::shared_ptr<server::SessionManager> sessionManager;
+    
+    // Repositories
+    std::shared_ptr<server::ResultRepository> resultRepository;
+    
     std::shared_ptr<server::ClientHandler> clientHandler;
     std::shared_ptr<server::RequestRouter> requestRouter;
 

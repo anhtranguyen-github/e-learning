@@ -18,8 +18,9 @@ namespace server {
 
 RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
                              std::shared_ptr<ConnectionManager> connMgr,
-                             std::shared_ptr<Database> database)
-    : sessionManager(sessionMgr), connectionManager(connMgr), db(database) {
+                             std::shared_ptr<Database> database,
+                             std::shared_ptr<ResultRepository> resultRepo)
+    : sessionManager(sessionMgr), connectionManager(connMgr), db(database), resultRepo(resultRepo) {
     
     // Initialize Repositories
     auto userRepo = std::make_shared<UserRepository>(db);
@@ -32,8 +33,8 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     chatController = std::make_shared<ChatController>(sessionManager, connectionManager, db);
     lessonController = std::make_shared<LessonController>(sessionManager, lessonRepo);
     exerciseController = std::make_shared<ExerciseController>(sessionManager, exerciseRepo);
-    submissionController = std::make_shared<SubmissionController>(sessionManager, db, exerciseRepo, examRepo);
-    resultController = std::make_shared<ResultController>(sessionManager, db);
+    submissionController = std::make_shared<SubmissionController>(sessionManager, resultRepo, exerciseRepo, examRepo);
+    resultController = std::make_shared<ResultController>(sessionManager, resultRepo);
     examController = std::make_shared<ExamController>(sessionManager, examRepo);
 
     // Register Default Middlewares
@@ -129,6 +130,9 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         case protocol::MsgCode::SUBMIT_ANSWER_REQUEST:
             submissionController->handleSubmission(clientFd, msg);
             break;
+        case protocol::MsgCode::GRADE_SUBMISSION_REQUEST:
+            submissionController->handleGradeSubmission(clientFd, msg);
+            break;
 
         // Result
         case protocol::MsgCode::RESULT_LIST_REQUEST:
@@ -136,6 +140,9 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             break;
         case protocol::MsgCode::RESULT_REQUEST: // This case is kept for handleResultRequest
             resultController->handleResultRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST:
+            resultController->handlePendingSubmissionsRequest(clientFd, msg);
             break;
 
         // Exam

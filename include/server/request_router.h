@@ -4,6 +4,7 @@
 #include "server/session.h"
 #include "server/connection_manager.h"
 #include "server/database.h"
+#include "server/repository/result_repository.h"
 #include "server/middleware.h"
 #include "common/protocol.h"
 #include <memory>
@@ -25,6 +26,7 @@ private:
     std::shared_ptr<SessionManager> sessionManager;
     std::shared_ptr<ConnectionManager> connectionManager;
     std::shared_ptr<Database> db;
+    std::shared_ptr<ResultRepository> resultRepo;
 
     // Middlewares
     std::vector<std::shared_ptr<Middleware>> middlewares;
@@ -43,7 +45,8 @@ private:
 public:
     RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
                   std::shared_ptr<ConnectionManager> connMgr,
-                  std::shared_ptr<Database> database);
+                  std::shared_ptr<Database> database,
+                  std::shared_ptr<ResultRepository> resultRepo);
 
     void registerMiddleware(std::shared_ptr<Middleware> middleware);
     void handleMessage(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler = nullptr);

@@ -456,9 +456,11 @@ namespace Payloads {
     struct ResultSummaryDTO : public ISerializable {
         std::string targetId;
         std::string score;
+        std::string status;
+        std::string feedback;
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {targetId, score};
+            std::vector<std::string> parts = {targetId, score, status, feedback};
             return utils::join(parts, '|');
         }
 
@@ -466,6 +468,64 @@ namespace Payloads {
             auto parts = utils::split(raw, '|');
             if (parts.size() >= 1) targetId = parts[0];
             if (parts.size() >= 2) score = parts[1];
+            if (parts.size() >= 3) status = parts[2];
+            if (parts.size() >= 4) feedback = parts[3];
+        }
+    };
+
+    struct PendingSubmissionDTO : public ISerializable {
+        std::string resultId;
+        std::string userName;
+        std::string targetType;
+        std::string targetTitle;
+        std::string submittedAt;
+        std::string userAnswer;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {resultId, userName, targetType, targetTitle, submittedAt, userAnswer};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) resultId = parts[0];
+            if (parts.size() >= 2) userName = parts[1];
+            if (parts.size() >= 3) targetType = parts[2];
+            if (parts.size() >= 4) targetTitle = parts[3];
+            if (parts.size() >= 5) submittedAt = parts[4];
+            if (parts.size() >= 6) userAnswer = parts[5];
+        }
+    };
+
+    struct PendingSubmissionsRequest : public ISerializable {
+        std::string sessionToken;
+
+        std::string serialize() const override {
+            return sessionToken;
+        }
+
+        void deserialize(const std::string& raw) override {
+            sessionToken = raw;
+        }
+    };
+
+    struct GradeSubmissionRequest : public ISerializable {
+        std::string sessionToken;
+        std::string resultId;
+        std::string score;
+        std::string feedback;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {sessionToken, resultId, score, feedback};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) resultId = parts[1];
+            if (parts.size() >= 3) score = parts[2];
+            if (parts.size() >= 4) feedback = parts[3];
         }
     };
 
