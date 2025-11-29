@@ -14,6 +14,7 @@ private:
     std::string serverHost;
     int serverPort;
     std::string sessionToken;
+    std::string userRole;
     bool connected;
     bool loggedIn;
     
@@ -58,6 +59,9 @@ public:
     // Session management
     std::string getSessionToken() const { return sessionToken; }
     void setSessionToken(const std::string& token) { sessionToken = token; }
+    
+    // User Role
+    std::string getUserRole() const { return userRole; }
 
     // Lesson management
     bool requestLessonList(const std::string& topic = "", const std::string& level = "");

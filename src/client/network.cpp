@@ -148,6 +148,7 @@ bool NetworkClient::login(const std::string& username, const std::string& passwo
             // Extract session token from response
             std::string responseStr = response.toString();
             sessionToken = utils::extractCookie(responseStr, "session_id");
+            userRole = utils::extractCookie(responseStr, "role");
             
             if (sessionToken.empty()) {
                 if (logger::clientLogger) {
@@ -209,6 +210,7 @@ bool NetworkClient::logout() {
         if (response.code == protocol::MsgCode::LOGOUT_SUCCESS) {
             loggedIn = false;
             sessionToken.clear();
+            userRole.clear();
             
             if (logger::clientLogger) {
                 logger::clientLogger->info("Logout successful");
@@ -226,6 +228,7 @@ bool NetworkClient::logout() {
     // because the server likely already considers us logged out.
     loggedIn = false;
     sessionToken.clear();
+    userRole.clear();
     
     return false;
 }

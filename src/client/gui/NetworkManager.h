@@ -12,6 +12,7 @@ class NetworkManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionStatusChanged)
     Q_PROPERTY(bool isLoggedIn READ isLoggedIn NOTIFY loginStatusChanged)
+    Q_PROPERTY(QString userRole READ userRole NOTIFY userRoleChanged)
 
 public:
     explicit NetworkManager(QObject *parent = nullptr);
@@ -38,10 +39,12 @@ public:
 
     bool isConnected() const;
     bool isLoggedIn() const;
+    QString userRole() const;
 
 signals:
     void connectionStatusChanged(bool connected);
     void loginStatusChanged(bool loggedIn);
+    void userRoleChanged(const QString &role);
     void loginSuccess();
     void loginFailure(const QString &message);
     void errorOccurred(const QString &message);

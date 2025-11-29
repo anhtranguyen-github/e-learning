@@ -56,6 +56,7 @@ void NetworkManager::login(const QString &username, const QString &password) {
     if (success) {
         emit loginSuccess();
         emit loginStatusChanged(true);
+        emit userRoleChanged(userRole());
         m_pollTimer->start(); // Start polling for subsequent messages (chat, notifications)
     } else {
         emit loginFailure("Login failed");
@@ -68,6 +69,7 @@ void NetworkManager::disconnect() {
     m_client->disconnect();
     emit connectionStatusChanged(false);
     emit loginStatusChanged(false);
+    emit userRoleChanged("");
 }
 
 bool NetworkManager::isConnected() const {
@@ -76,6 +78,10 @@ bool NetworkManager::isConnected() const {
 
 bool NetworkManager::isLoggedIn() const {
     return m_client->isLoggedIn();
+}
+
+QString NetworkManager::userRole() const {
+    return QString::fromStdString(m_client->getUserRole());
 }
 
 void NetworkManager::requestLessonList(const QString &topic, const QString &level) {
