@@ -92,7 +92,7 @@ Page {
                     RowLayout {
                         spacing: 20
                         Text {
-                            text: "Score: " + parseFloat(resultScore).toFixed(1) + "%"
+                            text: "Score: " + (resultScore ? parseFloat(resultScore).toFixed(1) : "0.0") + "%"
                             font.pixelSize: Style.subHeaderSize
                             color: Style.primaryColor
                             font.bold: true

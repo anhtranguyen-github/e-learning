@@ -74,7 +74,7 @@ Page {
                 RowLayout {
                     Layout.fillWidth: true
                     Text {
-                        text: model.title
+                        text: model.title || "Unknown Title"
                         font.pixelSize: Style.subHeaderSize
                         font.bold: true
                         color: Style.textColor
@@ -100,7 +100,7 @@ Page {
                     }
 
                     Text {
-                        text: model.status === "graded" ? "Score: " + parseFloat(model.score).toFixed(1) + "%" : "Score: Pending"
+                        text: model.status === "graded" ? "Score: " + (model.score ? parseFloat(model.score).toFixed(1) : "0.0") + "%" : "Score: Pending"
                         font.pixelSize: Style.bodySize
                         color: Style.textColor
                         visible: true
