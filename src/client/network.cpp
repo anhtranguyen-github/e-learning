@@ -599,6 +599,32 @@ bool NetworkClient::requestResultList() {
     return true;
 }
 
+bool NetworkClient::requestResultDetail(const std::string& targetType, const std::string& targetId) {
+    if (!connected || sessionToken.empty()) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Cannot request result detail: Not connected or not logged in");
+        }
+        return false;
+    }
+
+    Payloads::ResultDetailRequest req;
+    req.sessionToken = sessionToken;
+    req.targetType = targetType;
+    req.targetId = targetId;
+    
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::RESULT_DETAIL_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send result detail request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 bool NetworkClient::requestExercises() {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {

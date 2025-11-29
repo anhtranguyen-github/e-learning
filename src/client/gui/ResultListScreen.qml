@@ -24,19 +24,25 @@ Page {
             if (parts.length > 1) {
                 for (var i = 1; i < parts.length; i++) {
                     var itemParts = parts[i].split('|')
-                    if (itemParts.length >= 4) {
+                    // Expected: targetId|score|status|feedback|targetType|title
+                    if (itemParts.length >= 6) {
                         resultModel.append({
                             "targetId": itemParts[0],
                             "score": itemParts[1],
                             "status": itemParts[2],
-                            "feedback": itemParts[3]
+                            "feedback": itemParts[3],
+                            "targetType": itemParts[4],
+                            "title": itemParts[5]
                         })
-                    } else if (itemParts.length >= 3) {
-                         resultModel.append({
+                    } else if (itemParts.length >= 5) {
+                         // Backward compatibility
+                        resultModel.append({
                             "targetId": itemParts[0],
                             "score": itemParts[1],
                             "status": itemParts[2],
-                            "feedback": ""
+                            "feedback": itemParts[3],
+                            "targetType": itemParts[4],
+                            "title": "Unknown Title"
                         })
                     }
                 }
@@ -55,7 +61,7 @@ Page {
 
         delegate: Rectangle {
             width: resultListView.width
-            height: 80
+            height: 100 // Increased height for type
             color: Style.cardBackground
             radius: Style.cornerRadius
             border.color: "#e0e0e0"
@@ -65,11 +71,23 @@ Page {
                 anchors.margins: 10
                 spacing: 5
 
-                Text {
-                    text: "ID: " + model.targetId
-                    font.pixelSize: Style.subHeaderSize
-                    font.bold: true
-                    color: Style.textColor
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: model.title
+                        font.pixelSize: Style.subHeaderSize
+                        font.bold: true
+                        color: Style.textColor
+                    }
+                    
+                    Item { Layout.fillWidth: true }
+                    
+                    Text {
+                        text: model.targetType === "exam" ? "Exam" : (model.targetType === "exercise" ? "Exercise" : model.targetType)
+                        font.pixelSize: Style.bodySize
+                        font.bold: true
+                        color: Style.primaryColor
+                    }
                 }
 
                 RowLayout {
@@ -96,6 +114,16 @@ Page {
                     visible: model.feedback !== ""
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
+                }
+            }
+            
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    stackView.push("ResultDetailScreen.qml", {
+                        "targetType": model.targetType,
+                        "targetId": model.targetId
+                    })
                 }
             }
         }

@@ -138,6 +138,9 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         case protocol::MsgCode::RESULT_LIST_REQUEST:
             resultController->handleDoneUndoneListRequest(clientFd, msg);
             break;
+        case protocol::MsgCode::RESULT_DETAIL_REQUEST:
+            resultController->handleResultDetailRequest(clientFd, msg);
+            break;
         case protocol::MsgCode::RESULT_REQUEST: // This case is kept for handleResultRequest
             resultController->handleResultRequest(clientFd, msg);
             break;

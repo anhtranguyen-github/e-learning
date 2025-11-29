@@ -30,6 +30,7 @@ public:
     Q_INVOKABLE void requestExam(int id);
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
     Q_INVOKABLE void requestPendingSubmissions();
+    Q_INVOKABLE void requestResultDetail(const QString &targetType, const QString &targetId);
     Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback);
 
     bool isConnected() const;
@@ -47,6 +48,7 @@ signals:
     void exerciseListReceived(const QString &listData);
     void examListReceived(const QString &listData);
     void resultListReceived(const QString &listData);
+    void resultDetailReceived(const QString &detailData);
     void exerciseContentReceived(const QString &content);
     void examContentReceived(const QString &content);
     void answerSubmissionResult(const QString &response);

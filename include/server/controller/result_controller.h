@@ -22,6 +22,7 @@ public:
 
     void handleResultRequest(int clientFd, const protocol::Message& msg);
     void handleDoneUndoneListRequest(int clientFd, const protocol::Message& msg);
+    void handleResultDetailRequest(int clientFd, const protocol::Message& msg);
     void handlePendingSubmissionsRequest(int clientFd, const protocol::Message& msg);
 };
 

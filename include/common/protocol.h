@@ -71,7 +71,10 @@ enum class MsgCode : uint16_t {
 
     RESULT_LIST_REQUEST = 260,
     RESULT_LIST_SUCCESS = 261,
-    RESULT_LIST_FAILURE = 262,
+    RESULT_DETAIL_REQUEST = 262,
+    RESULT_DETAIL_SUCCESS = 263,
+    RESULT_DETAIL_FAILURE = 269, // New code
+    RESULT_LIST_FAILURE = 264,
     RESULT_REQUEST = 265, // Added for single result request
     
     // Teacher Grading (266-269)

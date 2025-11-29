@@ -152,6 +152,16 @@ void NetworkManager::submitGrade(const QString &resultId, const QString &score, 
     }
 }
 
+
+
+void NetworkManager::requestResultDetail(const QString &targetType, const QString &targetId) {
+    if (m_client->requestResultDetail(targetType.toStdString(), targetId.toStdString())) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request result detail");
+    }
+}
+
 void NetworkManager::checkMessages() {
     if (!m_client->isConnected()) {
         m_pollTimer->stop();
@@ -194,6 +204,12 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::RESULT_LIST_FAILURE:
                 emit errorOccurred("Failed to get results");
                 break;
+            case protocol::MsgCode::RESULT_DETAIL_SUCCESS:
+                emit resultDetailReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::RESULT_DETAIL_FAILURE: // Assuming this exists or falls back to generic failure
+                 emit errorOccurred("Failed to get result detail");
+                 break;
             case protocol::MsgCode::MULTIPLE_CHOICE_SUCCESS:
             case protocol::MsgCode::FILL_IN_SUCCESS:
             case protocol::MsgCode::SENTENCE_ORDER_SUCCESS:

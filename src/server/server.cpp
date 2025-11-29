@@ -292,6 +292,23 @@ void Server::stop() {
     }
 }
 
+// Global server pointer for signal handling
+Server* g_server = nullptr;
+
+void signalHandler(int signum) {
+    std::cout << "\nSignal (" << signum << ") received. Shutting down server..." << std::endl;
+    if (g_server) {
+        g_server->stop();
+    }
+    // Allow some time for cleanup if needed, or just exit
+    // exit(signum); 
+    // Better to let the main loop exit if possible, but stop() sets running=false.
+    // However, we are in a signal handler.
+    // If we exit here, destructors of main() variables won't run.
+    // But stop() has been called.
+    exit(signum);
+}
+
 // Main entry point
 int main(int argc, char* argv[]) {
     // Initialize logger
@@ -304,12 +321,11 @@ int main(int argc, char* argv[]) {
     }
 
     Server srv(port);
+    g_server = &srv;
 
-    // Handle Ctrl+C gracefully
-    signal(SIGINT, [](int) {
-        std::cout << "\nShutting down server..." << std::endl;
-        exit(0);
-    });
+    // Handle signals gracefully
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
 
     if (!srv.start()) {
         std::cerr << "Failed to start server" << std::endl;

@@ -32,7 +32,11 @@ public:
     std::vector<Payloads::ResultSummaryDTO> getResultsByUser(int userId, const std::string& targetType);
 
     // Get pending submissions for teachers
+    // Get pending submissions for teachers
     std::vector<Payloads::PendingSubmissionDTO> getPendingSubmissions();
+
+    // Get detailed result
+    bool getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail);
 };
 
 } // namespace server

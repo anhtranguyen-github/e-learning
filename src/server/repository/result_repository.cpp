@@ -1,6 +1,7 @@
 #include "server/repository/result_repository.h"
 #include "common/logger.h"
 #include "common/utils.h"
+#include <json/json.h>
 #include <iostream>
 
 namespace server {
@@ -46,11 +47,23 @@ bool ResultRepository::getResult(int userId, const std::string& targetType, int 
 
 std::vector<Payloads::ResultSummaryDTO> ResultRepository::getResultsByUser(int userId, const std::string& targetType) {
     std::vector<Payloads::ResultSummaryDTO> results;
-    std::string query = "SELECT target_id, score, status, feedback FROM results WHERE user_id = " + std::to_string(userId);
     
+    // Use DISTINCT ON to get only the latest result per target_type and target_id
+    // We order by target_type, target_id, and submitted_at DESC to ensure the first row is the latest
+    std::string query = "SELECT DISTINCT ON (r.target_type, r.target_id) "
+                        "r.target_id, r.score, r.status, r.feedback, r.target_type, "
+                        "COALESCE(e.title, ex.title) as title "
+                        "FROM results r "
+                        "LEFT JOIN exams e ON r.target_type = 'exam' AND r.target_id = e.exam_id "
+                        "LEFT JOIN exercises ex ON r.target_type = 'exercise' AND r.target_id = ex.exercise_id "
+                        "WHERE r.user_id = " + std::to_string(userId);
+
     if (!targetType.empty()) {
-        query += " AND target_type = '" + targetType + "'";
+        query += " AND r.target_type = '" + targetType + "'";
     }
+
+    // Important: ORDER BY must start with the columns in DISTINCT ON
+    query += " ORDER BY r.target_type, r.target_id, r.submitted_at DESC";
 
     if (logger::serverLogger) logger::serverLogger->debug("Executing query: " + query);
 
@@ -74,6 +87,12 @@ std::vector<Payloads::ResultSummaryDTO> ResultRepository::getResultsByUser(int u
             
             val = PQgetvalue(result, i, 3);
             dto.feedback = val ? val : "";
+
+            val = PQgetvalue(result, i, 4);
+            dto.targetType = val ? val : "";
+
+            val = PQgetvalue(result, i, 5);
+            dto.title = val ? val : "Unknown Title";
             
             results.push_back(dto);
         }
@@ -114,6 +133,83 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
     }
     
     return submissions;
+}
+
+bool ResultRepository::getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail) {
+    // 1. Fetch result data
+    std::string query = "SELECT score, feedback, user_answer FROM results WHERE user_id = " + std::to_string(userId) +
+                        " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId);
+    
+    PGresult* res = db->query(query);
+    if (!res || PQntuples(res) == 0) {
+        if (res) PQclear(res);
+        return false;
+    }
+
+    detail.targetId = std::to_string(targetId);
+    detail.targetType = targetType;
+    detail.score = PQgetvalue(res, 0, 0);
+    detail.feedback = PQgetvalue(res, 0, 1);
+    std::string userAnswerStr = PQgetvalue(res, 0, 2);
+    PQclear(res);
+
+    auto userAnswers = utils::split(userAnswerStr, '^');
+
+    // 2. Fetch content
+    std::string contentQuery;
+    if (targetType == "exercise") {
+        contentQuery = "SELECT title, questions FROM exercises WHERE exercise_id = " + std::to_string(targetId);
+    } else if (targetType == "exam") {
+        contentQuery = "SELECT title, question FROM exams WHERE exam_id = " + std::to_string(targetId);
+    } else {
+        return false;
+    }
+
+    res = db->query(contentQuery);
+    if (!res || PQntuples(res) == 0) {
+        if (res) PQclear(res);
+        return false;
+    }
+
+    detail.title = PQgetvalue(res, 0, 0);
+    std::string jsonContent = PQgetvalue(res, 0, 1);
+    PQclear(res);
+
+    // 3. Parse JSON
+    Json::Value root;
+    Json::Reader reader;
+    if (reader.parse(jsonContent, root)) {
+        // Handle different structures
+        // Exercises: root is array of questions
+        // Exams: root might be object with "questions" array or just array
+        
+        const Json::Value& questions = (root.isArray()) ? root : root["questions"];
+        
+        if (questions.isArray()) {
+            for (unsigned int i = 0; i < questions.size(); ++i) {
+                Payloads::QuestionResultDTO qDto;
+                qDto.questionText = questions[i]["question"].asString();
+                qDto.correctAnswer = questions[i]["answer"].asString(); // Or "correct_answer"
+                
+                if (i < userAnswers.size()) {
+                    qDto.userAnswer = userAnswers[i];
+                }
+                
+                // Simple status check (case insensitive?)
+                // Ideally, use the score per question if available, but we only have total score.
+                // So we can just compare strings for display purposes.
+                if (qDto.userAnswer == qDto.correctAnswer) {
+                    qDto.status = "correct";
+                } else {
+                    qDto.status = "incorrect";
+                }
+                
+                detail.questions.push_back(qDto);
+            }
+        }
+    }
+
+    return true;
 }
 
 } // namespace server

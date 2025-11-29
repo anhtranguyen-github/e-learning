@@ -141,6 +141,41 @@ void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol:
     sendMessage(clientFd, response);
 }
 
+void ResultController::handleResultDetailRequest(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    logger::serverLogger->debug("Handling result detail request from fd=" + std::to_string(clientFd));
+
+    Payloads::ResultDetailRequest req;
+    req.deserialize(payload);
+
+    int userId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId == -1) {
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid or expired session");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    sessionManager->update_session(req.sessionToken);
+
+    Payloads::ResultDetailDTO detail;
+    int targetId = 0;
+    try {
+        targetId = std::stoi(req.targetId);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Invalid target ID");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    if (resultRepo->getResultDetail(userId, req.targetType, targetId, detail)) {
+        protocol::Message response(protocol::MsgCode::RESULT_DETAIL_SUCCESS, detail.serialize());
+        sendMessage(clientFd, response);
+    } else {
+        protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Result not found");
+        sendMessage(clientFd, response);
+    }
+}
+
 void ResultController::handlePendingSubmissionsRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling pending submissions request from fd=" + std::to_string(clientFd));

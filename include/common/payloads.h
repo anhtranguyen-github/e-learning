@@ -458,9 +458,11 @@ namespace Payloads {
         std::string score;
         std::string status;
         std::string feedback;
+        std::string targetType; // Added targetType
+        std::string title; // Added title
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {targetId, score, status, feedback};
+            std::vector<std::string> parts = {targetId, score, status, feedback, targetType, title};
             return utils::join(parts, '|');
         }
 
@@ -470,6 +472,8 @@ namespace Payloads {
             if (parts.size() >= 2) score = parts[1];
             if (parts.size() >= 3) status = parts[2];
             if (parts.size() >= 4) feedback = parts[3];
+            if (parts.size() >= 5) targetType = parts[4];
+            if (parts.size() >= 6) title = parts[5];
         }
     };
 
@@ -526,6 +530,84 @@ namespace Payloads {
             if (parts.size() >= 2) resultId = parts[1];
             if (parts.size() >= 3) score = parts[2];
             if (parts.size() >= 4) feedback = parts[3];
+        }
+    };
+
+    struct ResultDetailRequest : public ISerializable {
+        std::string sessionToken;
+        std::string targetType;
+        std::string targetId;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {sessionToken, targetType, targetId};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) targetType = parts[1];
+            if (parts.size() >= 3) targetId = parts[2];
+        }
+    };
+
+    struct QuestionResultDTO : public ISerializable {
+        std::string questionText;
+        std::string userAnswer;
+        std::string correctAnswer;
+        std::string status;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {questionText, userAnswer, correctAnswer, status};
+            return utils::join(parts, '^');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '^');
+            if (parts.size() >= 1) questionText = parts[0];
+            if (parts.size() >= 2) userAnswer = parts[1];
+            if (parts.size() >= 3) correctAnswer = parts[2];
+            if (parts.size() >= 4) status = parts[3];
+        }
+    };
+
+    struct ResultDetailDTO : public ISerializable {
+        std::string targetId;
+        std::string targetType;
+        std::string title;
+        std::string score;
+        std::string feedback;
+        std::vector<QuestionResultDTO> questions;
+
+        std::string serialize() const override {
+            std::string base = utils::join({targetId, targetType, title, score, feedback}, '|');
+            std::vector<std::string> qParts;
+            for (const auto& q : questions) {
+                qParts.push_back(q.serialize());
+            }
+            if (!qParts.empty()) {
+                base += "|" + utils::join(qParts, '~');
+            }
+            return base;
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) targetId = parts[0];
+            if (parts.size() >= 2) targetType = parts[1];
+            if (parts.size() >= 3) title = parts[2];
+            if (parts.size() >= 4) score = parts[3];
+            if (parts.size() >= 5) feedback = parts[4];
+            
+            if (parts.size() >= 6) {
+                std::string qStr = parts[5];
+                auto qList = utils::split(qStr, '~');
+                for (const auto& qRaw : qList) {
+                    QuestionResultDTO q;
+                    q.deserialize(qRaw);
+                    questions.push_back(q);
+                }
+            }
         }
     };
 
