@@ -10,22 +10,30 @@ private:
     int id;
     std::string username;
     std::string passwordHash;
-    std::string salt;
+    std::string fullName;
+    std::string role;
+    std::string level;
 
 public:
     User() : id(-1) {}
-    User(int id, const std::string& username, const std::string& passwordHash, const std::string& salt)
-        : id(id), username(username), passwordHash(passwordHash), salt(salt) {}
+    User(int id, const std::string& username, const std::string& passwordHash, 
+         const std::string& fullName, const std::string& role, const std::string& level)
+        : id(id), username(username), passwordHash(passwordHash), 
+          fullName(fullName), role(role), level(level) {}
 
     int getId() const { return id; }
     std::string getUsername() const { return username; }
     std::string getPasswordHash() const { return passwordHash; }
-    std::string getSalt() const { return salt; }
+    std::string getFullName() const { return fullName; }
+    std::string getRole() const { return role; }
+    std::string getLevel() const { return level; }
 
     void setId(int id) { this->id = id; }
     void setUsername(const std::string& username) { this->username = username; }
     void setPasswordHash(const std::string& passwordHash) { this->passwordHash = passwordHash; }
-    void setSalt(const std::string& salt) { this->salt = salt; }
+    void setFullName(const std::string& fullName) { this->fullName = fullName; }
+    void setRole(const std::string& role) { this->role = role; }
+    void setLevel(const std::string& level) { this->level = level; }
 };
 
 } // namespace server

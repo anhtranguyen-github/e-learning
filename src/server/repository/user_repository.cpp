@@ -45,8 +45,29 @@ int UserRepository::getUserId(const std::string& username) {
     return -1;
 }
 
-User UserRepository::findById(int /*id*/) {
-    // Placeholder implementation if needed later
+User UserRepository::findById(int id) {
+    if (!db) return User();
+
+    std::string query = "SELECT user_id, username, password_hash, full_name, role, level FROM users WHERE user_id = $1";
+    std::string idStr = std::to_string(id);
+    const char* values[] = {idStr.c_str()};
+    PGresult* res = db->execParams(query, 1, values);
+
+    if (res && PQntuples(res) == 1) {
+        int userId = std::stoi(PQgetvalue(res, 0, 0));
+        std::string username = PQgetvalue(res, 0, 1);
+        std::string password = PQgetvalue(res, 0, 2);
+        std::string fullName = PQgetvalue(res, 0, 3);
+        std::string role = PQgetvalue(res, 0, 4);
+        std::string level = PQgetvalue(res, 0, 5);
+        
+        PQclear(res);
+        return User(userId, username, password, fullName, role, level);
+    }
+
+    if (res) {
+        PQclear(res);
+    }
     return User();
 }
 
