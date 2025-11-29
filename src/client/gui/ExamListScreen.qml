@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Layouts 1.15
 import "."
 
 Page {
@@ -38,6 +39,61 @@ Page {
                 }
             }
         }
+
+        function onExamContentReceived(content) {
+            console.log("ExamListScreen: Received exam content, navigating to DoExerciseScreen")
+            // Parse content here or pass raw content to DoExerciseScreen
+            // DoExerciseScreen parses it in onExamContentReceived, but we are navigating now.
+            // We can pass the content as a property.
+            
+            // Parse ExamDTO: id|lessonId|title|type|level|questions
+            var parts = content.split('|');
+            if (parts.length >= 6) {
+                var questionsStr = parts.slice(5).join('|'); 
+                var questions = questionsStr.split('^');
+                
+                var examData = {
+                    id: parts[0],
+                    lessonId: parts[1],
+                    title: parts[2],
+                    type: parts[3],
+                    level: parts[4],
+                    questions: questions
+                };
+
+                stackView.push("DoExerciseScreen.qml", { 
+                    "exerciseId": parseInt(parts[0]),
+                    "exerciseTypeStr": parts[3],
+                    "targetType": "exam",
+                    "preloadedExamData": examData
+                })
+            }
+        }
+
+        function onExamAlreadyTaken(message) {
+            console.log("ExamListScreen: Exam already taken")
+            messageDialog.messageText = message
+            messageDialog.open()
+        }
+    }
+
+    Dialog {
+        id: messageDialog
+        title: "Notification"
+        property string messageText: ""
+        
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 300
+        modal: true
+        standardButtons: Dialog.Ok
+
+        contentItem: Label {
+            text: messageDialog.messageText
+            wrapMode: Text.WordWrap
+            color: Style.textColor
+            font.pixelSize: Style.bodySize
+        }
     }
 
     GridView {
@@ -66,11 +122,8 @@ Page {
                     onEntered: parent.color = "#f8f9fa"
                     onExited: parent.color = Style.cardBackground
                     onClicked: {
-                        stackView.push("DoExerciseScreen.qml", { 
-                            "exerciseId": parseInt(model.examId),
-                            "exerciseTypeStr": model.type,
-                            "targetType": "exam"
-                        })
+                        // Request exam first
+                        networkManager.requestExam(parseInt(model.examId))
                     }
                 }
 

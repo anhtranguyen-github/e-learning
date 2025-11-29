@@ -35,7 +35,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     exerciseController = std::make_shared<ExerciseController>(sessionManager, exerciseRepo);
     submissionController = std::make_shared<SubmissionController>(sessionManager, resultRepo, exerciseRepo, examRepo);
     resultController = std::make_shared<ResultController>(sessionManager, resultRepo);
-    examController = std::make_shared<ExamController>(sessionManager, examRepo);
+    examController = std::make_shared<ExamController>(sessionManager, examRepo, resultRepo);
 
     // Register Default Middlewares
     registerMiddleware(std::make_shared<LoggingMiddleware>());

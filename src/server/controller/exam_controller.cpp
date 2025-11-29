@@ -9,8 +9,9 @@
 namespace server {
 
 ExamController::ExamController(std::shared_ptr<SessionManager> sessionMgr, 
-                           std::shared_ptr<ExamRepository> examRepo)
-    : sessionManager(sessionMgr), examRepository(examRepo) {
+                           std::shared_ptr<ExamRepository> examRepo,
+                           std::shared_ptr<ResultRepository> resultRepo)
+    : sessionManager(sessionMgr), examRepository(examRepo), resultRepository(resultRepo) {
 }
 
 
@@ -120,6 +121,13 @@ void ExamController::handleExamRequest(int clientFd, const protocol::Message &ms
     }
     sessionManager->update_session(req.sessionToken);
 
+    int userId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (userId == -1) {
+        protocol::Message response(protocol::MsgCode::EXAM_FAILURE, "Invalid session");
+        sendMessage(clientFd, response);
+        return;
+    }
+
     int examId;
     try {
         examId = std::stoi(req.examId);
@@ -135,6 +143,17 @@ void ExamController::handleExamRequest(int clientFd, const protocol::Message &ms
 
     if (logger::serverLogger) {
         logger::serverLogger->info("[INFO] ExamController: Handling exam request for ID: " + std::to_string(examId) + " from fd=" + std::to_string(clientFd));
+    }
+
+    // Check if exam already taken
+    if (resultRepository->hasResult(userId, "exam", examId)) {
+        std::string errorMsg = "Exam already taken by user " + std::to_string(userId);
+        if (logger::serverLogger) {
+            logger::serverLogger->info("[INFO] " + errorMsg);
+        }
+        protocol::Message response(protocol::MsgCode::EXAM_ALREADY_TAKEN, "Exam already taken");
+        sendMessage(clientFd, response);
+        return;
     }
 
     Exam exam = examRepository->loadExamById(examId);

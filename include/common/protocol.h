@@ -93,6 +93,7 @@ enum class MsgCode : uint16_t {
     EXAM_REQUEST = 275, // Added for single exam request
     EXAM_SUCCESS = 276,
     EXAM_FAILURE = 277,
+    EXAM_ALREADY_TAKEN = 278,
 
     // Notifications (290-299)
     NOTIFICATION_PUSH = 290,

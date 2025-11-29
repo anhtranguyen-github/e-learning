@@ -232,6 +232,9 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::EXAM_FAILURE:
                 emit errorOccurred("Failed to get exam content: " + QString::fromStdString(msg.toString()));
                 break;
+            case protocol::MsgCode::EXAM_ALREADY_TAKEN:
+                emit examAlreadyTaken(QString::fromStdString(msg.toString()));
+                break;
             case protocol::MsgCode::SUBMIT_ANSWER_SUCCESS: {
                 // Parse response to get targetType and targetId if possible, or just emit success
                 // The payload is ResultDTO: score|feedback

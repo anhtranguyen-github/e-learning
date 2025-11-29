@@ -17,6 +17,7 @@ Page {
     property string targetType: "exercise"
     property var exerciseData: ({ questions: [] })
     property var examData: ({ questions: [] })
+    property var preloadedExamData: null
     property int currentQuestionIndex: 0
     
     readonly property int questionCount: {
@@ -28,7 +29,14 @@ Page {
 
     Component.onCompleted: {
         if (targetType === "exam") {
-            networkManager.requestExam(exerciseId)
+            if (preloadedExamData) {
+                console.log("DoExerciseScreen: Using preloaded exam data")
+                root.examData = preloadedExamData
+                currentQuestionIndex = 0
+                loadQuestion(0)
+            } else {
+                networkManager.requestExam(exerciseId)
+            }
         } else {
             var code = 170;
             var typeUpper = exerciseTypeStr.toUpperCase();
@@ -106,6 +114,13 @@ Page {
         function onAnswerSubmissionFailure(message) {
             resultText.text = message
             resultText.color = Style.errorColor
+        }
+
+        function onErrorOccurred(message) {
+            console.log("DoExerciseScreen: Error occurred: " + message)
+            resultText.text = message
+            resultText.color = Style.errorColor
+            // Optionally disable interaction or go back
         }
     }
     

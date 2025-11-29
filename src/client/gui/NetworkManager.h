@@ -57,6 +57,7 @@ signals:
     void pendingSubmissionsReceived(const QString &listData);
     void gradeSubmissionSuccess(const QString &message);
     void gradeSubmissionFailure(const QString &message);
+    void examAlreadyTaken(const QString &message);
 
 private slots:
     void checkMessages();
