@@ -13,11 +13,12 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 | `CHAT_MESSAGE_FAILURE` | 303 | Failed to send message. | `error_message` |
 | `CHAT_HISTORY_REQUEST` | 304 | Request chat history with a user. | `sessionToken;otherUser` |
 | `CHAT_HISTORY_SUCCESS` | 305 | Returns chat history. | List of messages |
-| `CHAT_HISTORY_FAILURE` | 306 | Failed to retrieve history. | `error_message` |
+| `RECENT_CHATS_REQUEST` | 307 | Request list of recent conversations. | `sessionToken` |
+| `RECENT_CHATS_SUCCESS` | 308 | Returns list of recent chats. | List of `RecentChatDTO` |
+| `RECENT_CHATS_FAILURE` | 309 | Failed to retrieve recent chats. | `error_message` |
 
 ## Payload Definitions
 
-### PrivateMessageRequest
 ### PrivateMessageRequest
 - **Fields**: `sessionToken`, `recipient`, `messageType`, `content`
 - **Serialization**: `sessionToken;recipient;messageType;content`
@@ -26,6 +27,15 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 ### ChatHistoryRequest
 - **Fields**: `sessionToken`, `otherUser`
 - **Serialization**: `sessionToken;otherUser`
+
+### RecentChatsRequest
+- **Fields**: `sessionToken`
+- **Serialization**: `sessionToken`
+
+### RecentChatDTO
+- **Fields**: `userId`, `username`, `lastMessage`, `timestamp`
+- **Serialization**: `userId;username;lastMessage;timestamp`
+- **List Serialization**: `dto1|dto2|...`
 
 ## Example Flow
 
@@ -69,6 +79,18 @@ The Chat protocol enables private messaging between users and retrieval of chat 
 2.  **Server** responds with `CHAT_HISTORY_SUCCESS`:
     ```
     Code: 305
-    Payload: "UserB|TEXT|Hi|time^UserA|AUDIO|<Base64Data>|time" 
+    Payload: "UserB;TEXT;Hi;time|UserA;AUDIO;<Base64Data>;time" 
+    ```
+
+### Fetching Recent Chats
+1.  **Client** sends `RECENT_CHATS_REQUEST`:
+    ```
+    Code: 307
+    Payload: "tokenA"
+    ```
+2.  **Server** responds with `RECENT_CHATS_SUCCESS`:
+    ```
+    Code: 308
+    Payload: "5;UserB;Hello there!;2023-10-27 10:00:00|8;UserC;See you soon;2023-10-26 15:30:00"
     ```
 
