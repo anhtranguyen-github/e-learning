@@ -14,10 +14,10 @@ bool SessionManager::is_session_valid(const std::string& session_id) {
     return sessions_.count(session_id);
 }
 
-std::string SessionManager::create_session(int user_id, int client_fd) {
+std::string SessionManager::create_session(int user_id, int client_fd, const std::string& role) {
     std::string session_id = utils::generateSessionToken();
     std::lock_guard<std::mutex> lock(mutex_);
-    sessions_[session_id] = {user_id, std::chrono::steady_clock::now()};
+    sessions_[session_id] = {user_id, role, std::chrono::steady_clock::now()};
     fd_to_session_id_[client_fd] = session_id;
     return session_id;
 }
@@ -59,6 +59,17 @@ int SessionManager::get_user_id_by_fd(int client_fd) {
         }
     }
     return -1;
+}
+
+std::string SessionManager::get_user_role_by_fd(int client_fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (fd_to_session_id_.count(client_fd)) {
+        std::string session_id = fd_to_session_id_[client_fd];
+        if (sessions_.count(session_id)) {
+            return sessions_[session_id].role;
+        }
+    }
+    return "";
 }
 
 void SessionManager::remove_session_by_fd(int client_fd) {

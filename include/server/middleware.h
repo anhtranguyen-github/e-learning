@@ -63,6 +63,58 @@ public:
     }
 };
 
+class RBACMiddleware : public Middleware {
+private:
+    std::shared_ptr<SessionManager> sessionManager;
+
+public:
+    RBACMiddleware(std::shared_ptr<SessionManager> sm) : sessionManager(sm) {}
+
+    bool handle(int clientFd, const protocol::Message& msg, std::string& errorMsg) override {
+        std::string role = sessionManager->get_user_role_by_fd(clientFd);
+
+        // Teacher/Admin only requests
+        if (msg.code == protocol::MsgCode::GRADE_SUBMISSION_REQUEST ||
+            msg.code == protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST) {
+            
+            if (role != "teacher" && role != "admin") {
+                errorMsg = "Unauthorized: Teacher or Admin role required";
+                return false;
+            }
+        }
+        
+        // Student Role Handling:
+        // Students are implicitly handled here. They are blocked from the Teacher/Admin requests above.
+        // They are allowed to proceed to the Student-only requests below (which are not blocked for them).
+        // If we needed to restrict students from specific "Admin-only" features, we would add a check here.
+
+        // Student only requests (Teachers cannot access these)
+        // Teacher: view lesson, view pending submited exam/excercises, chat.
+        if (role == "teacher") {
+            if (msg.code == protocol::MsgCode::EXERCISE_LIST_REQUEST ||
+                msg.code == protocol::MsgCode::STUDY_EXERCISE_REQUEST ||
+                msg.code == protocol::MsgCode::MULTIPLE_CHOICE_REQUEST ||
+                msg.code == protocol::MsgCode::FILL_IN_REQUEST ||
+                msg.code == protocol::MsgCode::SENTENCE_ORDER_REQUEST ||
+                msg.code == protocol::MsgCode::REWRITE_SENTENCE_REQUEST ||
+                msg.code == protocol::MsgCode::WRITE_PARAGRAPH_REQUEST ||
+                msg.code == protocol::MsgCode::SPEAKING_TOPIC_REQUEST ||
+                msg.code == protocol::MsgCode::SUBMIT_ANSWER_REQUEST ||
+                msg.code == protocol::MsgCode::RESULT_LIST_REQUEST ||
+                msg.code == protocol::MsgCode::RESULT_DETAIL_REQUEST ||
+                msg.code == protocol::MsgCode::RESULT_REQUEST ||
+                msg.code == protocol::MsgCode::EXAM_LIST_REQUEST ||
+                msg.code == protocol::MsgCode::EXAM_REQUEST) {
+                
+                errorMsg = "Unauthorized: Teachers cannot perform student actions (Exercises, Exams, Results)";
+                return false;
+            }
+        }
+
+        return true;
+    }
+};
+
 } // namespace server
 
 #endif // MIDDLEWARE_H

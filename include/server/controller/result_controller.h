@@ -20,10 +20,10 @@ public:
     ResultController(std::shared_ptr<SessionManager> sessionMgr, 
                   std::shared_ptr<ResultRepository> repo);
 
-    void handleResultRequest(int clientFd, const protocol::Message& msg);
-    void handleDoneUndoneListRequest(int clientFd, const protocol::Message& msg);
-    void handleResultDetailRequest(int clientFd, const protocol::Message& msg);
-    void handlePendingSubmissionsRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentResultRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentResultListRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentResultDetailRequest(int clientFd, const protocol::Message& msg);
+    void handleTeacherPendingSubmissionsRequest(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

@@ -57,7 +57,7 @@ LessonType LessonController::parseLessonType(const std::string& typeStr) {
 // Message Handlers
 // ============================================================================
 
-void LessonController::handleLessonListRequest(int clientFd, const protocol::Message& msg) {
+void LessonController::handleUserLessonListRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -150,7 +150,7 @@ void LessonController::handleLessonListRequest(int clientFd, const protocol::Mes
     }
 }
 
-void LessonController::handleStudyLessonRequest(int clientFd, const protocol::Message& msg) {
+void LessonController::handleUserStudyLessonRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {

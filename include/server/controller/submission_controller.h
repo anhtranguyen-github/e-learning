@@ -26,8 +26,8 @@ public:
                       std::shared_ptr<ExerciseRepository> exerciseRepo,
                       std::shared_ptr<ExamRepository> examRepo);
 
-    void handleSubmission(int clientFd, const protocol::Message& msg);
-    void handleGradeSubmission(int clientFd, const protocol::Message& msg);
+    void handleStudentSubmission(int clientFd, const protocol::Message& msg);
+    void handleTeacherGradeSubmission(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

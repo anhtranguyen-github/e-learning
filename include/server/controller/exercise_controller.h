@@ -55,7 +55,7 @@ public:
      * @param clientFd - Client socket file descriptor
      * @param msg - Incoming message from client
      */
-    void handleExerciseListRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentExerciseListRequest(int clientFd, const protocol::Message& msg);
 
     /**
      * Handle STUDY_EXERCISE_REQUEST message
@@ -76,7 +76,7 @@ public:
      * @param clientFd - Client socket file descriptor
      * @param msg - Incoming message from client
      */
-    void handleStudyExerciseRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentStudyExerciseRequest(int clientFd, const protocol::Message& msg);
 
     /**
      * Handle specific exercise requests (MULTIPLE_CHOICE, FILL_IN, etc.)
@@ -84,7 +84,7 @@ public:
      * Expected payload format: <session_token>;<exercise_id>
      * The response code will match the request code + 1 (e.g. REQUEST -> SUCCESS).
      */
-    void handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentSpecificExerciseRequest(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

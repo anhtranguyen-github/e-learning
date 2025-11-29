@@ -17,17 +17,19 @@ public:
     SessionManager(std::shared_ptr<Database> db);
 
     bool is_session_valid(const std::string& session_id);
-    std::string create_session(int user_id, int client_fd);
+    std::string create_session(int user_id, int client_fd, const std::string& role);
     void remove_session(const std::string& session_id);
     void update_session(const std::string& session_id);
     int get_user_id_by_session(const std::string& session_id);
     int get_user_id_by_fd(int client_fd);
+    std::string get_user_role_by_fd(int client_fd);
     std::vector<int> get_fds_by_user_id(int user_id);
     void remove_session_by_fd(int client_fd);
 
 private:
     struct Session {
         int user_id;
+        std::string role;
         std::chrono::steady_clock::time_point last_active;
     };
 

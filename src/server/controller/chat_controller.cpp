@@ -14,7 +14,7 @@ ChatController::ChatController(std::shared_ptr<ChatRepository> chatRepo,
                                std::shared_ptr<SessionManager> sessionMgr)
     : chatRepository(chatRepo), userRepository(userRepo), connectionManager(connMgr), sessionManager(sessionMgr) {}
 
-void ChatController::handleSendPrivateMessage(int clientFd, const protocol::Message& msg) {
+void ChatController::handleUserSendPrivateMessage(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -115,7 +115,7 @@ void ChatController::handleSendPrivateMessage(int clientFd, const protocol::Mess
     send(clientFd, data.data(), data.size(), 0);
 }
 
-void ChatController::handleGetChatHistory(int clientFd, const protocol::Message& msg) {
+void ChatController::handleUserGetChatHistory(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     Payloads::ChatHistoryRequest req;
     req.deserialize(payload);
@@ -160,7 +160,7 @@ void ChatController::handleGetChatHistory(int clientFd, const protocol::Message&
     send(clientFd, data.data(), data.size(), 0);
 }
 
-void ChatController::handleGetRecentChats(int clientFd, const protocol::Message& msg) {
+void ChatController::handleUserGetRecentChats(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     Payloads::RecentChatsRequest req;
     req.deserialize(payload);

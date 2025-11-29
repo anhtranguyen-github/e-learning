@@ -23,8 +23,8 @@ public:
                   std::shared_ptr<ExamRepository> examRepo,
                   std::shared_ptr<ResultRepository> resultRepo);
 
-    void handleGetExams(int clientFd, const protocol::Message& msg);
-    void handleExamRequest(int clientFd, const protocol::Message& msg);
+    void handleStudentGetExams(int clientFd, const protocol::Message& msg);
+    void handleStudentExamRequest(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

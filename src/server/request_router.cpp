@@ -41,6 +41,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     // Register Default Middlewares
     registerMiddleware(std::make_shared<LoggingMiddleware>());
     registerMiddleware(std::make_shared<AuthMiddleware>(sessionManager));
+    registerMiddleware(std::make_shared<RBACMiddleware>(sessionManager));
 }
 
 void RequestRouter::registerMiddleware(std::shared_ptr<Middleware> middleware) {
@@ -84,39 +85,39 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         // User / Auth
         case protocol::MsgCode::LOGIN_REQUEST:
             if (clientHandler) {
-                if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleLoginRequest");
-                userController->handleLoginRequest(clientFd, msg, clientHandler);
+                if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleUserLoginRequest");
+                userController->handleUserLoginRequest(clientFd, msg, clientHandler);
             } else {
                 if (logger::serverLogger) logger::serverLogger->error("ClientHandler is null for LOGIN_REQUEST");
             }
             break;
         case protocol::MsgCode::LOGOUT_REQUEST:
-            if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleLogoutRequest");
-            userController->handleLogoutRequest(clientFd, msg);
+            if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleUserLogoutRequest");
+            userController->handleUserLogoutRequest(clientFd, msg);
             break;
 
         // Chat
         case protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST:
-            chatController->handleSendPrivateMessage(clientFd, msg);
+            chatController->handleUserSendPrivateMessage(clientFd, msg);
             break;
         case protocol::MsgCode::CHAT_HISTORY_REQUEST:
-            chatController->handleGetChatHistory(clientFd, msg);
+            chatController->handleUserGetChatHistory(clientFd, msg);
             break;
         case protocol::MsgCode::RECENT_CHATS_REQUEST:
-            chatController->handleGetRecentChats(clientFd, msg);
+            chatController->handleUserGetRecentChats(clientFd, msg);
             break;
 
         // Lesson
         case protocol::MsgCode::LESSON_LIST_REQUEST:
-            lessonController->handleLessonListRequest(clientFd, msg);
+            lessonController->handleUserLessonListRequest(clientFd, msg);
             break;
         case protocol::MsgCode::STUDY_LESSON_REQUEST:
-            lessonController->handleStudyLessonRequest(clientFd, msg);
+            lessonController->handleUserStudyLessonRequest(clientFd, msg);
             break;
 
         // Exercise
         case protocol::MsgCode::EXERCISE_LIST_REQUEST:
-            exerciseController->handleExerciseListRequest(clientFd, msg);
+            exerciseController->handleStudentExerciseListRequest(clientFd, msg);
             break;
         case protocol::MsgCode::MULTIPLE_CHOICE_REQUEST:
         case protocol::MsgCode::FILL_IN_REQUEST:
@@ -124,40 +125,40 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         case protocol::MsgCode::REWRITE_SENTENCE_REQUEST:
         case protocol::MsgCode::WRITE_PARAGRAPH_REQUEST:
         case protocol::MsgCode::SPEAKING_TOPIC_REQUEST:
-            exerciseController->handleSpecificExerciseRequest(clientFd, msg);
+            exerciseController->handleStudentSpecificExerciseRequest(clientFd, msg);
             break;
         case protocol::MsgCode::STUDY_EXERCISE_REQUEST:
-            exerciseController->handleStudyExerciseRequest(clientFd, msg);
+            exerciseController->handleStudentStudyExerciseRequest(clientFd, msg);
             break;
 
         // Submission
         case protocol::MsgCode::SUBMIT_ANSWER_REQUEST:
-            submissionController->handleSubmission(clientFd, msg);
+            submissionController->handleStudentSubmission(clientFd, msg);
             break;
         case protocol::MsgCode::GRADE_SUBMISSION_REQUEST:
-            submissionController->handleGradeSubmission(clientFd, msg);
+            submissionController->handleTeacherGradeSubmission(clientFd, msg);
             break;
 
         // Result
         case protocol::MsgCode::RESULT_LIST_REQUEST:
-            resultController->handleDoneUndoneListRequest(clientFd, msg);
+            resultController->handleStudentResultListRequest(clientFd, msg);
             break;
         case protocol::MsgCode::RESULT_DETAIL_REQUEST:
-            resultController->handleResultDetailRequest(clientFd, msg);
+            resultController->handleStudentResultDetailRequest(clientFd, msg);
             break;
         case protocol::MsgCode::RESULT_REQUEST: // This case is kept for handleResultRequest
-            resultController->handleResultRequest(clientFd, msg);
+            resultController->handleStudentResultRequest(clientFd, msg);
             break;
         case protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST:
-            resultController->handlePendingSubmissionsRequest(clientFd, msg);
+            resultController->handleTeacherPendingSubmissionsRequest(clientFd, msg);
             break;
 
         // Exam
         case protocol::MsgCode::EXAM_LIST_REQUEST:
-            examController->handleGetExams(clientFd, msg);
+            examController->handleStudentGetExams(clientFd, msg);
             break;
         case protocol::MsgCode::EXAM_REQUEST: // This case is kept for handleExamRequest
-            examController->handleExamRequest(clientFd, msg);
+            examController->handleStudentExamRequest(clientFd, msg);
             break;
 
         default:

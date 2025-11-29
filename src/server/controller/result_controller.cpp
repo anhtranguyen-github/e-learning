@@ -45,7 +45,7 @@ bool ResultController::sendMessage(int clientFd, const protocol::Message& msg) {
 // Message Handlers
 // ============================================================================
 
-void ResultController::handleResultRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleStudentResultRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling result request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -87,7 +87,7 @@ void ResultController::handleResultRequest(int clientFd, const protocol::Message
     }
 }
 
-void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleStudentResultListRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling done/undone list request from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -141,7 +141,7 @@ void ResultController::handleDoneUndoneListRequest(int clientFd, const protocol:
     sendMessage(clientFd, response);
 }
 
-void ResultController::handleResultDetailRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleStudentResultDetailRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling result detail request from fd=" + std::to_string(clientFd));
 
@@ -176,7 +176,7 @@ void ResultController::handleResultDetailRequest(int clientFd, const protocol::M
     }
 }
 
-void ResultController::handlePendingSubmissionsRequest(int clientFd, const protocol::Message& msg) {
+void ResultController::handleTeacherPendingSubmissionsRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling pending submissions request from fd=" + std::to_string(clientFd));
 

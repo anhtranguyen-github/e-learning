@@ -47,7 +47,7 @@ bool SubmissionController::sendMessage(int clientFd, const protocol::Message& ms
 // Message Handlers
 // ============================================================================
 
-void SubmissionController::handleSubmission(int clientFd, const protocol::Message& msg) {
+void SubmissionController::handleStudentSubmission(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling submission from fd=" + std::to_string(clientFd) + ", payload: " + payload);
 
@@ -159,7 +159,7 @@ void SubmissionController::handleSubmission(int clientFd, const protocol::Messag
     }
 }
 
-void SubmissionController::handleGradeSubmission(int clientFd, const protocol::Message& msg) {
+void SubmissionController::handleTeacherGradeSubmission(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     logger::serverLogger->debug("Handling grade submission from fd=" + std::to_string(clientFd));
 

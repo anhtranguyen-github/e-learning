@@ -25,7 +25,7 @@ void UserController::sendMessage(int clientFd, const protocol::Message& msg) {
     }
 }
 
-void UserController::handleLoginRequest(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler) {
+void UserController::handleUserLoginRequest(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler) {
     if (logger::serverLogger) logger::serverLogger->debug("Handling login request for fd=" + std::to_string(clientFd));
     
     std::string payload = msg.toString();
@@ -49,13 +49,17 @@ void UserController::handleLoginRequest(int clientFd, const protocol::Message& m
         // Get user ID
         int userId = userRepo->getUserId(username);
         
-        // Create session
-        std::string sessionId = sessionMgr->create_session(userId, clientFd);
+        // Get user details to retrieve role
+        User user = userRepo->findById(userId);
+        std::string role = user.getRole();
+        
+        // Create session with role
+        std::string sessionId = sessionMgr->create_session(userId, clientFd, role);
         
         // Register client with ConnectionManager
         connMgr->add_client(userId, clientHandler);
 
-        protocol::Message response(protocol::MsgCode::LOGIN_SUCCESS, "session_id=" + sessionId);
+        protocol::Message response(protocol::MsgCode::LOGIN_SUCCESS, "session_id=" + sessionId + ";role=" + role);
         sendMessage(clientFd, response);
         
         if (logger::serverLogger) {
@@ -72,7 +76,7 @@ void UserController::handleLoginRequest(int clientFd, const protocol::Message& m
     }
 }
 
-void UserController::handleLogoutRequest(int clientFd, const protocol::Message& msg) {
+void UserController::handleUserLogoutRequest(int clientFd, const protocol::Message& msg) {
     std::string sessionId = msg.toString();
     
     if (sessionId.empty()) {

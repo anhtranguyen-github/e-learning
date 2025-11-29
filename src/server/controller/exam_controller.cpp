@@ -16,7 +16,7 @@ ExamController::ExamController(std::shared_ptr<SessionManager> sessionMgr,
 
 
 
-void ExamController::handleGetExams(int clientFd, const protocol::Message &msg) {
+void ExamController::handleStudentGetExams(int clientFd, const protocol::Message &msg) {
     std::string payload = msg.toString();
 
     if (logger::serverLogger) {
@@ -109,7 +109,7 @@ void ExamController::handleGetExams(int clientFd, const protocol::Message &msg) 
         sendMessage(clientFd, response);
     }
 }
-void ExamController::handleExamRequest(int clientFd, const protocol::Message &msg) {
+void ExamController::handleStudentExamRequest(int clientFd, const protocol::Message &msg) {
     std::string payload = msg.toString();
     Payloads::ExamRequest req;
     req.deserialize(payload);

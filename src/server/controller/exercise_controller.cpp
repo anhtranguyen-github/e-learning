@@ -57,7 +57,7 @@ ExerciseType ExerciseController::parseExerciseType(const std::string& typeStr) {
 // Message Handlers
 // ============================================================================
 
-void ExerciseController::handleExerciseListRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleStudentExerciseListRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -150,7 +150,7 @@ void ExerciseController::handleExerciseListRequest(int clientFd, const protocol:
     }
 }
 
-void ExerciseController::handleStudyExerciseRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleStudentStudyExerciseRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     if (logger::serverLogger) {
@@ -233,7 +233,7 @@ void ExerciseController::handleStudyExerciseRequest(int clientFd, const protocol
     }
 }
 
-void ExerciseController::handleSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
+void ExerciseController::handleStudentSpecificExerciseRequest(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     
     Payloads::SpecificExerciseRequest req;

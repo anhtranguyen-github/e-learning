@@ -25,13 +25,13 @@ public:
                    std::shared_ptr<SessionManager> sessionMgr);
 
     // Handle SEND_CHAT_PRIVATE_REQUEST
-    void handleSendPrivateMessage(int clientFd, const protocol::Message& msg);
+    void handleUserSendPrivateMessage(int clientFd, const protocol::Message& msg);
 
     // Handle CHAT_HISTORY_REQUEST
-    void handleGetChatHistory(int clientFd, const protocol::Message& msg);
+    void handleUserGetChatHistory(int clientFd, const protocol::Message& msg);
 
     // Handle RECENT_CHATS_REQUEST
-    void handleGetRecentChats(int clientFd, const protocol::Message& msg);
+    void handleUserGetRecentChats(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

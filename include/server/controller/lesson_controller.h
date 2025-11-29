@@ -55,7 +55,7 @@ public:
      * @param clientFd - Client socket file descriptor
      * @param msg - Incoming message from client
      */
-    void handleLessonListRequest(int clientFd, const protocol::Message& msg);
+    void handleUserLessonListRequest(int clientFd, const protocol::Message& msg);
 
     /**
      * Handle STUDY_LESSON_REQUEST message
@@ -76,7 +76,7 @@ public:
      * @param clientFd - Client socket file descriptor
      * @param msg - Incoming message from client
      */
-    void handleStudyLessonRequest(int clientFd, const protocol::Message& msg);
+    void handleUserStudyLessonRequest(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server
