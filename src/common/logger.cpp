@@ -8,6 +8,7 @@ namespace logger {
 Logger* serverLogger = nullptr;
 Logger* clientLogger = nullptr;
 Logger* heartbeatLogger = nullptr;
+Logger* messageLogger = nullptr;
 
 Logger::Logger(const std::string& filename, LogLevel minLevel)
     : minLevel(minLevel) {
@@ -77,6 +78,17 @@ void Logger::error(const std::string& message) {
     log(LogLevel::ERROR, message);
 }
 
+void Logger::logMessage(const std::string& sender, const std::string& message) {
+    std::lock_guard<std::mutex> lock(logMutex);
+    
+    std::string logEntry = "[" + getCurrentTime() + "] [" + sender + "] " + message;
+    
+    if (logFile.is_open()) {
+        logFile << logEntry << std::endl;
+        logFile.flush();
+    }
+}
+
 void initServerLogger(const std::string& filename) {
     if (serverLogger == nullptr) {
         serverLogger = new Logger(filename, LogLevel::DEBUG);
@@ -92,6 +104,12 @@ void initClientLogger(const std::string& filename) {
 void initHeartbeatLogger(const std::string& filename) {
     if (heartbeatLogger == nullptr) {
         heartbeatLogger = new Logger(filename, LogLevel::DEBUG);
+    }
+}
+
+void initMessageLogger(const std::string& filename) {
+    if (messageLogger == nullptr) {
+        messageLogger = new Logger(filename, LogLevel::INFO);
     }
 }
 

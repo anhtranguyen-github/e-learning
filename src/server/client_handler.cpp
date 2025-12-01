@@ -35,6 +35,10 @@ void ClientHandler::processMessage(int clientFd, const std::vector<uint8_t>& dat
                                       " from fd=" + std::to_string(clientFd));
         }
 
+        if (logger::messageLogger) {
+            logger::messageLogger->logMessage("Client(" + std::to_string(clientFd) + ")", msg.toString());
+        }
+
             switch (msg.code) {
             case protocol::MsgCode::HEARTBEAT:
                 handleHeartbeat(msg);
@@ -112,6 +116,10 @@ void ClientHandler::handleClientDisconnect(int clientFd) {
 bool ClientHandler::send_message(const protocol::Message& msg) {
     std::vector<uint8_t> data = msg.serialize();
     
+    if (logger::messageLogger) {
+        logger::messageLogger->logMessage("Server->Client(" + std::to_string(clientFd_) + ")", msg.toString());
+    }
+
     ssize_t sent = send(clientFd_, data.data(), data.size(), 0);
     
     if (sent < 0) {

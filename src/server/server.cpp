@@ -315,6 +315,7 @@ int main(int argc, char* argv[]) {
     // Initialize logger
     logger::initServerLogger();
     logger::initHeartbeatLogger();
+    logger::initMessageLogger("logs/server_msg.log");
 
     int port = 8080;
     if (argc > 1) {

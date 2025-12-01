@@ -271,6 +271,11 @@ bool NetworkClient::sendMessage(const protocol::Message& msg) {
     }
 
     std::vector<uint8_t> data = msg.serialize();
+    
+    if (logger::messageLogger) {
+        logger::messageLogger->logMessage("Client->Server", msg.toString());
+    }
+    
     return sendData(data);
 }
 
@@ -372,7 +377,11 @@ std::vector<protocol::Message> NetworkClient::pollMessages() {
         receiveBuffer.erase(receiveBuffer.begin(), receiveBuffer.begin() + msgLen);
         
         try {
-            messages.push_back(protocol::Message::deserialize(msgData));
+            protocol::Message msg = protocol::Message::deserialize(msgData);
+            if (logger::messageLogger) {
+                logger::messageLogger->logMessage("Server", msg.toString());
+            }
+            messages.push_back(msg);
         } catch (...) {
             // Should not happen if getFullLength returned > 0
         }
