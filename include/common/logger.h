@@ -35,17 +35,20 @@ public:
     void info(const std::string& message);
     void warn(const std::string& message);
     void error(const std::string& message);
+    void logMessage(const std::string& sender, const std::string& message);
 };
 
 // Global logger instances
 extern Logger* serverLogger;
 extern Logger* clientLogger;
 extern Logger* heartbeatLogger;
+extern Logger* messageLogger;
 
 // Initialize loggers
 void initServerLogger(const std::string& filename = "logs/server.log");
 void initClientLogger(const std::string& filename = "logs/client.log");
 void initHeartbeatLogger(const std::string& filename = "logs/heartbeat.log");
+void initMessageLogger(const std::string& filename = "logs/msg.log");
 
 } // namespace logger
 
