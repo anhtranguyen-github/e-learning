@@ -233,6 +233,56 @@ bool NetworkClient::logout() {
     return false;
 }
 
+bool NetworkClient::registerUser(const std::string& username, const std::string& password) {
+    if (!connected) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not connected to server");
+        }
+        return false;
+    }
+
+    // Send register request (same format as login)
+    Payloads::LoginRequest req;
+    req.username = username;
+    req.password = password;
+    std::string payload = req.serialize();
+    protocol::Message registerMsg(protocol::MsgCode::REGISTER_REQUEST, payload);
+    
+    if (!sendMessage(registerMsg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send register request");
+        }
+        return false;
+    }
+
+    // Wait for response
+    try {
+        protocol::Message response = receiveMessage();
+        
+        if (response.code == protocol::MsgCode::REGISTER_SUCCESS) {
+            if (logger::clientLogger) {
+                logger::clientLogger->info("Registration successful for user: " + username);
+            }
+            return true;
+        } else if (response.code == protocol::MsgCode::REGISTER_FAILURE) {
+            if (logger::clientLogger) {
+                logger::clientLogger->error("Registration failed: " + response.toString());
+            }
+            return false;
+        }
+    } catch (const std::exception& e) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Error receiving register response: " + std::string(e.what()));
+        }
+        return false;
+    }
+    
+    if (logger::clientLogger) {
+        logger::clientLogger->error("Unexpected response from server");
+    }
+    return false;
+}
+
 bool NetworkClient::sendHeartbeat() {
     if (!loggedIn) {
         return false;

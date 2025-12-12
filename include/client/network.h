@@ -43,6 +43,7 @@ public:
 
     // Authentication
     bool login(const std::string& username, const std::string& password);
+    bool registerUser(const std::string& username, const std::string& password);
     bool logout();
 
     // Heartbeat
