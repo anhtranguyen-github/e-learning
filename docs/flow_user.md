@@ -12,7 +12,7 @@ sequenceDiagram
 
     Note over Client, DB: Login Flow
 
-    Client->>Network: send(LOGIN_REQUEST, "user;pass")
+    Client->>Network: send(LOGIN_REQUEST, user;pass)
     Network->>Controller: handleUserLoginRequest(fd, msg)
     Controller->>Repo: verifyCredentials(username, password)
     Repo->>DB: SELECT password_hash FROM users...
@@ -34,5 +34,5 @@ sequenceDiagram
     Controller->>Controller: sessionMgr->create_session(...)
     Controller->>Controller: connMgr->add_client(...)
 
-    Controller-->>Client: send(LOGIN_SUCCESS, "session_id;role")
+    Controller-->>Client: send(LOGIN_SUCCESS, session_id;role)
 ```
