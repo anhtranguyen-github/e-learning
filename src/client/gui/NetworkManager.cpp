@@ -243,6 +243,24 @@ void NetworkManager::requestRecentChats() {
     }
 }
 
+void NetworkManager::initiateCall(const QString &targetUser) {
+    if (!m_client->initiateCall(targetUser.toStdString())) {
+        emit callFailed("Failed to initiate call");
+    }
+}
+
+void NetworkManager::answerCall(const QString &callerUser) {
+    m_client->answerCall(callerUser.toStdString());
+}
+
+void NetworkManager::declineCall(const QString &callerUser) {
+    m_client->declineCall(callerUser.toStdString());
+}
+
+void NetworkManager::endCall(const QString &otherUser) {
+    m_client->endCall(otherUser.toStdString());
+}
+
 void NetworkManager::checkMessages() {
     if (!m_client->isConnected()) {
         m_pollTimer->stop();
@@ -448,6 +466,27 @@ void NetworkManager::checkMessages() {
                 break;
             case protocol::MsgCode::RECENT_CHATS_FAILURE:
                 emit chatError("Failed to get recent chats");
+                break;
+
+            // Voice Calls
+            case protocol::MsgCode::CALL_INCOMING: {
+                Payloads::VoiceCallNotification notification;
+                notification.deserialize(msg.toString());
+                emit incomingCall(QString::fromStdString(notification.callerUsername), 
+                                  QString::fromStdString(notification.callerId));
+                break;
+            }
+            case protocol::MsgCode::CALL_ANSWER_REQUEST: {
+                Payloads::VoiceCallNotification notification;
+                notification.deserialize(msg.toString());
+                emit callAnswered(QString::fromStdString(notification.callerUsername));
+                break;
+            }
+            case protocol::MsgCode::CALL_ENDED:
+                emit callEnded(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::CALL_FAILED:
+                emit callFailed(QString::fromStdString(msg.toString()));
                 break;
 
             default:

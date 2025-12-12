@@ -38,6 +38,12 @@ public:
     Q_INVOKABLE void requestChatHistory(const QString &otherUser);
     Q_INVOKABLE void requestRecentChats();
 
+    // Voice Calls
+    Q_INVOKABLE void initiateCall(const QString &targetUser);
+    Q_INVOKABLE void answerCall(const QString &callerUser);
+    Q_INVOKABLE void declineCall(const QString &callerUser);
+    Q_INVOKABLE void endCall(const QString &otherUser);
+
     bool isConnected() const;
     bool isLoggedIn() const;
     QString userRole() const;
@@ -73,6 +79,12 @@ signals:
     void recentChatsReceived(const QString &chatsData);
     void chatMessageSent(const QString &message);
     void chatError(const QString &message);
+
+    // Voice Call Signals
+    void incomingCall(const QString &callerUsername, const QString &callerId);
+    void callAnswered(const QString &username);
+    void callEnded(const QString &reason);
+    void callFailed(const QString &reason);
 
 private slots:
     void checkMessages();
