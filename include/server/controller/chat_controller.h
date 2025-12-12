@@ -32,6 +32,12 @@ public:
 
     // Handle RECENT_CHATS_REQUEST
     void handleUserGetRecentChats(int clientFd, const protocol::Message& msg);
+
+    // Voice Call Handlers
+    void handleCallInitiate(int clientFd, const protocol::Message& msg);
+    void handleCallAnswer(int clientFd, const protocol::Message& msg);
+    void handleCallDecline(int clientFd, const protocol::Message& msg);
+    void handleCallEnd(int clientFd, const protocol::Message& msg);
 };
 
 } // namespace server

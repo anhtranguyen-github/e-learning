@@ -201,4 +201,130 @@ void ChatController::handleUserGetRecentChats(int clientFd, const protocol::Mess
     send(clientFd, data.data(), data.size(), 0);
 }
 
+void ChatController::handleCallInitiate(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    Payloads::VoiceCallRequest req;
+    req.deserialize(payload);
+
+    int callerId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (callerId == -1) {
+        protocol::Message response(protocol::MsgCode::CALL_FAILED, "Invalid session");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    User caller = userRepository->findById(callerId);
+    int targetId = userRepository->getUserId(req.targetUser);
+    
+    if (targetId == -1) {
+        protocol::Message response(protocol::MsgCode::CALL_FAILED, "User not found");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    // Check if target is online
+    if (!connectionManager->isUserOnline(targetId)) {
+        protocol::Message response(protocol::MsgCode::CALL_FAILED, "User is offline");
+        std::vector<uint8_t> data = response.serialize();
+        send(clientFd, data.data(), data.size(), 0);
+        return;
+    }
+
+    // Send incoming call notification to target
+    Payloads::VoiceCallNotification notification;
+    notification.callerUsername = caller.getUsername();
+    notification.callerId = std::to_string(callerId);
+    
+    protocol::Message callNotification(protocol::MsgCode::CALL_INCOMING, notification.serialize());
+    connectionManager->sendToUser(targetId, callNotification);
+
+    if (logger::serverLogger) {
+        logger::serverLogger->info("Call initiated from " + caller.getUsername() + " to " + req.targetUser);
+    }
+}
+
+void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    Payloads::VoiceCallRequest req;
+    req.deserialize(payload);
+
+    int answererId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (answererId == -1) {
+        return;
+    }
+
+    User answerer = userRepository->findById(answererId);
+    int callerId = userRepository->getUserId(req.targetUser);
+    
+    if (callerId == -1) {
+        return;
+    }
+
+    // Notify caller that call was answered
+    Payloads::VoiceCallNotification notification;
+    notification.callerUsername = answerer.getUsername();
+    notification.callerId = std::to_string(answererId);
+    
+    protocol::Message response(protocol::MsgCode::CALL_ANSWER_REQUEST, notification.serialize());
+    connectionManager->sendToUser(callerId, response);
+
+    if (logger::serverLogger) {
+        logger::serverLogger->info("Call answered by " + answerer.getUsername());
+    }
+}
+
+void ChatController::handleCallDecline(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    Payloads::VoiceCallRequest req;
+    req.deserialize(payload);
+
+    int declinerId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (declinerId == -1) {
+        return;
+    }
+
+    User decliner = userRepository->findById(declinerId);
+    int callerId = userRepository->getUserId(req.targetUser);
+    
+    if (callerId == -1) {
+        return;
+    }
+
+    // Notify caller that call was declined
+    protocol::Message response(protocol::MsgCode::CALL_ENDED, "Call declined by " + decliner.getUsername());
+    connectionManager->sendToUser(callerId, response);
+
+    if (logger::serverLogger) {
+        logger::serverLogger->info("Call declined by " + decliner.getUsername());
+    }
+}
+
+void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+    Payloads::VoiceCallRequest req;
+    req.deserialize(payload);
+
+    int enderId = sessionManager->get_user_id_by_session(req.sessionToken);
+    if (enderId == -1) {
+        return;
+    }
+
+    User ender = userRepository->findById(enderId);
+    int otherId = userRepository->getUserId(req.targetUser);
+    
+    if (otherId == -1) {
+        return;
+    }
+
+    // Notify other party that call ended
+    protocol::Message response(protocol::MsgCode::CALL_ENDED, "Call ended by " + ender.getUsername());
+    connectionManager->sendToUser(otherId, response);
+
+    if (logger::serverLogger) {
+        logger::serverLogger->info("Call ended by " + ender.getUsername());
+    }
+}
+
 } // namespace server
