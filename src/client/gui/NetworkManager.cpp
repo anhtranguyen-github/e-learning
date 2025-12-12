@@ -64,6 +64,25 @@ void NetworkManager::login(const QString &username, const QString &password) {
     }
 }
 
+void NetworkManager::registerUser(const QString &username, const QString &password) {
+    if (!m_client->isConnected()) {
+        // Try to connect to default if not connected
+        if (!m_client->connect()) {
+            emit registerFailure("Could not connect to server");
+            return;
+        }
+        emit connectionStatusChanged(true);
+    }
+
+    bool success = m_client->registerUser(username.toStdString(), password.toStdString());
+    
+    if (success) {
+        emit registerSuccess();
+    } else {
+        emit registerFailure("Registration failed");
+    }
+}
+
 void NetworkManager::disconnect() {
     m_pollTimer->stop();
     m_client->disconnect();

@@ -20,6 +20,7 @@ public:
 
     Q_INVOKABLE void connectToServer(const QString &host, int port);
     Q_INVOKABLE void login(const QString &username, const QString &password);
+    Q_INVOKABLE void registerUser(const QString &username, const QString &password);
     Q_INVOKABLE void disconnect();
 
     Q_INVOKABLE void requestLessonList(const QString &topic = "", const QString &level = "");
@@ -47,6 +48,8 @@ signals:
     void userRoleChanged(const QString &role);
     void loginSuccess();
     void loginFailure(const QString &message);
+    void registerSuccess();
+    void registerFailure(const QString &message);
     void errorOccurred(const QString &message);
     
     void lessonListReceived(const QString &listData);
