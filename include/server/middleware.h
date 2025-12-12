@@ -39,6 +39,7 @@ public:
     bool handle(int clientFd, const protocol::Message& msg, std::string& errorMsg) override {
         // Skip auth check for Login/Register/Disconnect/Heartbeat
         if (msg.code == protocol::MsgCode::LOGIN_REQUEST || 
+            msg.code == protocol::MsgCode::REGISTER_REQUEST ||
             msg.code == protocol::MsgCode::DISCONNECT_REQUEST ||
             msg.code == protocol::MsgCode::HEARTBEAT) {
             return true;

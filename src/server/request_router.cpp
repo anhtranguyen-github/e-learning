@@ -95,6 +95,10 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleUserLogoutRequest");
             userController->handleUserLogoutRequest(clientFd, msg);
             break;
+        case protocol::MsgCode::REGISTER_REQUEST:
+            if (logger::serverLogger) logger::serverLogger->debug("Routing to UserController::handleUserRegisterRequest");
+            userController->handleUserRegisterRequest(clientFd, msg);
+            break;
 
         // Chat
         case protocol::MsgCode::SEND_CHAT_PRIVATE_REQUEST:
