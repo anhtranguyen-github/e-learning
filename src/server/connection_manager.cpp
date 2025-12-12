@@ -43,4 +43,9 @@ void ConnectionManager::sendToUser(int userId, const protocol::Message& msg) {
     }
 }
 
+bool ConnectionManager::isUserOnline(int userId) const {
+    auto it = active_clients_.find(userId);
+    return it != active_clients_.end() && it->second != nullptr;
+}
+
 } // namespace server

@@ -24,6 +24,9 @@ public:
     // Send message to a specific user (all active sessions)
     void sendToUser(int userId, const protocol::Message& msg);
 
+    // Check if user is online
+    bool isUserOnline(int userId) const;
+
 private:
     std::unordered_map<int, ClientHandler*> active_clients_;
     std::shared_ptr<SessionManager> sessionManager;
