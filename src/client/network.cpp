@@ -833,4 +833,70 @@ bool NetworkClient::requestRecentChats() {
     return true;
 }
 
+bool NetworkClient::initiateCall(const std::string& targetUser) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot initiate call");
+        }
+        return false;
+    }
+
+    Payloads::VoiceCallRequest req;
+    req.sessionToken = sessionToken;
+    req.targetUser = targetUser;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::CALL_INITIATE_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send call initiate request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::answerCall(const std::string& callerUser) {
+    if (!connected || !loggedIn) {
+        return false;
+    }
+
+    Payloads::VoiceCallRequest req;
+    req.sessionToken = sessionToken;
+    req.targetUser = callerUser;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::CALL_ANSWER_REQUEST, payload);
+
+    return sendMessage(msg);
+}
+
+bool NetworkClient::declineCall(const std::string& callerUser) {
+    if (!connected || !loggedIn) {
+        return false;
+    }
+
+    Payloads::VoiceCallRequest req;
+    req.sessionToken = sessionToken;
+    req.targetUser = callerUser;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::CALL_DECLINE_REQUEST, payload);
+
+    return sendMessage(msg);
+}
+
+bool NetworkClient::endCall(const std::string& otherUser) {
+    if (!connected || !loggedIn) {
+        return false;
+    }
+
+    Payloads::VoiceCallRequest req;
+    req.sessionToken = sessionToken;
+    req.targetUser = otherUser;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::CALL_END_REQUEST, payload);
+
+    return sendMessage(msg);
+}
+
 } // namespace client

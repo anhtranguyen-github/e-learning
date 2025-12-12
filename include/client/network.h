@@ -86,6 +86,12 @@ public:
     bool requestChatHistory(const std::string& otherUser);
     bool requestRecentChats();
 
+    // Voice Calls
+    bool initiateCall(const std::string& targetUser);
+    bool answerCall(const std::string& callerUser);
+    bool declineCall(const std::string& callerUser);
+    bool endCall(const std::string& otherUser);
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };
