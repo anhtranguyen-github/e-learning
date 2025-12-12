@@ -159,6 +159,183 @@ Window {
                         Layout.alignment: Qt.AlignHCenter
                         horizontalAlignment: Text.AlignHCenter
                     }
+
+                    // Register link
+                    Text {
+                        text: "Don't have an account? <a href='#'>Register</a>"
+                        font.pixelSize: Style.smallSize
+                        color: Style.secondaryTextColor
+                        Layout.alignment: Qt.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        textFormat: Text.RichText
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: stackView.push(registerComponent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: registerComponent
+        Page {
+            background: Rectangle { color: Style.backgroundColor }
+            
+            property bool isBusy: false
+
+            Connections {
+                target: networkManager
+                function onRegisterSuccess() {
+                    isBusy = false
+                    regStatusMessage.text = "Registration successful! Please login."
+                    regStatusMessage.color = Style.successColor
+                    // Go back to login after short delay
+                    successTimer.start()
+                }
+                function onRegisterFailure(message) {
+                    isBusy = false
+                    regStatusMessage.text = message
+                    regStatusMessage.color = Style.errorColor
+                }
+            }
+
+            Timer {
+                id: successTimer
+                interval: 1500
+                repeat: false
+                onTriggered: stackView.pop()
+            }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: 400
+                height: regContentLayout.height + 60
+                color: Style.cardBackground
+                radius: Style.cornerRadius
+                
+                border.color: "#e0e0e0"
+                border.width: 1
+
+                ColumnLayout {
+                    id: regContentLayout
+                    anchors.centerIn: parent
+                    width: parent.width * 0.85
+                    spacing: 20
+
+                    Text {
+                        text: "Create Account"
+                        font.family: Style.fontFamily
+                        font.pixelSize: 32
+                        font.bold: true
+                        color: Style.textColor
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    TextField {
+                        id: regUsernameField
+                        placeholderText: "Username (min 3 characters)"
+                        Layout.fillWidth: true
+                        font.pixelSize: Style.bodySize
+                        background: Rectangle {
+                            color: "#f0f2f5"
+                            radius: Style.cornerRadius
+                            border.color: regUsernameField.activeFocus ? Style.primaryColor : "transparent"
+                            border.width: 2
+                        }
+                        padding: 12
+                    }
+
+                    TextField {
+                        id: regPasswordField
+                        placeholderText: "Password (min 4 characters)"
+                        echoMode: TextInput.Password
+                        Layout.fillWidth: true
+                        font.pixelSize: Style.bodySize
+                        background: Rectangle {
+                            color: "#f0f2f5"
+                            radius: Style.cornerRadius
+                            border.color: regPasswordField.activeFocus ? Style.primaryColor : "transparent"
+                            border.width: 2
+                        }
+                        padding: 12
+                    }
+
+                    TextField {
+                        id: regConfirmPasswordField
+                        placeholderText: "Confirm Password"
+                        echoMode: TextInput.Password
+                        Layout.fillWidth: true
+                        font.pixelSize: Style.bodySize
+                        background: Rectangle {
+                            color: "#f0f2f5"
+                            radius: Style.cornerRadius
+                            border.color: regConfirmPasswordField.activeFocus ? Style.primaryColor : "transparent"
+                            border.width: 2
+                        }
+                        padding: 12
+                    }
+
+                    Button {
+                        text: isBusy ? "Registering..." : "Register"
+                        Layout.fillWidth: true
+                        enabled: !isBusy && regUsernameField.text.length >= 3 && regPasswordField.text.length >= 4 && regPasswordField.text === regConfirmPasswordField.text
+                        
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: Style.bodySize
+                            font.bold: true
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: parent.enabled ? Style.primaryColor : Style.secondaryColor
+                            radius: Style.cornerRadius
+                        }
+
+                        onClicked: {
+                            if (regPasswordField.text !== regConfirmPasswordField.text) {
+                                regStatusMessage.text = "Passwords do not match"
+                                regStatusMessage.color = Style.errorColor
+                                return
+                            }
+                            isBusy = true
+                            regStatusMessage.text = "Registering..."
+                            regStatusMessage.color = Style.secondaryTextColor
+                            networkManager.registerUser(regUsernameField.text, regPasswordField.text)
+                        }
+                    }
+
+                    Text {
+                        id: regStatusMessage
+                        text: ""
+                        font.pixelSize: Style.smallSize
+                        Layout.alignment: Qt.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+
+                    // Back to login link
+                    Text {
+                        text: "Already have an account? <a href='#'>Login</a>"
+                        font.pixelSize: Style.smallSize
+                        color: Style.secondaryTextColor
+                        Layout.alignment: Qt.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        textFormat: Text.RichText
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: stackView.pop()
+                        }
+                    }
                 }
             }
         }
