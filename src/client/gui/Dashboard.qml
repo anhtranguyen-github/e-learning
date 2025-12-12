@@ -31,6 +31,7 @@ Page {
             menuModel.append({ name: "My Results", icon: "📊", page: "ResultListScreen.qml", color: "#f6c23e" })
             menuModel.append({ name: "Chat", icon: "💬", page: "ChatScreen.qml", color: "#8e44ad" })
         }
+        menuModel.append({ name: "Settings", icon: "⚙️", page: "SettingsScreen.qml", color: "#7f8c8d" })
         menuModel.append({ name: "Logout", icon: "🚪", page: "LOGOUT", color: "#e74a3b" })
     }
 
