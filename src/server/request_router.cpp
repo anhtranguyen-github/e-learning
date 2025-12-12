@@ -111,6 +111,20 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             chatController->handleUserGetRecentChats(clientFd, msg);
             break;
 
+        // Voice Calls
+        case protocol::MsgCode::CALL_INITIATE_REQUEST:
+            chatController->handleCallInitiate(clientFd, msg);
+            break;
+        case protocol::MsgCode::CALL_ANSWER_REQUEST:
+            chatController->handleCallAnswer(clientFd, msg);
+            break;
+        case protocol::MsgCode::CALL_DECLINE_REQUEST:
+            chatController->handleCallDecline(clientFd, msg);
+            break;
+        case protocol::MsgCode::CALL_END_REQUEST:
+            chatController->handleCallEnd(clientFd, msg);
+            break;
+
         // Lesson
         case protocol::MsgCode::LESSON_LIST_REQUEST:
             lessonController->handleUserLessonListRequest(clientFd, msg);
