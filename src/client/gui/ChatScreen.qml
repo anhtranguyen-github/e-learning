@@ -10,6 +10,12 @@ Page {
     property string currentRecipient: ""
     property var chatModel: ListModel {}
     property var recentChatsModel: ListModel {}
+    
+    // Voice Call properties
+    property bool inCall: false
+    property string callPartner: ""
+    property string incomingCaller: ""
+    property string incomingCallerId: ""
 
     background: Rectangle {
         color: "#f5f5f5"
@@ -19,6 +25,219 @@ Page {
         title: "Chat"
         showBack: true
         onBackClicked: stackView.pop()
+    }
+
+    // Voice Call Connections
+    Connections {
+        target: networkManager
+        
+        function onIncomingCall(callerUsername, callerId) {
+            incomingCaller = callerUsername
+            incomingCallerId = callerId
+            incomingCallDialog.open()
+        }
+        
+        function onCallAnswered(username) {
+            inCall = true
+            callPartner = username
+            inCallDialog.open()
+        }
+        
+        function onCallEnded(reason) {
+            inCall = false
+            callPartner = ""
+            inCallDialog.close()
+            incomingCallDialog.close()
+        }
+        
+        function onCallFailed(reason) {
+            inCall = false
+            callPartner = ""
+            callFailedMessage.text = reason
+            callFailedMessage.visible = true
+        }
+    }
+
+    // Incoming Call Dialog
+    Dialog {
+        id: incomingCallDialog
+        title: "Incoming Call"
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 350
+        
+        background: Rectangle {
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: Style.primaryColor
+            border.width: 2
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+
+            Text {
+                text: "📞"
+                font.pixelSize: 48
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: incomingCaller + " is calling..."
+                font.family: Style.fontFamily
+                font.pixelSize: Style.subHeadingSize
+                font.bold: true
+                color: Style.textColor
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 20
+
+                Button {
+                    text: "Decline"
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: Style.errorColor
+                        radius: Style.cornerRadius
+                    }
+                    onClicked: {
+                        networkManager.declineCall(incomingCaller)
+                        incomingCallDialog.close()
+                    }
+                }
+
+                Button {
+                    text: "Answer"
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: Style.successColor
+                        radius: Style.cornerRadius
+                    }
+                    onClicked: {
+                        networkManager.answerCall(incomingCaller)
+                        inCall = true
+                        callPartner = incomingCaller
+                        incomingCallDialog.close()
+                        inCallDialog.open()
+                    }
+                }
+
+                Button {
+                    text: "Ignore"
+                    contentItem: Text {
+                        text: parent.text
+                        color: Style.textColor
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: "#e0e0e0"
+                        radius: Style.cornerRadius
+                    }
+                    onClicked: {
+                        incomingCallDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    // In-Call Dialog
+    Dialog {
+        id: inCallDialog
+        title: "In Call"
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 300
+
+        background: Rectangle {
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: Style.successColor
+            border.width: 2
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+
+            Text {
+                text: "🔊"
+                font.pixelSize: 48
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "In call with " + callPartner
+                font.family: Style.fontFamily
+                font.pixelSize: Style.bodySize
+                font.bold: true
+                color: Style.textColor
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "(Voice call simulation - no actual audio)"
+                font.pixelSize: Style.smallSize
+                color: Style.secondaryTextColor
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Button {
+                text: "End Call"
+                Layout.alignment: Qt.AlignHCenter
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    color: Style.errorColor
+                    radius: Style.cornerRadius
+                }
+                onClicked: {
+                    networkManager.endCall(callPartner)
+                    inCall = false
+                    callPartner = ""
+                    inCallDialog.close()
+                }
+            }
+        }
+    }
+
+    // Call Failed Message
+    Text {
+        id: callFailedMessage
+        visible: false
+        text: ""
+        color: Style.errorColor
+        font.pixelSize: Style.smallSize
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: 10
+        
+        Timer {
+            running: callFailedMessage.visible
+            interval: 3000
+            onTriggered: callFailedMessage.visible = false
+        }
     }
 
     RowLayout {
@@ -164,6 +383,25 @@ Page {
                             font.pixelSize: 18
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
+                        }
+
+                        // Call Button
+                        Button {
+                            text: "📞 Call"
+                            enabled: !inCall
+                            contentItem: Text {
+                                text: parent.text
+                                color: parent.enabled ? "white" : Style.secondaryTextColor
+                                font.pixelSize: Style.smallSize
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            background: Rectangle {
+                                color: parent.enabled ? Style.primaryColor : "#e0e0e0"
+                                radius: Style.cornerRadius
+                            }
+                            onClicked: {
+                                networkManager.initiateCall(currentRecipient)
+                            }
                         }
                     }
                 }
