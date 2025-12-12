@@ -20,6 +20,7 @@ public:
 
     void handleUserLoginRequest(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler);
     void handleUserLogoutRequest(int clientFd, const protocol::Message& msg);
+    void handleUserRegisterRequest(int clientFd, const protocol::Message& msg);
 
 private:
     std::shared_ptr<UserRepository> userRepo;

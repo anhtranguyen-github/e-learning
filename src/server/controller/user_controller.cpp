@@ -119,4 +119,47 @@ void UserController::handleUserLogoutRequest(int clientFd, const protocol::Messa
     }
 }
 
+void UserController::handleUserRegisterRequest(int clientFd, const protocol::Message& msg) {
+    if (logger::serverLogger) logger::serverLogger->debug("Handling register request for fd=" + std::to_string(clientFd));
+    
+    std::string payload = msg.toString();
+    std::string username, password;
+    
+    // Parse registration data (same format as login: username;password)
+    if (!utils::parseLoginCredentials(payload, username, password)) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("Invalid registration format from fd=" + std::to_string(clientFd));
+        }
+        protocol::Message response(protocol::MsgCode::REGISTER_FAILURE, "Invalid registration format");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    // Validate username and password
+    if (username.length() < 3 || password.length() < 4) {
+        protocol::Message response(protocol::MsgCode::REGISTER_FAILURE, "Username must be at least 3 characters and password at least 4 characters");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    // Create user
+    if (userRepo->createUser(username, password, "student")) {
+        protocol::Message response(protocol::MsgCode::REGISTER_SUCCESS, "Registration successful");
+        sendMessage(clientFd, response);
+        
+        if (logger::serverLogger) {
+            logger::serverLogger->info("User " + username + " registered successfully (fd=" + 
+                                      std::to_string(clientFd) + ")");
+        }
+    } else {
+        protocol::Message response(protocol::MsgCode::REGISTER_FAILURE, "Username already exists or registration failed");
+        sendMessage(clientFd, response);
+        
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("Failed registration attempt for user " + username + 
+                                      " (fd=" + std::to_string(clientFd) + ")");
+        }
+    }
+}
+
 } // namespace server
