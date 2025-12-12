@@ -16,6 +16,9 @@ enum class MsgCode : uint16_t {
     LOGIN_REQUEST = 100,
     LOGIN_SUCCESS = 101,
     LOGIN_FAILURE = 102,
+    REGISTER_REQUEST = 103,
+    REGISTER_SUCCESS = 104,
+    REGISTER_FAILURE = 105,
 
     // Logout (110-119)
     LOGOUT_REQUEST = 110,
