@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "."
 
 Page {
     id: chatScreen
@@ -12,6 +13,12 @@ Page {
 
     background: Rectangle {
         color: "#f5f5f5"
+    }
+
+    header: Header {
+        title: "Chat"
+        showBack: true
+        onBackClicked: stackView.pop()
     }
 
     RowLayout {
