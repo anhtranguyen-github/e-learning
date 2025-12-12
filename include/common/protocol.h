@@ -113,6 +113,16 @@ enum class MsgCode : uint16_t {
     RECENT_CHATS_SUCCESS = 308,
     RECENT_CHATS_FAILURE = 309,
 
+    // Voice Call Management (310-329)
+    CALL_INITIATE_REQUEST = 310,
+    CALL_INCOMING = 311,
+    CALL_ANSWER_REQUEST = 312,
+    CALL_DECLINE_REQUEST = 313,
+    CALL_END_REQUEST = 314,
+    CALL_ENDED = 315,
+    CALL_BUSY = 316,
+    CALL_FAILED = 317,
+
     // Heartbeat and Disconnect (900-909)
     HEARTBEAT = 900,
     DISCONNECT_REQUEST = 901,

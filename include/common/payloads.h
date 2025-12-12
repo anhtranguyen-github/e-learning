@@ -713,6 +713,39 @@ namespace Payloads {
         }
     };
 
+    // Voice Call Payloads
+    struct VoiceCallRequest : public ISerializable {
+        std::string sessionToken;
+        std::string targetUser;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {sessionToken, targetUser};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) targetUser = parts[1];
+        }
+    };
+
+    struct VoiceCallNotification : public ISerializable {
+        std::string callerUsername;
+        std::string callerId;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {callerUsername, callerId};
+            return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) callerUsername = parts[0];
+            if (parts.size() >= 2) callerId = parts[1];
+        }
+    };
+
 } // namespace Payloads
 
 #endif // COMMON_PAYLOADS_H
