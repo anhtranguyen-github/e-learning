@@ -71,4 +71,51 @@ User UserRepository::findById(int id) {
     return User();
 }
 
+bool UserRepository::usernameExists(const std::string& username) {
+    if (!db) return false;
+
+    std::string query = "SELECT 1 FROM users WHERE username = $1";
+    const char* values[] = {username.c_str()};
+    PGresult* res = db->execParams(query, 1, values);
+
+    bool exists = (res && PQntuples(res) > 0);
+    if (res) {
+        PQclear(res);
+    }
+    return exists;
+}
+
+bool UserRepository::createUser(const std::string& username, const std::string& password, const std::string& role) {
+    if (!db) return false;
+
+    // Check if username already exists
+    if (usernameExists(username)) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("Registration failed: username '" + username + "' already exists");
+        }
+        return false;
+    }
+
+    // Insert new user (password stored as plain text for now - should be hashed in production)
+    std::string query = "INSERT INTO users (username, password_hash, full_name, role, level) VALUES ($1, $2, $3, $4, 'beginner')";
+    const char* values[] = {username.c_str(), password.c_str(), username.c_str(), role.c_str()};
+    PGresult* res = db->execParams(query, 4, values);
+
+    if (res && PQresultStatus(res) == PGRES_COMMAND_OK) {
+        PQclear(res);
+        if (logger::serverLogger) {
+            logger::serverLogger->info("User '" + username + "' registered successfully");
+        }
+        return true;
+    }
+
+    if (res) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("Failed to create user: " + std::string(PQerrorMessage(db->getConnection())));
+        }
+        PQclear(res);
+    }
+    return false;
+}
+
 } // namespace server
