@@ -19,6 +19,7 @@ class ExerciseController;
 class SubmissionController;
 class ResultController;
 class ExamController;
+class FeedbackController;
 class ClientHandler;
 
 class RequestRouter {
@@ -39,6 +40,7 @@ private:
     std::shared_ptr<SubmissionController> submissionController;
     std::shared_ptr<ResultController> resultController;
     std::shared_ptr<ExamController> examController;
+    std::shared_ptr<FeedbackController> feedbackController;
 
     void sendErrorResponse(int clientFd, protocol::MsgCode code, const std::string& message);
 

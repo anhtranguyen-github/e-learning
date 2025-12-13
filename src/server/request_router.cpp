@@ -6,6 +6,7 @@
 #include "server/controller/submission_controller.h"
 #include "server/controller/result_controller.h"
 #include "server/controller/exam_controller.h"
+#include "server/controller/feedback_controller.h"
 #include "server/repository/user_repository.h"
 #include "server/repository/lesson_repository.h"
 #include "server/repository/exercise_repository.h"
@@ -37,6 +38,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     submissionController = std::make_shared<SubmissionController>(sessionManager, resultRepo, exerciseRepo, examRepo);
     resultController = std::make_shared<ResultController>(sessionManager, resultRepo);
     examController = std::make_shared<ExamController>(sessionManager, examRepo, resultRepo);
+    feedbackController = std::make_shared<FeedbackController>(sessionManager, resultRepo, exerciseRepo, examRepo);
 
     // Register Default Middlewares
     registerMiddleware(std::make_shared<LoggingMiddleware>());
@@ -154,7 +156,7 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             submissionController->handleStudentSubmission(clientFd, msg);
             break;
         case protocol::MsgCode::GRADE_SUBMISSION_REQUEST:
-            submissionController->handleTeacherGradeSubmission(clientFd, msg);
+            feedbackController->handleGradeSubmission(clientFd, msg);
             break;
 
         // Result
@@ -168,7 +170,7 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             resultController->handleStudentResultRequest(clientFd, msg);
             break;
         case protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST:
-            resultController->handleTeacherPendingSubmissionsRequest(clientFd, msg);
+            feedbackController->handleGetSubmissions(clientFd, msg);
             break;
 
         // Exam
