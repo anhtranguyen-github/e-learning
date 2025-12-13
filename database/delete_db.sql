@@ -2,6 +2,8 @@
 -- DATABASE DELETE SCRIPT
 -- =====================================
 
+DROP TABLE IF EXISTS call_logs CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
 DROP TABLE IF EXISTS server_sessions CASCADE;
 DROP TABLE IF EXISTS game_items CASCADE;
 DROP TABLE IF EXISTS results CASCADE;

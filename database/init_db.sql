@@ -90,14 +90,25 @@ CREATE TABLE IF NOT EXISTS server_sessions (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 -- Create chat_messages table
+-- Create chat_messages table
 CREATE TABLE IF NOT EXISTS chat_messages (
     id SERIAL PRIMARY KEY,
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
     content TEXT NOT NULL,
-    message_type VARCHAR(20) CHECK (message_type IN ('TEXT', 'AUDIO')) DEFAULT 'TEXT',
+    message_type VARCHAR(20) CHECK (message_type IN ('TEXT', 'AUDIO', 'SYSTEM')) DEFAULT 'TEXT',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (sender_id) REFERENCES users(user_id),
     FOREIGN KEY (receiver_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS call_logs (
+    call_id SERIAL PRIMARY KEY,
+    caller_id INTEGER NOT NULL REFERENCES users(user_id),
+    receiver_id INTEGER NOT NULL REFERENCES users(user_id),
+    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_time TIMESTAMPTZ,
+    status VARCHAR(20) CHECK (status IN ('COMPLETED', 'MISSED', 'BUSY', 'DECLINED', 'FAILED')),
+    duration INTEGER -- seconds
 );
