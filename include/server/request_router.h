@@ -22,6 +22,7 @@ class StudentExamController;
 class TeacherExamController;
 class FeedbackController;
 class GameController;
+class AdminGameController;
 class ClientHandler;
 
 class RequestRouter {
@@ -45,6 +46,7 @@ private:
     std::shared_ptr<TeacherExamController> teacherExamController;
     std::shared_ptr<FeedbackController> feedbackController;
     std::shared_ptr<GameController> gameController;
+    std::shared_ptr<AdminGameController> adminGameController;
 
     void sendErrorResponse(int clientFd, protocol::MsgCode code, const std::string& message);
 

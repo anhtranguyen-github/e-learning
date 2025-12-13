@@ -926,6 +926,65 @@ namespace Payloads {
         }
     };
 
+    // Game Management Payloads (Admin)
+    struct GameCreateRequest : public ISerializable {
+        std::string sessionToken;
+        std::string type;
+        std::string level;
+        std::string questionJson;
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, type, level, questionJson};
+             return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) type = parts[1];
+            if (parts.size() >= 3) level = parts[2];
+            if (parts.size() >= 4) questionJson = parts[3];
+        }
+    };
+
+    struct GameDeleteRequest : public ISerializable {
+        std::string sessionToken;
+        std::string gameId;
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, gameId};
+             return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) gameId = parts[1];
+        }
+    };
+
+    struct GameUpdateRequest : public ISerializable {
+        std::string sessionToken;
+        std::string gameId;
+        std::string type;
+        std::string level;
+        std::string questionJson;
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, gameId, type, level, questionJson};
+             return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) gameId = parts[1];
+            if (parts.size() >= 3) type = parts[2];
+            if (parts.size() >= 4) level = parts[3];
+            if (parts.size() >= 5) questionJson = parts[4];
+        }
+    };
+
 
     // Voice Call Payloads
     struct VoiceCallRequest : public ISerializable {

@@ -91,4 +91,57 @@ Game GameRepository::getGameById(int id) {
     return game;
 }
 
+int GameRepository::createGame(const Game& game) {
+    std::string sql = "INSERT INTO game_items (type, level, question, created_by) VALUES ($1, $2, $3::jsonb, 1) RETURNING game_id";
+    const char* params[3];
+    std::string type = game.getType();
+    std::string level = game.getLevel();
+    std::string json = game.getQuestionJson();
+    
+    params[0] = type.c_str();
+    params[1] = level.c_str();
+    params[2] = json.c_str();
+    
+    PGresult* res = db->execParams(sql, 3, params);
+    
+    int newId = -1;
+    if (PQresultStatus(res) == PGRES_TUPLES_OK && PQntuples(res) > 0) {
+        newId = std::stoi(PQgetvalue(res, 0, 0));
+    }
+    
+    PQclear(res);
+    return newId;
+}
+
+bool GameRepository::updateGame(const Game& game) {
+    std::string sql = "UPDATE game_items SET type = $1, level = $2, question = $3::jsonb WHERE game_id = $4";
+    const char* params[4];
+    std::string type = game.getType();
+    std::string level = game.getLevel();
+    std::string json = game.getQuestionJson();
+    std::string idStr = std::to_string(game.getId());
+    
+    params[0] = type.c_str();
+    params[1] = level.c_str();
+    params[2] = json.c_str();
+    params[3] = idStr.c_str();
+    
+    PGresult* res = db->execParams(sql, 4, params);
+    bool success = (PQresultStatus(res) == PGRES_COMMAND_OK);
+    PQclear(res);
+    return success;
+}
+
+bool GameRepository::deleteGame(int id) {
+    std::string sql = "DELETE FROM game_items WHERE game_id = $1";
+    const char* params[1];
+    std::string idStr = std::to_string(id);
+    params[0] = idStr.c_str();
+    
+    PGresult* res = db->execParams(sql, 1, params);
+    bool success = (PQresultStatus(res) == PGRES_COMMAND_OK);
+    PQclear(res);
+    return success;
+}
+
 } // namespace server

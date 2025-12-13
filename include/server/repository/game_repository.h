@@ -17,6 +17,11 @@ public:
     std::vector<std::string> getGameTypes();
     std::vector<Game> getLevelsByType(const std::string& type);
     Game getGameById(int id);
+    
+    // Admin methods
+    int createGame(const Game& game);
+    bool updateGame(const Game& game);
+    bool deleteGame(int id);
 
 private:
     std::shared_ptr<Database> db;

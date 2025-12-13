@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS exams (
 CREATE TABLE IF NOT EXISTS results (
     result_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
-    target_type VARCHAR(50) CHECK (target_type IN ('exam','exercise')),
+    target_type VARCHAR(50) CHECK (target_type IN ('exam','exercise','game')),
     target_id INT NOT NULL,
     score NUMERIC(5,2),
     user_answer TEXT,

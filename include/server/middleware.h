@@ -106,6 +106,17 @@ public:
             }
         }
 
+        // Admin only requests
+        if (msg.code == protocol::MsgCode::GAME_CREATE_REQUEST ||
+            msg.code == protocol::MsgCode::GAME_UPDATE_REQUEST ||
+            msg.code == protocol::MsgCode::GAME_DELETE_REQUEST) {
+            
+            if (role != "admin") {
+                errorMsg = "Unauthorized: Admin role required";
+                return false;
+            }
+        }
+
         return true;
     }
 };

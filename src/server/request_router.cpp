@@ -13,7 +13,9 @@
 #include "server/repository/exercise_repository.h"
 #include "server/repository/exam_repository.h"
 #include "server/repository/game_repository.h"
+#include "server/repository/game_repository.h"
 #include "server/controller/game_controller.h"
+#include "server/controller/admin_game_controller.h"
 #include "common/logger.h"
 #include "common/payloads.h"
 #include <sys/socket.h>
@@ -45,6 +47,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     teacherExamController = std::make_shared<TeacherExamController>(sessionManager, examRepo);
     feedbackController = std::make_shared<FeedbackController>(sessionManager, resultRepo, exerciseRepo, examRepo);
     gameController = std::make_shared<GameController>(sessionManager, gameRepo, resultRepo);
+    adminGameController = std::make_shared<AdminGameController>(sessionManager, gameRepo);
 
     // Register Default Middlewares
     registerMiddleware(std::make_shared<LoggingMiddleware>());
@@ -204,6 +207,17 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             break;
         case protocol::MsgCode::GAME_SUBMIT_REQUEST:
             gameController->handleGameSubmitRequest(clientFd, msg);
+            break;
+
+        // Admin Game Management
+        case protocol::MsgCode::GAME_CREATE_REQUEST:
+            adminGameController->handleGameCreateRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::GAME_UPDATE_REQUEST:
+            adminGameController->handleGameUpdateRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::GAME_DELETE_REQUEST:
+            adminGameController->handleGameDeleteRequest(clientFd, msg);
             break;
 
         default:

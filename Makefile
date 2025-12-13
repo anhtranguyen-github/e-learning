@@ -40,6 +40,7 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/controller/chat_controller.cpp \
              $(SRC_DIR)/server/controller/feedback_controller.cpp \
              $(SRC_DIR)/server/controller/game_controller.cpp \
+             $(SRC_DIR)/server/controller/admin_game_controller.cpp \
              $(SRC_DIR)/server/controller/user_controller.cpp
 
 
