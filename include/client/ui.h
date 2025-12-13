@@ -13,6 +13,7 @@ private:
 
     void displayMainMenu();
     void displayLoggedInMenu();
+    void displayAdminMenu();
     void handleLogin();
     void handleLogout();
     void handleViewLessons();
@@ -25,6 +26,13 @@ private:
     void handleChat();
     void handleSendPrivateMessage();
     void handleViewChatHistory();
+    
+    // Admin handlers
+    void handleAdminGameMenu();
+    void handleAdminCreateGame();
+    void handleAdminUpdateGame();
+    void handleAdminDeleteGame();
+    
     void clearScreen();
     
     // Helper to parse and display lesson list

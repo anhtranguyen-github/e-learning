@@ -31,7 +31,11 @@ void UI::displayMainMenu() {
         std::cout << "2. Disconnect\n";
         std::cout << "3. Exit\n\n";
     } else {
-        displayLoggedInMenu();
+        if (network.getUserRole() == "admin") {
+            displayAdminMenu();
+        } else {
+            displayLoggedInMenu();
+        }
         return;
     }
     
@@ -171,62 +175,105 @@ void UI::run() {
                     break;
             }
         } else {
-            // Logged in menu
-            switch (choice) {
-                case 1:
-                    handleViewLessons();
-                    break;
-                
-                case 2:
-                    handleStudyLesson();
-                    break;
+            if (network.getUserRole() == "admin") {
+                // Admin Menu
+                switch (choice) {
+                    case 1:
+                        handleAdminGameMenu();
+                        break;
+                    case 2:
+                        handleViewLessons();
+                        break;
+                    case 3:
+                        handleViewExercises();
+                        break;
+                    case 4:
+                        handleViewExams();
+                        break;
+                    case 5:
+                        handleViewResults();
+                        break;
+                    case 6:
+                        handleChat();
+                        break;
+                    case 7:
+                        std::cout << "\n--- Status ---\n";
+                        std::cout << "Connected: Yes\n";
+                        std::cout << "Logged In: Yes (Admin)\n";
+                        std::cout << "Session Token: " << network.getSessionToken() << "\n";
+                        std::cout << "Press Enter to continue...";
+                        std::cin.ignore();
+                        std::cin.get();
+                        break;
+                    case 8:
+                        handleLogout();
+                        break;
+                    case 9:
+                        running = false;
+                        break;
+                    default:
+                        std::cout << "Invalid option.\n";
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                        break;
+                }
+            } else {
+                // Logged in menu (Student/Teacher)
+                switch (choice) {
+                    case 1:
+                        handleViewLessons();
+                        break;
+                    
+                    case 2:
+                        handleStudyLesson();
+                        break;
 
-                case 3:
-                    handleDoExercise();
-                    break;
+                    case 3:
+                        handleDoExercise();
+                        break;
 
-                case 4:
-                    handleSubmitAnswer();
-                    break;
+                    case 4:
+                        handleSubmitAnswer();
+                        break;
 
-                case 5:
-                    handleViewResults();
-                    break;
+                    case 5:
+                        handleViewResults();
+                        break;
 
-                case 6:
-                    handleViewExercises();
-                    break;
+                    case 6:
+                        handleViewExercises();
+                        break;
 
-                case 7:
-                    handleViewExams();
-                    break;
-                
-                case 8:
-                    handleChat();
-                    break;
+                    case 7:
+                        handleViewExams();
+                        break;
+                    
+                    case 8:
+                        handleChat();
+                        break;
 
-                case 9:
-                    std::cout << "\n--- Status ---\n";
-                    std::cout << "Connected: Yes\n";
-                    std::cout << "Logged In: Yes\n";
-                    std::cout << "Session Token: " << network.getSessionToken() << "\n";
-                    std::cout << "Press Enter to continue...";
-                    std::cin.ignore();
-                    std::cin.get();
-                    break;
-                
-                case 10:
-                    handleLogout();
-                    break;
-                
-                case 11:
-                    running = false;
-                    break;
-                
-                default:
-                    std::cout << "Invalid option.\n";
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
-                    break;
+                    case 9:
+                        std::cout << "\n--- Status ---\n";
+                        std::cout << "Connected: Yes\n";
+                        std::cout << "Logged In: Yes\n";
+                        std::cout << "Session Token: " << network.getSessionToken() << "\n";
+                        std::cout << "Press Enter to continue...";
+                        std::cin.ignore();
+                        std::cin.get();
+                        break;
+                    
+                    case 10:
+                        handleLogout();
+                        break;
+                    
+                    case 11:
+                        running = false;
+                        break;
+                    
+                    default:
+                        std::cout << "Invalid option.\n";
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                        break;
+                }
             }
         }
     }
@@ -660,6 +707,134 @@ void UI::parseExamList(const std::string& payload) {
         std::cout << "[" << id << "] " << title << "\n";
         std::cout << "    Lesson ID: " << lesson_id << " | Type: " << type << " | Level: " << level << "\n\n";
     }
+}
+
+
+void UI::displayAdminMenu() {
+    clearScreen();
+    std::cout << "========================================\n";
+    std::cout << "     TCP Learning App - Admin Panel\n";
+    std::cout << "========================================\n\n";
+    std::cout << "Status: Logged In (Admin)\n";
+    std::cout << "Session Token: " << network.getSessionToken().substr(0, 8) << "...\n\n";
+    std::cout << "1. Manage Games\n";
+    std::cout << "2. View Lesson List\n";
+    std::cout << "3. View Exercises\n";
+    std::cout << "4. View Exams\n";
+    std::cout << "5. View Results\n";
+    std::cout << "6. Chat\n";
+    std::cout << "7. View Status\n";
+    std::cout << "8. Logout\n";
+    std::cout << "9. Exit\n\n";
+    std::cout << "Choose an option: ";
+}
+
+void UI::handleAdminGameMenu() {
+    bool inGameMenu = true;
+    while (inGameMenu) {
+        clearScreen();
+        std::cout << "\n--- Game Management ---\n";
+        std::cout << "1. Create Game\n";
+        std::cout << "2. Update Game\n";
+        std::cout << "3. Delete Game\n";
+        std::cout << "4. Back to Admin Menu\n\n";
+        std::cout << "Choose an option: ";
+
+        int choice;
+        std::cin >> choice;
+
+        if (std::cin.fail()) {
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                handleAdminCreateGame();
+                break;
+            case 2:
+                handleAdminUpdateGame();
+                break;
+            case 3:
+                handleAdminDeleteGame();
+                break;
+            case 4:
+                inGameMenu = false;
+                break;
+            default:
+                std::cout << "Invalid option.\n";
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                break;
+        }
+    }
+}
+
+void UI::handleAdminCreateGame() {
+    std::string type, level, json;
+    
+    std::cout << "\n--- Create Game ---\n";
+    std::cout << "Type (sentence_match/word_match/image_match): ";
+    std::cin >> type;
+    std::cout << "Level (beginner/intermediate/advanced): ";
+    std::cin >> level;
+    std::cout << "Question JSON: ";
+    std::cin.ignore();
+    std::getline(std::cin, json);
+
+    if (network.requestCreateGame(type, level, json)) {
+        protocol::Message response = network.receiveMessage();
+        std::cout << "Response: " << response.toString() << "\n";
+    } else {
+        std::cout << "Failed to send request.\n";
+    }
+    
+    std::cout << "Press Enter to continue...";
+    std::cin.get(); 
+}
+
+void UI::handleAdminUpdateGame() {
+    std::string id, type, level, json;
+    
+    std::cout << "\n--- Update Game ---\n";
+    std::cout << "Game ID: ";
+    std::cin >> id;
+    std::cout << "Type (sentence_match/word_match/image_match): ";
+    std::cin >> type;
+    std::cout << "Level (beginner/intermediate/advanced): ";
+    std::cin >> level;
+    std::cout << "Question JSON: ";
+    std::cin.ignore();
+    std::getline(std::cin, json);
+
+    if (network.requestUpdateGame(id, type, level, json)) {
+        protocol::Message response = network.receiveMessage();
+        std::cout << "Response: " << response.toString() << "\n";
+    } else {
+        std::cout << "Failed to send request.\n";
+    }
+
+    std::cout << "Press Enter to continue...";
+    std::cin.get();
+}
+
+void UI::handleAdminDeleteGame() {
+    std::string id;
+    
+    std::cout << "\n--- Delete Game ---\n";
+    std::cout << "Game ID: ";
+    std::cin >> id;
+
+    if (network.requestDeleteGame(id)) {
+        protocol::Message response = network.receiveMessage();
+        std::cout << "Response: " << response.toString() << "\n";
+    } else {
+        std::cout << "Failed to send request.\n";
+    }
+
+    std::cout << "Press Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
 }
 
 } // namespace client

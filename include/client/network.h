@@ -92,6 +92,17 @@ public:
     bool declineCall(const std::string& callerUser);
     bool endCall(const std::string& otherUser);
 
+    // Admin Game Management
+    bool requestCreateGame(const std::string& type, const std::string& level, const std::string& questionJson);
+    bool requestUpdateGame(const std::string& gameId, const std::string& type, const std::string& level, const std::string& questionJson);
+    bool requestDeleteGame(const std::string& gameId);
+
+    // Game Play
+    bool requestGameList();
+    bool requestGameLevelList(const std::string& gameType);
+    bool requestGameData(const std::string& gameId);
+    bool submitGameResult(const std::string& gameId, const std::string& score, const std::string& detailsJson);
+
     // Socket file descriptor
     int getSocketFd() const { return sockfd; }
 };

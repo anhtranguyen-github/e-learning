@@ -269,6 +269,65 @@ void NetworkManager::endCall(const QString &otherUser) {
     m_client->endCall(otherUser.toStdString());
 }
 
+// Game Methods
+// Game Methods
+void NetworkManager::requestGameList() {
+   if (m_client->requestGameList()) {
+       // Success
+   } else {
+       emit errorOccurred("Failed to request game list");
+   }
+}
+
+void NetworkManager::requestGameLevelList(const QString &gameType) {
+    if (m_client->requestGameLevelList(gameType.toStdString())) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request game levels");
+    }
+}
+
+void NetworkManager::requestGameData(const QString &gameId) {
+    if (m_client->requestGameData(gameId.toStdString())) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request game data");
+    }
+}
+
+void NetworkManager::submitGameResult(const QString &gameId, const QString &score, const QString &detailsJson) {
+    if (m_client->submitGameResult(gameId.toStdString(), score.toStdString(), detailsJson.toStdString())) {
+        // Success
+    } else {
+        emit gameSubmitFailure("Failed to submit game result");
+    }
+}
+
+void NetworkManager::requestAdminCreateGame(const QString &type, const QString &level, const QString &questionJson) {
+    if (m_client->requestCreateGame(type.toStdString(), level.toStdString(), questionJson.toStdString())) {
+        // Success
+    } else {
+        emit gameCreateFailure("Failed to send create game request");
+    }
+}
+
+void NetworkManager::requestAdminUpdateGame(const QString &gameId, const QString &type, const QString &level, const QString &questionJson) {
+    if (m_client->requestUpdateGame(gameId.toStdString(), type.toStdString(), level.toStdString(), questionJson.toStdString())) {
+        // Success
+    } else {
+        emit gameUpdateFailure("Failed to send update game request");
+    }
+}
+
+void NetworkManager::requestAdminDeleteGame(const QString &gameId) {
+    if (m_client->requestDeleteGame(gameId.toStdString())) {
+        // Success
+    } else {
+        emit gameDeleteFailure("Failed to send delete game request");
+    }
+}
+
+
 void NetworkManager::checkMessages() {
     if (!m_client->isConnected()) {
         m_pollTimer->stop();
@@ -507,6 +566,54 @@ void NetworkManager::checkMessages() {
                 break;
             case protocol::MsgCode::CALL_FAILED:
                 emit callFailed(QString::fromStdString(msg.toString()));
+                break;
+
+            // Admin Game Management Responses
+            case protocol::MsgCode::GAME_CREATE_SUCCESS:
+                emit gameCreateSuccess(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_CREATE_FAILURE:
+                emit gameCreateFailure(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_UPDATE_SUCCESS:
+                emit gameUpdateSuccess(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_UPDATE_FAILURE:
+                emit gameUpdateFailure(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_DELETE_SUCCESS:
+                emit gameDeleteSuccess(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_DELETE_FAILURE:
+                emit gameDeleteFailure(QString::fromStdString(msg.toString()));
+                break;
+
+
+
+            // Game Play Responses
+            case protocol::MsgCode::GAME_LIST_SUCCESS:
+                emit gameListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_LIST_FAILURE:
+                emit errorOccurred("Failed to get game list");
+                break;
+            case protocol::MsgCode::GAME_LEVEL_LIST_SUCCESS:
+                emit gameLevelListReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_LEVEL_LIST_FAILURE:
+                emit errorOccurred("Failed to get game levels");
+                break;
+            case protocol::MsgCode::GAME_DATA_SUCCESS:
+                emit gameDataReceived(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_DATA_FAILURE:
+                emit errorOccurred("Failed to get game data");
+                break;
+            case protocol::MsgCode::GAME_SUBMIT_SUCCESS:
+                emit gameSubmitSuccess(QString::fromStdString(msg.toString()));
+                break;
+            case protocol::MsgCode::GAME_SUBMIT_FAILURE:
+                emit gameSubmitFailure(QString::fromStdString(msg.toString()));
                 break;
 
             default:

@@ -45,6 +45,16 @@ public:
     Q_INVOKABLE void declineCall(const QString &callerUser);
     Q_INVOKABLE void endCall(const QString &otherUser);
 
+    Q_INVOKABLE void requestGameList();
+    Q_INVOKABLE void requestGameLevelList(const QString &gameType);
+    Q_INVOKABLE void requestGameData(const QString &gameId);
+    Q_INVOKABLE void submitGameResult(const QString &gameId, const QString &score, const QString &detailsJson);
+
+    // Admin Game Management
+    Q_INVOKABLE void requestAdminCreateGame(const QString &type, const QString &level, const QString &questionJson);
+    Q_INVOKABLE void requestAdminUpdateGame(const QString &gameId, const QString &type, const QString &level, const QString &questionJson);
+    Q_INVOKABLE void requestAdminDeleteGame(const QString &gameId);
+
     bool isConnected() const;
     bool isLoggedIn() const;
     QString userRole() const;
@@ -86,6 +96,21 @@ signals:
     void callAnswered(const QString &username);
     void callEnded(const QString &reason);
     void callFailed(const QString &reason);
+
+    // Game Signals
+    void gameListReceived(const QString &listData);
+    void gameLevelListReceived(const QString &listData);
+    void gameDataReceived(const QString &data);
+    void gameSubmitSuccess(const QString &message);
+    void gameSubmitFailure(const QString &message);
+    
+    // Admin Game Signals
+    void gameCreateSuccess(const QString &message);
+    void gameCreateFailure(const QString &message);
+    void gameUpdateSuccess(const QString &message);
+    void gameUpdateFailure(const QString &message);
+    void gameDeleteSuccess(const QString &message);
+    void gameDeleteFailure(const QString &message);
 
 private slots:
     void checkMessages();

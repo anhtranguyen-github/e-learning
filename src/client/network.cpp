@@ -924,4 +924,184 @@ bool NetworkClient::endCall(const std::string& otherUser) {
     return sendMessage(msg);
 }
 
+
+// Admin Game Management Implementation
+
+bool NetworkClient::requestCreateGame(const std::string& type, const std::string& level, const std::string& questionJson) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot create game");
+        }
+        return false;
+    }
+
+    Payloads::GameCreateRequest req;
+    req.sessionToken = sessionToken;
+    req.type = type;
+    req.level = level;
+    req.questionJson = questionJson;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_CREATE_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send create game request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestUpdateGame(const std::string& gameId, const std::string& type, const std::string& level, const std::string& questionJson) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot update game");
+        }
+        return false;
+    }
+
+    Payloads::GameUpdateRequest req;
+    req.sessionToken = sessionToken;
+    req.gameId = gameId;
+    req.type = type;
+    req.level = level;
+    req.questionJson = questionJson;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_UPDATE_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send update game request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestDeleteGame(const std::string& gameId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot delete game");
+        }
+        return false;
+    }
+
+    Payloads::GameDeleteRequest req;
+    req.sessionToken = sessionToken;
+    req.gameId = gameId;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_DELETE_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send delete game request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+
+// Game Play Implementation
+
+bool NetworkClient::requestGameList() {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request game list");
+        }
+        return false;
+    }
+
+    Payloads::GameListRequest req;
+    req.sessionToken = sessionToken;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_LIST_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send game list request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestGameLevelList(const std::string& gameType) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request game level list");
+        }
+        return false;
+    }
+
+    Payloads::GameLevelListRequest req;
+    req.sessionToken = sessionToken;
+    req.gameType = gameType;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_LEVEL_LIST_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send game level list request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestGameData(const std::string& gameId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request game data");
+        }
+        return false;
+    }
+
+    Payloads::GameDataRequest req;
+    req.sessionToken = sessionToken;
+    req.gameId = gameId;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_DATA_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send game data request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::submitGameResult(const std::string& gameId, const std::string& score, const std::string& detailsJson) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot submit game result");
+        }
+        return false;
+    }
+
+    Payloads::GameSubmitRequest req;
+    req.sessionToken = sessionToken;
+    req.gameId = gameId;
+    req.score = score;
+    req.detailsJson = detailsJson;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::GAME_SUBMIT_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send game submit request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace client
