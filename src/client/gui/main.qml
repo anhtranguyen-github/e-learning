@@ -64,14 +64,12 @@ Window {
             incomingCaller = callerUsername
             incomingCallerId = callerId
             incomingCallDialog.open()
-            incomingCallTimer.restart()
         }
         
         function onCallAnswered(username) {
             inCall = true
             callPartner = username
             incomingCallDialog.close()
-            incomingCallTimer.stop()
             inCallDialog.open()
         }
         
@@ -80,14 +78,12 @@ Window {
             callPartner = ""
             inCallDialog.close()
             incomingCallDialog.close()
-            incomingCallTimer.stop()
         }
         
         function onCallFailed(reason) {
             inCall = false
             callPartner = ""
             incomingCallDialog.close()
-            incomingCallTimer.stop()
         }
     }
 
@@ -108,17 +104,7 @@ Window {
             border.width: 2
         }
 
-        Timer {
-            id: incomingCallTimer
-            interval: 5000 // 5 seconds timeout
-            repeat: false
-            onTriggered: {
-                if (incomingCallDialog.visible) {
-                    networkManager.declineCall(incomingCaller)
-                    incomingCallDialog.close()
-                }
-            }
-        }
+
 
         ColumnLayout {
             anchors.fill: parent
@@ -144,6 +130,23 @@ Window {
                 spacing: 20
 
                 Button {
+                    text: "Ignore"
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: "#7f8c8d" // Grey
+                        radius: Style.cornerRadius
+                    }
+                    onClicked: {
+                        incomingCallDialog.close()
+                    }
+                }
+
+                Button {
                     text: "Decline"
                     contentItem: Text {
                         text: parent.text
@@ -158,7 +161,6 @@ Window {
                     onClicked: {
                         networkManager.declineCall(incomingCaller)
                         incomingCallDialog.close()
-                        incomingCallTimer.stop()
                     }
                 }
 
@@ -179,7 +181,6 @@ Window {
                         inCall = true
                         callPartner = incomingCaller
                         incomingCallDialog.close()
-                        incomingCallTimer.stop()
                         inCallDialog.open()
                     }
                 }

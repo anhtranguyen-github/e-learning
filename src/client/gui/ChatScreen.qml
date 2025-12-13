@@ -346,7 +346,13 @@ Page {
                                         Component {
                                             id: textComponent
                                             Label {
-                                                text: model.content
+                                                text: {
+                                                    if (model.type === "SYSTEM" && model.content === "Call Ended") {
+                                                        if (model.sender === "me") return "You ended the call"
+                                                        else return "Call ended"
+                                                    }
+                                                    return model.content
+                                                }
                                                 wrapMode: Text.Wrap
                                                 width: Math.min(implicitWidth, chatListView.width * 0.6)
                                                 horizontalAlignment: model.type === "SYSTEM" ? Text.AlignHCenter : Text.AlignLeft
@@ -504,8 +510,16 @@ Page {
                     var content = parts[2];
                     var timestamp = parts[3];
                     
+                    var displaySender = sender;
+                    // Try to normalize 'me' if currentUser is available
+                    try {
+                        if (typeof currentUser !== "undefined" && sender === currentUser.username) {
+                            displaySender = "me";
+                        }
+                    } catch (e) { console.log("currentUser not found in ChatScreen") }
+
                     chatModel.append({
-                        "sender": sender,
+                        "sender": displaySender,
                         "content": content,
                         "type": type,
                         "timestamp": timestamp
