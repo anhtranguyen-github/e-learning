@@ -145,8 +145,11 @@ void ExamController::handleStudentExamRequest(int clientFd, const protocol::Mess
         logger::serverLogger->info("[INFO] ExamController: Handling exam request for ID: " + std::to_string(examId) + " from fd=" + std::to_string(clientFd));
     }
 
-    // Check if exam already taken
-    if (resultRepository->hasResult(userId, "exam", examId)) {
+    // Check if exam already taken - only applies to STUDENTS
+    // Teachers can view any exam for grading purposes
+    std::string userRole = sessionManager->get_user_role_by_fd(clientFd);
+    
+    if (userRole == "student" && resultRepository->hasResult(userId, "exam", examId)) {
         std::string errorMsg = "Exam already taken by user " + std::to_string(userId);
         if (logger::serverLogger) {
             logger::serverLogger->info("[INFO] " + errorMsg);
