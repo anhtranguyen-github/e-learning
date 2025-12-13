@@ -23,12 +23,14 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/model/exercise.cpp \
              $(SRC_DIR)/server/model/exam.cpp \
              $(SRC_DIR)/server/model/user.cpp \
+             $(SRC_DIR)/server/model/game.cpp \
              $(SRC_DIR)/server/repository/lesson_repository.cpp \
              $(SRC_DIR)/server/repository/exercise_repository.cpp \
              $(SRC_DIR)/server/repository/exam_repository.cpp \
              $(SRC_DIR)/server/repository/user_repository.cpp \
              $(SRC_DIR)/server/repository/result_repository.cpp \
              $(SRC_DIR)/server/repository/chat_repository.cpp \
+             $(SRC_DIR)/server/repository/game_repository.cpp \
              $(SRC_DIR)/server/controller/lesson_controller.cpp \
              $(SRC_DIR)/server/controller/exercise_controller.cpp \
              $(SRC_DIR)/server/controller/submission_controller.cpp \
@@ -37,6 +39,7 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/controller/teacher_exam_controller.cpp \
              $(SRC_DIR)/server/controller/chat_controller.cpp \
              $(SRC_DIR)/server/controller/feedback_controller.cpp \
+             $(SRC_DIR)/server/controller/game_controller.cpp \
              $(SRC_DIR)/server/controller/user_controller.cpp
 
 
