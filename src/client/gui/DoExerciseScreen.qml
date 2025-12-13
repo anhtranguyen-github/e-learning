@@ -143,6 +143,7 @@ Page {
 
     function loadQuestion(index) {
         if (!examData.questions || index >= examData.questions.length) return;
+        currentQuestionIndex = index;
         
         var qStr = examData.questions[index];
         // Try to parse JSON
