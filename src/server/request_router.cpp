@@ -12,6 +12,8 @@
 #include "server/repository/lesson_repository.h"
 #include "server/repository/exercise_repository.h"
 #include "server/repository/exam_repository.h"
+#include "server/repository/game_repository.h"
+#include "server/controller/game_controller.h"
 #include "common/logger.h"
 #include "common/payloads.h"
 #include <sys/socket.h>
@@ -30,6 +32,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     auto exerciseRepo = std::make_shared<ExerciseRepository>(db);
     auto examRepo = std::make_shared<ExamRepository>(db);
     auto chatRepo = std::make_shared<ChatRepository>(db);
+    auto gameRepo = std::make_shared<GameRepository>(db);
 
     // Initialize Controllers
     userController = std::make_shared<UserController>(userRepo, sessionManager, connectionManager);
@@ -41,6 +44,7 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     studentExamController = std::make_shared<StudentExamController>(sessionManager, examRepo, resultRepo);
     teacherExamController = std::make_shared<TeacherExamController>(sessionManager, examRepo);
     feedbackController = std::make_shared<FeedbackController>(sessionManager, resultRepo, exerciseRepo, examRepo);
+    gameController = std::make_shared<GameController>(sessionManager, gameRepo, resultRepo);
 
     // Register Default Middlewares
     registerMiddleware(std::make_shared<LoggingMiddleware>());
@@ -186,6 +190,20 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         // Exam (Teacher)
         case protocol::MsgCode::EXAM_REVIEW_REQUEST:
             teacherExamController->handleExamReview(clientFd, msg);
+            break;
+
+        // Games
+        case protocol::MsgCode::GAME_LIST_REQUEST:
+            gameController->handleGameListRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::GAME_LEVEL_LIST_REQUEST:
+            gameController->handleGameLevelListRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::GAME_DATA_REQUEST:
+            gameController->handleGameDataRequest(clientFd, msg);
+            break;
+        case protocol::MsgCode::GAME_SUBMIT_REQUEST:
+            gameController->handleGameSubmitRequest(clientFd, msg);
             break;
 
         default:
