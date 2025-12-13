@@ -9,6 +9,7 @@ Page {
     property string targetType
     property string targetTitle
     property string userAnswer
+    property string targetId
 
     background: Rectangle { color: Style.backgroundColor }
     
@@ -17,103 +18,196 @@ Page {
         onBackClicked: stackView.pop()
     }
 
-    ScrollView {
+    property var gradingDetails: ({})
+
+    ListModel { id: questionModel }
+
+    Component.onCompleted: {
+        console.log("GradingScreen loaded. Type:", targetType, "ID:", targetId)
+        var tId = parseInt(targetId)
+        if (isNaN(tId)) {
+            console.warn("Invalid targetId:", targetId)
+            return
+        }
+
+        if (targetType === "exercise") {
+            networkManager.requestExercise(160, tId)
+        } else if (targetType === "exam") {
+            networkManager.requestExam(tId)
+        }
+    }
+
+    Connections {
+        target: networkManager
+        function onExerciseContentReceived(content) { parseContent(content) }
+        function onExamContentReceived(content) { parseContent(content) }
+        function onGradeSubmissionSuccess(msg) { stackView.pop() }
+    }
+
+    function parseContent(content) {
+        questionModel.clear()
+        
+        var parts = content.split('|')
+        if (parts.length < 6) {
+            console.warn("Invalid content format received in GradingScreen")
+            return
+        }
+
+        var questionsStr = parts.slice(5).join('|')
+        var questionsList = questionsStr.split('^')
+        var userAnswers = userAnswer.split("^")
+        
+        for (var i = 0; i < questionsList.length; i++) {
+            var qStr = questionsList[i]
+            var uAns = userAnswers[i] || "No answer"
+            
+            try {
+                var qObj = JSON.parse(qStr)
+                var qText = qObj.text || qObj.question || "Question " + (i+1)
+                var qType = qObj.type || "unknown"
+                
+                questionModel.append({
+                    "index": i,
+                    "questionText": qText,
+                    "type": qType,
+                    "userAnswer": uAns,
+                    "score": "0",
+                    "comment": ""
+                })
+            } catch (e) {
+                console.log("Error parsing question JSON:", e)
+                questionModel.append({
+                    "index": i,
+                    "questionText": qStr, // Fallback to raw string
+                    "type": "unknown",
+                    "userAnswer": uAns,
+                    "score": "0",
+                    "comment": ""
+                })
+            }
+        }
+    }
+
+    ListView {
+        id: gradingList
         anchors.fill: parent
         anchors.margins: Style.margin
-        contentWidth: parent.width - 2 * Style.margin
+        spacing: 20
+        clip: true
+        model: questionModel
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 20
+        delegate: Rectangle {
+            width: gradingList.width
+            height: contentCol.height + 30
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: "#e0e0e0"
 
-            // Submission Info
-            Rectangle {
-                Layout.fillWidth: true
-                height: infoCol.height + 20
-                color: Style.cardBackground
-                radius: Style.cornerRadius
-                border.color: "#e0e0e0"
+            ColumnLayout {
+                id: contentCol
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 15
+                spacing: 10
 
-                ColumnLayout {
-                    id: infoCol
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 10
-
-                    Text {
-                        text: "Task: " + targetTitle
-                        font.bold: true
-                        font.pixelSize: Style.subHeaderSize
-                    }
-                    Text {
-                        text: "Type: " + targetType
-                        font.pixelSize: Style.bodySize
-                    }
+                // Question Header
+                Text {
+                    text: "Q" + (model.index + 1) + ": " + model.type
+                    font.bold: true
+                    color: Style.primaryColor
                 }
-            }
 
-            // User Answer
-            Rectangle {
-                Layout.fillWidth: true
-                height: answerCol.height + 20
-                color: Style.cardBackground
-                radius: Style.cornerRadius
-                border.color: "#e0e0e0"
-
-                ColumnLayout {
-                    id: answerCol
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 10
-
-                    Text {
-                        text: "User Answer:"
-                        font.bold: true
-                        font.pixelSize: Style.subHeaderSize
-                    }
-                    Text {
-                        text: userAnswer
-                        font.pixelSize: Style.bodySize
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
+                // Question Text
+                Text {
+                    text: model.questionText
+                    font.pixelSize: Style.bodySize
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
                 }
-            }
 
-            // Grading Inputs
-            Rectangle {
-                Layout.fillWidth: true
-                height: gradingCol.height + 20
-                color: Style.cardBackground
-                radius: Style.cornerRadius
-                border.color: "#e0e0e0"
+                Rectangle { height: 1; Layout.fillWidth: true; color: "#e0e0e0" }
 
-                ColumnLayout {
-                    id: gradingCol
-                    anchors.fill: parent
-                    anchors.margins: 10
+                // User Answer
+                Text {
+                    text: "Student Answer:"
+                    font.bold: true
+                    font.pixelSize: Style.smallSize
+                    color: "gray"
+                }
+                Text {
+                    text: model.userAnswer
+                    font.pixelSize: Style.bodySize
+                    font.italic: true
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    color: Style.textColor
+                }
+
+                Rectangle { height: 1; Layout.fillWidth: true; color: "#e0e0e0" }
+
+                // Grading Inputs
+                RowLayout {
+                    Layout.fillWidth: true
                     spacing: 10
 
-                    Text {
-                        text: "Score (0-100):"
-                        font.bold: true
-                    }
+                    Text { text: "Score (0-10):"; verticalAlignment: Text.AlignVCenter }
                     TextField {
-                        id: scoreInput
-                        Layout.fillWidth: true
-                        placeholderText: "Enter score"
-                        validator: DoubleValidator { bottom: 0; top: 100; decimals: 1 }
+                        id: scoreField
+                        Layout.preferredWidth: 80
+                        text: model.score
+                        validator: DoubleValidator { bottom: 0; top: 10; decimals: 1 }
+                        onEditingFinished: {
+                            model.score = text
+                        }
                     }
 
-                    Text {
-                        text: "Feedback:"
-                        font.bold: true
+                    Text { text: "Comment:"; verticalAlignment: Text.AlignVCenter }
+                    TextField {
+                        id: commentField
+                        Layout.fillWidth: true
+                        placeholderText: "Specific feedback..."
+                        text: model.comment
+                        onEditingFinished: {
+                            model.comment = text
+                        }
                     }
+                }
+            }
+        }
+
+        footer: ColumnLayout {
+            width: gradingList.width
+            spacing: 15
+            
+            // Spacer
+            Item { Layout.preferredHeight: 20 }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: footerCol.height + 30
+                color: Style.cardBackground
+                radius: Style.cornerRadius
+                border.color: Style.primaryColor
+                
+                ColumnLayout {
+                    id: footerCol
+                    anchors.fill: parent
+                    anchors.margins: 15
+                    spacing: 10
+                    
+                    Text {
+                        text: "Overall Feedback & Grade"
+                        font.bold: true
+                        font.pixelSize: Style.subHeadingSize
+                        color: Style.primaryColor
+                    }
+                    
                     TextArea {
-                        id: feedbackInput
+                        id: overallFeedbackInput
                         Layout.fillWidth: true
                         Layout.preferredHeight: 100
-                        placeholderText: "Enter feedback"
+                        placeholderText: "Enter overall feedback for this submission..."
                         background: Rectangle {
                             border.color: "#bdbdbd"
                             radius: 4
@@ -140,15 +234,49 @@ Page {
                     radius: Style.cornerRadius
                 }
 
-                onClicked: {
-                    if (scoreInput.text === "") {
-                        // Show error
-                        return
-                    }
-                    networkManager.submitGrade(resultId, scoreInput.text, feedbackInput.text)
-                    stackView.pop() // Return to list
-                }
+                onClicked: submitGrading()
             }
+            
+            // Bottom spacer
+            Item { Layout.preferredHeight: 50 }
         }
+    }
+
+    function submitGrading() {
+        var totalScore = 0
+        var detailsArray = []
+        var maxTotal = 0
+
+        for (var i = 0; i < questionModel.count; i++) {
+            var item = questionModel.get(i)
+            var s = parseFloat(item.score) || 0
+            totalScore += s
+            maxTotal += 10 // Assuming 10 per question
+            
+            detailsArray.push({
+                "question": item.questionText,
+                "userAnswer": item.userAnswer,
+                "score": s,
+                "comment": item.comment
+            })
+        }
+
+        // Normalize total score to 0-100 scale?
+        // Previously exams were 0-100.
+        // If I limit per question to 10, total is count * 10.
+        // Normalized = (totalScore / maxTotal) * 100.
+        var normalizedScore = (maxTotal > 0) ? (totalScore / maxTotal) * 100 : 0
+        normalizedScore = Math.round(normalizedScore * 10) / 10 // Round to 1 decimal
+
+        var gradingDetailsObj = {
+            "items": detailsArray,
+            "overallFeedback": overallFeedbackInput.text
+        }
+        
+        var detailsJson = JSON.stringify(gradingDetailsObj)
+        
+        console.log("Submitting:", normalizedScore, overallFeedbackInput.text, detailsJson)
+        
+        networkManager.submitGrade(resultId, normalizedScore.toString(), overallFeedbackInput.text, detailsJson)
     }
 }

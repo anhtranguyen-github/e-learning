@@ -91,21 +91,37 @@ void SubmissionController::handleStudentSubmission(int clientFd, const protocol:
     if (targetType == "exercise") {
         Exercise exercise = exerciseRepo->loadExerciseById(targetId);
         if (exercise.getExerciseId() != -1) {
-            std::string correct = exercise.getAnswer();
-            if (userAnswer == correct) {
-                score = 100.0;
-                feedback = "Correct!";
+            std::vector<Question> questions = exercise.getQuestions();
+            if (questions.empty()) {
+                score = 0.0;
+                feedback = "Error: No questions found for exercise";
             } else {
-                score = 0.0;
-                feedback = "Incorrect. The correct answer is: " + correct;
-            }
-            
-            // Check for subjective types
-            std::string type = exercise.getType();
-            if (type == "essay" || type == "speaking" || type == "rewrite_sentence") {
-                status = "pending";
-                score = 0.0;
-                feedback = "Pending instructor review";
+                std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
+                int correctCount = 0;
+                bool hasSubjective = false;
+
+                for (size_t i = 0; i < questions.size(); ++i) {
+                    std::string qType = questions[i].getType();
+                    if (qType == "essay" || qType == "speaking" || qType == "rewrite_sentence") {
+                        hasSubjective = true;
+                    }
+
+                    std::string correct = questions[i].getAnswer();
+                    std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
+                    
+                    if (user == correct) {
+                        correctCount++;
+                    }
+                }
+
+                if (hasSubjective) {
+                    status = "pending";
+                    score = 0.0;
+                    feedback = "Pending instructor review";
+                } else {
+                    score = (static_cast<double>(correctCount) / questions.size()) * 100.0;
+                    feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(questions.size()) + " correct.";
+                }
             }
         }
     } else if (targetType == "exam") {
@@ -187,7 +203,7 @@ void SubmissionController::handleTeacherGradeSubmission(int clientFd, const prot
         return;
     }
 
-    if (resultRepo->updateResult(resultId, score, req.feedback, "graded")) {
+    if (resultRepo->updateResult(resultId, score, req.feedback, "graded", req.gradingDetails)) {
         protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_SUCCESS, "Grade updated successfully");
         sendMessage(clientFd, response);
     } else {

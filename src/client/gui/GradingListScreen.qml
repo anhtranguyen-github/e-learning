@@ -24,14 +24,15 @@ Page {
             if (parts.length > 1) {
                 for (var i = 1; i < parts.length; i++) {
                     var itemParts = parts[i].split('|')
-                    if (itemParts.length >= 6) {
+                    if (itemParts.length >= 7) {
                         submissionModel.append({
                             "resultId": itemParts[0],
                             "userName": itemParts[1],
                             "targetType": itemParts[2],
                             "targetTitle": itemParts[3],
                             "submittedAt": itemParts[4],
-                            "userAnswer": itemParts[5]
+                            "userAnswer": itemParts[5],
+                            "targetId": itemParts[6]
                         })
                     }
                 }
@@ -63,7 +64,8 @@ Page {
                         "userName": model.userName,
                         "targetType": model.targetType,
                         "targetTitle": model.targetTitle,
-                        "userAnswer": model.userAnswer
+                        "userAnswer": model.userAnswer,
+                        "targetId": model.targetId
                     })
                 }
             }
@@ -75,7 +77,7 @@ Page {
 
                 Text {
                     text: model.targetTitle + " (" + model.targetType + ")"
-                    font.pixelSize: Style.subHeaderSize
+                    font.pixelSize: Style.subHeadingSize
                     font.bold: true
                     color: Style.textColor
                 }

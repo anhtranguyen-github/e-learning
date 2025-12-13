@@ -21,7 +21,7 @@ Page {
         
         if (role === "teacher") {
             menuModel.append({ name: "Lessons", icon: "📖", page: "LessonListScreen.qml", color: "#4e73df" })
-            menuModel.append({ name: "Feedback", icon: "📝", page: "FeedbackScreen.qml", color: "#4e73df" })
+            menuModel.append({ name: "Grading", icon: "📝", page: "GradingListScreen.qml", color: "#4e73df" })
             menuModel.append({ name: "Chat", icon: "💬", page: "ChatScreen.qml", color: "#8e44ad" })
         } else {
             // Default to student view
