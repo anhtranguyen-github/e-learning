@@ -19,12 +19,17 @@ Page {
         menuModel.clear()
         var role = networkManager.userRole
         
-        if (role === "teacher") {
+        if (role === "admin") {
+            menuModel.append({ name: "Manage Games", icon: "🎮", page: "AdminGameScreen.qml", color: "#e74a3b" })
+            menuModel.append({ name: "Lessons", icon: "📖", page: "LessonListScreen.qml", color: "#4e73df" })
+            menuModel.append({ name: "Chat", icon: "💬", page: "ChatScreen.qml", color: "#8e44ad" })
+        } else if (role === "teacher") {
             menuModel.append({ name: "Lessons", icon: "📖", page: "LessonListScreen.qml", color: "#4e73df" })
             menuModel.append({ name: "Grading", icon: "📝", page: "GradingListScreen.qml", color: "#4e73df" })
             menuModel.append({ name: "Chat", icon: "💬", page: "ChatScreen.qml", color: "#8e44ad" })
         } else {
             // Default to student view
+            menuModel.append({ name: "Games", icon: "🎮", page: "GameListScreen.qml", color: "#e74a3b" })
             menuModel.append({ name: "Lessons", icon: "📖", page: "LessonListScreen.qml", color: "#4e73df" })
             menuModel.append({ name: "Exercises", icon: "✍️", page: "ExerciseListScreen.qml", color: "#1cc88a" })
             menuModel.append({ name: "Exams", icon: "📝", page: "ExamListScreen.qml", color: "#36b9cc" })
