@@ -76,7 +76,8 @@ public:
 
         // Teacher/Admin only requests
         if (msg.code == protocol::MsgCode::GRADE_SUBMISSION_REQUEST ||
-            msg.code == protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST) {
+            msg.code == protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST ||
+            msg.code == protocol::MsgCode::EXAM_REVIEW_REQUEST) {
             
             if (role != "teacher" && role != "admin") {
                 errorMsg = "Unauthorized: Teacher or Admin role required";
@@ -84,13 +85,7 @@ public:
             }
         }
         
-        // Student Role Handling:
-        // Students are implicitly handled here. They are blocked from the Teacher/Admin requests above.
-        // They are allowed to proceed to the Student-only requests below (which are not blocked for them).
-        // If we needed to restrict students from specific "Admin-only" features, we would add a check here.
-
         // Student only requests (Teachers cannot access these)
-        // Teacher: view lesson, view pending submited exam/excercises, chat.
         if (role == "teacher") {
             if (msg.code == protocol::MsgCode::EXERCISE_LIST_REQUEST ||
                 msg.code == protocol::MsgCode::MULTIPLE_CHOICE_REQUEST ||
@@ -103,9 +98,10 @@ public:
                 msg.code == protocol::MsgCode::RESULT_LIST_REQUEST ||
                 msg.code == protocol::MsgCode::RESULT_DETAIL_REQUEST ||
                 msg.code == protocol::MsgCode::RESULT_REQUEST ||
-                msg.code == protocol::MsgCode::EXAM_LIST_REQUEST) {
+                msg.code == protocol::MsgCode::EXAM_LIST_REQUEST ||
+                msg.code == protocol::MsgCode::EXAM_REQUEST) {
                 
-                errorMsg = "Unauthorized: Teachers cannot perform student actions (Exercises, Exams, Results)";
+                errorMsg = "Unauthorized: Teachers cannot perform student actions";
                 return false;
             }
         }

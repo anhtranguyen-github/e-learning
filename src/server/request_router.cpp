@@ -5,7 +5,8 @@
 #include "server/controller/exercise_controller.h"
 #include "server/controller/submission_controller.h"
 #include "server/controller/result_controller.h"
-#include "server/controller/exam_controller.h"
+#include "server/controller/student_exam_controller.h"
+#include "server/controller/teacher_exam_controller.h"
 #include "server/controller/feedback_controller.h"
 #include "server/repository/user_repository.h"
 #include "server/repository/lesson_repository.h"
@@ -37,7 +38,8 @@ RequestRouter::RequestRouter(std::shared_ptr<SessionManager> sessionMgr,
     exerciseController = std::make_shared<ExerciseController>(sessionManager, exerciseRepo);
     submissionController = std::make_shared<SubmissionController>(sessionManager, resultRepo, exerciseRepo, examRepo);
     resultController = std::make_shared<ResultController>(sessionManager, resultRepo);
-    examController = std::make_shared<ExamController>(sessionManager, examRepo, resultRepo);
+    studentExamController = std::make_shared<StudentExamController>(sessionManager, examRepo, resultRepo);
+    teacherExamController = std::make_shared<TeacherExamController>(sessionManager, examRepo);
     feedbackController = std::make_shared<FeedbackController>(sessionManager, resultRepo, exerciseRepo, examRepo);
 
     // Register Default Middlewares
@@ -173,12 +175,17 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
             feedbackController->handleGetSubmissions(clientFd, msg);
             break;
 
-        // Exam
+        // Exam (Student)
         case protocol::MsgCode::EXAM_LIST_REQUEST:
-            examController->handleStudentGetExams(clientFd, msg);
+            studentExamController->handleGetExams(clientFd, msg);
             break;
-        case protocol::MsgCode::EXAM_REQUEST: // This case is kept for handleExamRequest
-            examController->handleStudentExamRequest(clientFd, msg);
+        case protocol::MsgCode::EXAM_REQUEST:
+            studentExamController->handleExamRequest(clientFd, msg);
+            break;
+
+        // Exam (Teacher)
+        case protocol::MsgCode::EXAM_REVIEW_REQUEST:
+            teacherExamController->handleExamReview(clientFd, msg);
             break;
 
         default:

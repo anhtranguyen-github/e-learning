@@ -33,7 +33,8 @@ SERVER_SRC = $(SRC_DIR)/server/server.cpp \
              $(SRC_DIR)/server/controller/exercise_controller.cpp \
              $(SRC_DIR)/server/controller/submission_controller.cpp \
              $(SRC_DIR)/server/controller/result_controller.cpp \
-             $(SRC_DIR)/server/controller/exam_controller.cpp \
+             $(SRC_DIR)/server/controller/student_exam_controller.cpp \
+             $(SRC_DIR)/server/controller/teacher_exam_controller.cpp \
              $(SRC_DIR)/server/controller/chat_controller.cpp \
              $(SRC_DIR)/server/controller/feedback_controller.cpp \
              $(SRC_DIR)/server/controller/user_controller.cpp

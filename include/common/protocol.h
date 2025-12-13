@@ -93,10 +93,11 @@ enum class MsgCode : uint16_t {
     EXAM_LIST_REQUEST = 270, // Re-adding this as it was removed earlier
     EXAM_LIST_SUCCESS = 271,
     EXAM_LIST_FAILURE = 272,
-    EXAM_REQUEST = 275, // Added for single exam request
+    EXAM_REQUEST = 275, // Student exam request (with "already taken" check)
     EXAM_SUCCESS = 276,
     EXAM_FAILURE = 277,
     EXAM_ALREADY_TAKEN = 278,
+    EXAM_REVIEW_REQUEST = 279, // Teacher exam review (no restrictions)
 
     // Notifications (290-299)
     NOTIFICATION_PUSH = 290,

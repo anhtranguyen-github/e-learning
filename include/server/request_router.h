@@ -18,7 +18,8 @@ class LessonController;
 class ExerciseController;
 class SubmissionController;
 class ResultController;
-class ExamController;
+class StudentExamController;
+class TeacherExamController;
 class FeedbackController;
 class ClientHandler;
 
@@ -39,7 +40,8 @@ private:
     std::shared_ptr<ExerciseController> exerciseController;
     std::shared_ptr<SubmissionController> submissionController;
     std::shared_ptr<ResultController> resultController;
-    std::shared_ptr<ExamController> examController;
+    std::shared_ptr<StudentExamController> studentExamController;
+    std::shared_ptr<TeacherExamController> teacherExamController;
     std::shared_ptr<FeedbackController> feedbackController;
 
     void sendErrorResponse(int clientFd, protocol::MsgCode code, const std::string& message);
