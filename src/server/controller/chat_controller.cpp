@@ -243,6 +243,15 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
     if (logger::serverLogger) {
         logger::serverLogger->info("Call initiated from " + caller.getUsername() + " to " + req.targetUser);
     }
+
+    // Save SYSTEM message
+    ChatMessage sysMsg;
+    sysMsg.setSenderId(callerId);
+    sysMsg.setReceiverId(targetId);
+    sysMsg.setContent("Call Initiated");
+    sysMsg.setMessageType("SYSTEM");
+    sysMsg.setIsRead(false);
+    chatRepository->saveMessage(sysMsg);
 }
 
 void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg) {
@@ -274,6 +283,15 @@ void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg
     if (logger::serverLogger) {
         logger::serverLogger->info("Call answered by " + answerer.getUsername());
     }
+
+    // Save SYSTEM message
+    ChatMessage sysMsg;
+    sysMsg.setSenderId(answererId);
+    sysMsg.setReceiverId(callerId);
+    sysMsg.setContent("Call Answered");
+    sysMsg.setMessageType("SYSTEM");
+    sysMsg.setIsRead(false);
+    chatRepository->saveMessage(sysMsg);
 }
 
 void ChatController::handleCallDecline(int clientFd, const protocol::Message& msg) {
@@ -301,6 +319,15 @@ void ChatController::handleCallDecline(int clientFd, const protocol::Message& ms
     if (logger::serverLogger) {
         logger::serverLogger->info("Call declined by " + decliner.getUsername());
     }
+
+    // Save SYSTEM message
+    ChatMessage sysMsg;
+    sysMsg.setSenderId(declinerId);
+    sysMsg.setReceiverId(callerId);
+    sysMsg.setContent("Call Declined");
+    sysMsg.setMessageType("SYSTEM");
+    sysMsg.setIsRead(false);
+    chatRepository->saveMessage(sysMsg);
 }
 
 void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
@@ -328,6 +355,15 @@ void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
     if (logger::serverLogger) {
         logger::serverLogger->info("Call ended by " + ender.getUsername());
     }
+
+    // Save SYSTEM message
+    ChatMessage sysMsg;
+    sysMsg.setSenderId(enderId);
+    sysMsg.setReceiverId(otherId);
+    sysMsg.setContent("Call Ended");
+    sysMsg.setMessageType("SYSTEM");
+    sysMsg.setIsRead(false);
+    chatRepository->saveMessage(sysMsg);
 }
 
 } // namespace server
