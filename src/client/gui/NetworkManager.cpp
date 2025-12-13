@@ -317,6 +317,7 @@ void NetworkManager::checkMessages() {
             case protocol::MsgCode::RESULT_DETAIL_FAILURE: // Assuming this exists or falls back to generic failure
                  emit errorOccurred("Failed to get result detail");
                  break;
+            case protocol::MsgCode::STUDY_EXERCISE_SUCCESS:
             case protocol::MsgCode::MULTIPLE_CHOICE_SUCCESS:
             case protocol::MsgCode::FILL_IN_SUCCESS:
             case protocol::MsgCode::SENTENCE_ORDER_SUCCESS:
