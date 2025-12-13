@@ -93,7 +93,6 @@ public:
         // Teacher: view lesson, view pending submited exam/excercises, chat.
         if (role == "teacher") {
             if (msg.code == protocol::MsgCode::EXERCISE_LIST_REQUEST ||
-                msg.code == protocol::MsgCode::STUDY_EXERCISE_REQUEST ||
                 msg.code == protocol::MsgCode::MULTIPLE_CHOICE_REQUEST ||
                 msg.code == protocol::MsgCode::FILL_IN_REQUEST ||
                 msg.code == protocol::MsgCode::SENTENCE_ORDER_REQUEST ||
@@ -104,8 +103,7 @@ public:
                 msg.code == protocol::MsgCode::RESULT_LIST_REQUEST ||
                 msg.code == protocol::MsgCode::RESULT_DETAIL_REQUEST ||
                 msg.code == protocol::MsgCode::RESULT_REQUEST ||
-                msg.code == protocol::MsgCode::EXAM_LIST_REQUEST ||
-                msg.code == protocol::MsgCode::EXAM_REQUEST) {
+                msg.code == protocol::MsgCode::EXAM_LIST_REQUEST) {
                 
                 errorMsg = "Unauthorized: Teachers cannot perform student actions (Exercises, Exams, Results)";
                 return false;
