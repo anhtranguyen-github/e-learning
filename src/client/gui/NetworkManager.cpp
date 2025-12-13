@@ -269,6 +269,14 @@ void NetworkManager::checkMessages() {
 
     std::vector<protocol::Message> messages = m_client->pollMessages();
     
+    if (!m_client->isConnected()) {
+        m_pollTimer->stop();
+        emit connectionStatusChanged(false);
+        emit loginStatusChanged(false); // Also update login status
+        emit errorOccurred("Disconnected from server");
+        return;
+    }
+    
     for (const auto& msg : messages) {
         qDebug() << "Received message code:" << (int)msg.code;
         

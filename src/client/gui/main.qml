@@ -253,6 +253,82 @@ Window {
         }
     }
 
+    // Global Error/Network Handling
+    Connections {
+        target: networkManager
+        
+        function onErrorOccurred(message) {
+            if (message === "Disconnected from server") {
+                disconnectedDialog.open()
+            }
+        }
+    }
+
+    // Disconnected Dialog
+    Dialog {
+        id: disconnectedDialog
+        title: "Disconnected"
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 300
+        
+        background: Rectangle {
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: Style.errorColor
+            border.width: 2
+        }
+        
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+            
+            Text {
+                text: "⚠️"
+                font.pixelSize: 48
+                Layout.alignment: Qt.AlignHCenter
+            }
+            
+            Text {
+                text: "Server Disconnected"
+                font.family: Style.fontFamily
+                font.pixelSize: Style.subHeadingSize
+                font.bold: true
+                color: Style.textColor
+                Layout.alignment: Qt.AlignHCenter
+            }
+            
+            Text {
+                text: "The connection to the server was lost."
+                font.pixelSize: Style.bodySize
+                color: Style.secondaryTextColor
+                Layout.alignment: Qt.AlignHCenter
+                horizontalAlignment: Text.AlignHCenter
+            }
+            
+            Button {
+                text: "Return to Login"
+                Layout.alignment: Qt.AlignHCenter
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    color: Style.primaryColor
+                    radius: Style.cornerRadius
+                }
+                onClicked: {
+                    disconnectedDialog.close()
+                    stackView.pop(null)
+                }
+            }
+        }
+    }
+
     Component {
         id: loginComponent
         Page {
