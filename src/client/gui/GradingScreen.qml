@@ -71,6 +71,7 @@ Page {
                     "questionText": qText,
                     "type": qType,
                     "userAnswer": uAns,
+                    "correctAnswer": qObj.answer || qObj.correctAnswer || "N/A",
                     "score": "0",
                     "comment": ""
                 })
@@ -139,6 +140,23 @@ Page {
                     text: model.userAnswer
                     font.pixelSize: Style.bodySize
                     font.italic: true
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    color: Style.textColor
+                }
+
+                Rectangle { height: 1; Layout.fillWidth: true; color: "#e0e0e0" }
+
+                 // Correct Answer
+                Text {
+                    text: "Correct Answer:"
+                    font.bold: true
+                    font.pixelSize: Style.smallSize
+                    color: Style.successColor // Greenish
+                }
+                Text {
+                    text: model.correctAnswer
+                    font.pixelSize: Style.bodySize
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     color: Style.textColor
@@ -234,7 +252,7 @@ Page {
                     radius: Style.cornerRadius
                 }
 
-                onClicked: submitGrading()
+                onClicked: submitGrading(overallFeedbackInput.text)
             }
             
             // Bottom spacer
@@ -242,7 +260,7 @@ Page {
         }
     }
 
-    function submitGrading() {
+    function submitGrading(overallFeedback) {
         var totalScore = 0
         var detailsArray = []
         var maxTotal = 0
@@ -261,22 +279,19 @@ Page {
             })
         }
 
-        // Normalize total score to 0-100 scale?
-        // Previously exams were 0-100.
-        // If I limit per question to 10, total is count * 10.
-        // Normalized = (totalScore / maxTotal) * 100.
+        // Normalize total score to 0-100 scale
         var normalizedScore = (maxTotal > 0) ? (totalScore / maxTotal) * 100 : 0
-        normalizedScore = Math.round(normalizedScore * 10) / 10 // Round to 1 decimal
+        normalizedScore = Math.round(normalizedScore * 10) / 10
 
         var gradingDetailsObj = {
             "items": detailsArray,
-            "overallFeedback": overallFeedbackInput.text
+            "overallFeedback": overallFeedback
         }
         
         var detailsJson = JSON.stringify(gradingDetailsObj)
         
-        console.log("Submitting:", normalizedScore, overallFeedbackInput.text, detailsJson)
+        console.log("Submitting:", normalizedScore, overallFeedback, detailsJson)
         
-        networkManager.submitGrade(resultId, normalizedScore.toString(), overallFeedbackInput.text, detailsJson)
+        networkManager.submitGrade(resultId, normalizedScore.toString(), overallFeedback, detailsJson)
     }
 }

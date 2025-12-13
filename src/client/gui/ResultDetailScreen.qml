@@ -51,7 +51,9 @@ Page {
                                 "questionText": qParts[0],
                                 "userAnswer": qParts[1],
                                 "correctAnswer": qParts[2],
-                                "status": qParts[3]
+                                "status": qParts[3],
+                                "questionScore": qParts.length >= 5 ? qParts[4] : "",
+                                "teacherComment": qParts.length >= 6 ? qParts[5] : ""
                             })
                         }
                     }
@@ -163,6 +165,26 @@ Page {
                             font.pixelSize: Style.bodySize
                             color: "green"
                             visible: model.status !== "correct"
+                            wrapMode: Text.Wrap
+                            Layout.fillWidth: true
+                        }
+
+                        // Teacher Score (if available)
+                        Text {
+                            text: "Score: " + model.questionScore + "/10"
+                            font.pixelSize: Style.bodySize
+                            color: Style.primaryColor
+                            font.bold: true
+                            visible: model.questionScore !== ""
+                        }
+
+                        // Teacher Comment (if available)
+                        Text {
+                            text: "Teacher Comment: " + model.teacherComment
+                            font.pixelSize: Style.smallSize
+                            font.italic: true
+                            color: "gray"
+                            visible: model.teacherComment !== ""
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
                         }
