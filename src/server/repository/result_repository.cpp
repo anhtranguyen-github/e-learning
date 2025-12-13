@@ -312,7 +312,9 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
 }
 
 bool ResultRepository::addFeedback(int resultId, const std::string& feedbackContent, const std::string& feedbackType) {
-    // Update feedback field, optionally storing feedback type in grading_details
+    // feedbackType reserved for future use (e.g., "text" vs "audio")
+    (void)feedbackType;
+    
     std::string query = "UPDATE results SET feedback = $1, graded_at = CURRENT_TIMESTAMP WHERE result_id = $2";
     
     std::string s_resultId = std::to_string(resultId);
