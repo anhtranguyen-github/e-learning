@@ -611,7 +611,7 @@ bool NetworkClient::requestPendingSubmissions() {
     return true;
 }
 
-bool NetworkClient::submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback) {
+bool NetworkClient::submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback, const std::string& gradingDetails) {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {
             logger::clientLogger->error("Not logged in - cannot submit grade");
@@ -624,6 +624,7 @@ bool NetworkClient::submitGrade(const std::string& resultId, const std::string& 
     req.resultId = resultId;
     req.score = score;
     req.feedback = feedback;
+    req.gradingDetails = gradingDetails;
     std::string payload = req.serialize();
     protocol::Message msg(protocol::MsgCode::GRADE_SUBMISSION_REQUEST, payload);
 

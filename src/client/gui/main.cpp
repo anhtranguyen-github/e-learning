@@ -3,8 +3,10 @@
 #include <QQmlContext>
 #include "NetworkManager.h"
 #include "common/logger.h"
+#include <csignal>
 
 int main(int argc, char *argv[]) {
+    signal(SIGPIPE, SIG_IGN);
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;

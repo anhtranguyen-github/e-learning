@@ -33,7 +33,7 @@ public:
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
     Q_INVOKABLE void requestPendingSubmissions();
     Q_INVOKABLE void requestResultDetail(const QString &targetType, const QString &targetId);
-    Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback);
+    Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback, const QString &gradingDetails = "{}");
     Q_INVOKABLE void sendPrivateMessage(const QString &recipient, const QString &content, const QString &type = "TEXT");
     Q_INVOKABLE void requestChatHistory(const QString &otherUser);
     Q_INVOKABLE void requestRecentChats();

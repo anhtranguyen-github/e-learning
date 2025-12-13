@@ -486,9 +486,10 @@ namespace Payloads {
         std::string targetTitle;
         std::string submittedAt;
         std::string userAnswer;
+        std::string targetId; // Added targetId
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {resultId, userName, targetType, targetTitle, submittedAt, userAnswer};
+            std::vector<std::string> parts = {resultId, userName, targetType, targetTitle, submittedAt, userAnswer, targetId};
             return utils::join(parts, '|');
         }
 
@@ -500,6 +501,7 @@ namespace Payloads {
             if (parts.size() >= 4) targetTitle = parts[3];
             if (parts.size() >= 5) submittedAt = parts[4];
             if (parts.size() >= 6) userAnswer = parts[5];
+            if (parts.size() >= 7) targetId = parts[6];
         }
     };
 
@@ -520,9 +522,10 @@ namespace Payloads {
         std::string resultId;
         std::string score;
         std::string feedback;
+        std::string gradingDetails;
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {sessionToken, resultId, score, feedback};
+            std::vector<std::string> parts = {sessionToken, resultId, score, feedback, gradingDetails};
             return utils::join(parts, ';');
         }
 
@@ -532,6 +535,7 @@ namespace Payloads {
             if (parts.size() >= 2) resultId = parts[1];
             if (parts.size() >= 3) score = parts[2];
             if (parts.size() >= 4) feedback = parts[3];
+            if (parts.size() >= 5) gradingDetails = parts[4];
         }
     };
 

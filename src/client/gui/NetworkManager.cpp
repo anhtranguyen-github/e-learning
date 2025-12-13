@@ -175,8 +175,8 @@ void NetworkManager::requestPendingSubmissions() {
     }
 }
 
-void NetworkManager::submitGrade(const QString &resultId, const QString &score, const QString &feedback) {
-    if (m_client->submitGrade(resultId.toStdString(), score.toStdString(), feedback.toStdString())) {
+void NetworkManager::submitGrade(const QString &resultId, const QString &score, const QString &feedback, const QString &gradingDetails) {
+    if (m_client->submitGrade(resultId.toStdString(), score.toStdString(), feedback.toStdString(), gradingDetails.toStdString())) {
         // Success
     } else {
         emit errorOccurred("Failed to submit grade");
@@ -474,6 +474,9 @@ void NetworkManager::checkMessages() {
                 break;
             case protocol::MsgCode::RECENT_CHATS_FAILURE:
                 emit chatError("Failed to get recent chats");
+                break;
+            case protocol::MsgCode::GENERAL_FAILURE:
+                emit errorOccurred("Server error: " + QString::fromStdString(msg.toString()));
                 break;
 
             // Voice Calls
