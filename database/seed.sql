@@ -9,7 +9,10 @@ TRUNCATE TABLE results, exams, exercises, lessons, game_items, users RESTART IDE
 -- Admin and Student
 INSERT INTO users (username, password_hash, full_name, role, level) VALUES
 ('admin', 'admin', 'Administrator', 'admin', 'advanced'),
-('student', 'password', 'Student User', 'student', 'beginner');
+('teacher', 'teacher123', 'Teacher User', 'teacher', 'advanced'),
+('student1', 'password', 'Student One', 'student', 'beginner'),
+('student2', 'password', 'Student Two', 'student', 'intermediate'),
+('student3', 'password', 'Student Three', 'student', 'advanced');
 
 -- Additional random users
 INSERT INTO users (username, password_hash, full_name, role, level)
@@ -30,21 +33,24 @@ SELECT
     'https://example.com/video' || i,
     'https://example.com/audio' || i,
     'This is the lesson content number ' || i,
-    jsonb_build_object('word', 'example_' || i, 'meaning', 'meaning_' || i),
-    jsonb_build_object('rule', 'grammar_rule_' || i, 'example', 'example_sentence_' || i),
+    jsonb_build_array(jsonb_build_object('word', 'example_' || i, 'meaning', 'meaning_' || i)),
+    jsonb_build_array(jsonb_build_object('rule', 'grammar_rule_' || i, 'example', 'example_sentence_' || i)),
     1 -- Created by admin (id 1)
 FROM generate_series(1,20) s(i);
 
 \echo '--- Inserting Exercises ---'
--- 1. Legacy Single Question Exercises
-INSERT INTO exercises (lesson_id, title, type, level, question, answer, media_url, created_by)
+-- 1. Single Question Exercises
+INSERT INTO exercises (lesson_id, title, type, level, questions, media_url, created_by)
 SELECT 
     (random()*19 + 1)::int,
-    'Legacy Exercise ' || i,
+    'Exercise ' || i,
     (ARRAY['rewrite_sentence','essay','speaking'])[1 + (random()*2)::int],
     (ARRAY['beginner','intermediate','advanced'])[1 + (random()*2)::int],
-    'Legacy Question text for exercise ' || i,
-    'Answer text for exercise ' || i,
+    jsonb_build_array(jsonb_build_object(
+        'text', 'Question text for exercise ' || i,
+        'answer', 'Answer text for exercise ' || i,
+        'type', 'text' -- Default or derived
+    )),
     'https://example.com/media' || i,
     1
 FROM generate_series(1,10) s(i);

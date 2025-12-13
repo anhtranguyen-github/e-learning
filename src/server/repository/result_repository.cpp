@@ -11,19 +11,45 @@ ResultRepository::ResultRepository(std::shared_ptr<Database> database) : db(data
 bool ResultRepository::saveResult(int userId, const std::string& targetType, int targetId, 
                                 double score, const std::string& userAnswer, 
                                 const std::string& feedback, const std::string& status) {
-    std::string query = "INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status) VALUES (" +
-                        std::to_string(userId) + ", '" + targetType + "', " + std::to_string(targetId) +
-                        ", " + std::to_string(score) + ", '" + userAnswer + "', '" + feedback + "', '" + status + "')";
+    const char* query = "INSERT INTO results (user_id, target_type, target_id, score, user_answer, feedback, status) VALUES ($1, $2, $3, $4, $5, $6, $7)";
     
-    return db->execute(query);
+    std::string s_userId = std::to_string(userId);
+    std::string s_targetId = std::to_string(targetId);
+    std::string s_score = std::to_string(score);
+    
+    const char* params[7];
+    params[0] = s_userId.c_str();
+    params[1] = targetType.c_str();
+    params[2] = s_targetId.c_str();
+    params[3] = s_score.c_str();
+    params[4] = userAnswer.c_str();
+    params[5] = feedback.c_str();
+    params[6] = status.c_str();
+
+    PGresult* res = db->execParams(query, 7, params);
+    bool success = (res && PQresultStatus(res) == PGRES_COMMAND_OK);
+    if (res) PQclear(res);
+    return success;
 }
 
-bool ResultRepository::updateResult(int resultId, double score, const std::string& feedback, const std::string& status) {
-    std::string query = "UPDATE results SET score = " + std::to_string(score) + 
-                        ", feedback = '" + feedback + "', status = '" + status + 
-                        "', graded_at = CURRENT_TIMESTAMP WHERE result_id = " + std::to_string(resultId);
+bool ResultRepository::updateResult(int resultId, double score, const std::string& feedback, const std::string& status, const std::string& gradingDetails) {
+    std::string details = gradingDetails.empty() ? "{}" : gradingDetails;
+    const char* query = "UPDATE results SET score = $1, feedback = $2, status = $3, grading_details = $4, graded_at = CURRENT_TIMESTAMP WHERE result_id = $5";
     
-    return db->execute(query);
+    std::string s_score = std::to_string(score);
+    std::string s_resultId = std::to_string(resultId);
+
+    const char* params[5];
+    params[0] = s_score.c_str();
+    params[1] = feedback.c_str();
+    params[2] = status.c_str();
+    params[3] = details.c_str();
+    params[4] = s_resultId.c_str();
+    
+    PGresult* res = db->execParams(query, 5, params);
+    bool success = (res && PQresultStatus(res) == PGRES_COMMAND_OK);
+    if (res) PQclear(res);
+    return success;
 }
 
 bool ResultRepository::getResult(int userId, const std::string& targetType, int targetId, 
@@ -127,6 +153,7 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
             dto.targetTitle = "ID: " + std::string(PQgetvalue(result, i, 3)); // Placeholder for title
             dto.submittedAt = PQgetvalue(result, i, 4);
             dto.userAnswer = PQgetvalue(result, i, 5);
+            dto.targetId = PQgetvalue(result, i, 3); // Populate targetId for client to fetch metadata
             submissions.push_back(dto);
         }
         PQclear(result);
@@ -157,55 +184,58 @@ bool ResultRepository::getResultDetail(int userId, const std::string& targetType
     auto userAnswers = utils::split(userAnswerStr, '^');
 
     // 2. Fetch content
-    std::string contentQuery;
+    // 2. Fetch content
+    std::string jsonContent;
+
     if (targetType == "exercise") {
-        contentQuery = "SELECT title, questions FROM exercises WHERE exercise_id = " + std::to_string(targetId);
+        std::string contentQuery = "SELECT title, questions FROM exercises WHERE exercise_id = " + std::to_string(targetId);
+        res = db->query(contentQuery);
+        if (!res || PQntuples(res) == 0) {
+            if (res) PQclear(res);
+            return false;
+        }
+        detail.title = PQgetvalue(res, 0, 0);
+        jsonContent = PQgetvalue(res, 0, 1) ? PQgetvalue(res, 0, 1) : "";
+        PQclear(res);
+
     } else if (targetType == "exam") {
-        contentQuery = "SELECT title, question FROM exams WHERE exam_id = " + std::to_string(targetId);
+        std::string contentQuery = "SELECT title, question FROM exams WHERE exam_id = " + std::to_string(targetId);
+        res = db->query(contentQuery);
+        if (!res || PQntuples(res) == 0) {
+            if (res) PQclear(res);
+            return false;
+        }
+        detail.title = PQgetvalue(res, 0, 0);
+        jsonContent = PQgetvalue(res, 0, 1) ? PQgetvalue(res, 0, 1) : "";
+        PQclear(res);
     } else {
         return false;
     }
 
-    res = db->query(contentQuery);
-    if (!res || PQntuples(res) == 0) {
-        if (res) PQclear(res);
-        return false;
-    }
-
-    detail.title = PQgetvalue(res, 0, 0);
-    std::string jsonContent = PQgetvalue(res, 0, 1);
-    PQclear(res);
-
-    // 3. Parse JSON
-    Json::Value root;
-    Json::Reader reader;
-    if (reader.parse(jsonContent, root)) {
-        // Handle different structures
-        // Exercises: root is array of questions
-        // Exams: root might be object with "questions" array or just array
-        
-        const Json::Value& questions = (root.isArray()) ? root : root["questions"];
-        
-        if (questions.isArray()) {
-            for (unsigned int i = 0; i < questions.size(); ++i) {
-                Payloads::QuestionResultDTO qDto;
-                qDto.questionText = questions[i]["question"].asString();
-                qDto.correctAnswer = questions[i]["answer"].asString(); // Or "correct_answer"
-                
-                if (i < userAnswers.size()) {
-                    qDto.userAnswer = userAnswers[i];
+    // 3. Parse and Populate
+    if (!jsonContent.empty()) {
+        Json::Value root;
+        Json::Reader reader;
+        if (reader.parse(jsonContent, root)) {
+            const Json::Value& questions = (root.isArray()) ? root : root["questions"];
+            if (questions.isArray() && !questions.empty()) {
+                for (unsigned int i = 0; i < questions.size(); ++i) {
+                    Payloads::QuestionResultDTO qDto;
+                    qDto.questionText = questions[i]["text"].asString();
+                    qDto.correctAnswer = questions[i]["answer"].asString();
+                    
+                    if (i < userAnswers.size()) {
+                        qDto.userAnswer = userAnswers[i];
+                    }
+                    
+                    if (qDto.userAnswer == qDto.correctAnswer) {
+                        qDto.status = "correct";
+                    } else {
+                        qDto.status = "incorrect";
+                    }
+                    
+                    detail.questions.push_back(qDto);
                 }
-                
-                // Simple status check (case insensitive?)
-                // Ideally, use the score per question if available, but we only have total score.
-                // So we can just compare strings for display purposes.
-                if (qDto.userAnswer == qDto.correctAnswer) {
-                    qDto.status = "correct";
-                } else {
-                    qDto.status = "incorrect";
-                }
-                
-                detail.questions.push_back(qDto);
             }
         }
     }

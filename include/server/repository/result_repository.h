@@ -22,7 +22,7 @@ public:
                    const std::string& feedback, const std::string& status);
 
     // Update an existing result (for grading)
-    bool updateResult(int resultId, double score, const std::string& feedback, const std::string& status);
+    bool updateResult(int resultId, double score, const std::string& feedback, const std::string& status, const std::string& gradingDetails = "");
 
     // Get a specific result
     bool getResult(int userId, const std::string& targetType, int targetId, 
@@ -41,6 +41,7 @@ public:
     // Check if result exists
     bool hasResult(int userId, const std::string& targetType, int targetId);
 };
+
 
 } // namespace server
 

@@ -33,9 +33,7 @@ CREATE TABLE IF NOT EXISTS exercises (
     type VARCHAR(50) CHECK (type IN ('rewrite_sentence', 'essay', 'speaking', 'multiple_choice', 'fill_in_blank', 'order')),
     level VARCHAR(50) CHECK (level IN ('beginner', 'intermediate', 'advanced')),
     options JSONB,
-    question TEXT, -- Made nullable as we might use 'questions' instead
-    questions JSONB, -- New column for multiple questions
-    answer TEXT,
+    questions JSONB, -- Stores array of questions: [{"text": "...", "type": "...", "answer": "...", ...}]
     media_url TEXT,
     explanation TEXT,
     created_by INT REFERENCES users(user_id) ON DELETE SET NULL,
@@ -64,6 +62,7 @@ CREATE TABLE IF NOT EXISTS results (
     graded_by VARCHAR(50) DEFAULT 'machine',
     graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    grading_details JSONB,
     status VARCHAR(20) CHECK (status IN ('pending', 'graded')) DEFAULT 'graded'
 );
 

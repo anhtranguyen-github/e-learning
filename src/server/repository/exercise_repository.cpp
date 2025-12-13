@@ -78,43 +78,6 @@ bool ExerciseRepository::parseExerciseFromRow(PGresult* result, int row, Exercis
         int col_questions = PQfnumber(result, "questions");
         if (col_questions != -1 && !PQgetisnull(result, row, col_questions)) {
             exercise.setQuestions(parseQuestions(PQgetvalue(result, row, col_questions)));
-        } else {
-            // Fallback to legacy columns
-            Question q;
-            
-            // Handle non-nullable question
-            if (!PQgetisnull(result, row, PQfnumber(result, "question"))) {
-                q.setText(PQgetvalue(result, row, PQfnumber(result, "question")));
-            }
-            
-            // Handle nullable options (JSONB)
-            if (!PQgetisnull(result, row, PQfnumber(result, "options"))) {
-                std::string optionsJson = PQgetvalue(result, row, PQfnumber(result, "options"));
-                Json::Value root;
-                Json::Reader reader;
-                if (reader.parse(optionsJson, root) && root.isArray()) {
-                    std::vector<std::string> opts;
-                    for (const auto& item : root) {
-                        if (item.isString()) opts.push_back(item.asString());
-                    }
-                    q.setOptions(opts);
-                }
-            }
-
-            // Handle nullable answer
-            if (!PQgetisnull(result, row, PQfnumber(result, "answer"))) {
-                q.setAnswer(PQgetvalue(result, row, PQfnumber(result, "answer")));
-            }
-            
-            // Handle nullable explanation
-            if (!PQgetisnull(result, row, PQfnumber(result, "explanation"))) {
-                q.setExplanation(PQgetvalue(result, row, PQfnumber(result, "explanation")));
-            }
-            
-            // Set type from exercise type if needed, or leave empty
-            q.setType(exercise.getType());
-            
-            exercise.setQuestions({q});
         }
 
         return true;
