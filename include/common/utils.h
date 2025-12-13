@@ -25,6 +25,12 @@ std::string createCookieHeader(const std::string& sessionId);
 // Parse login credentials from payload (format: "username;password")
 bool parseLoginCredentials(const std::string& payload, std::string& username, std::string& password);
 
+// Read binary file content
+std::vector<char> readFile(const std::string& path);
+
+// Encode data to Base64
+std::string base64Encode(const std::vector<char>& data);
+
 } // namespace utils
 
 #endif // UTILS_H

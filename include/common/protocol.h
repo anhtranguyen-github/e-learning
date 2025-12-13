@@ -99,7 +99,21 @@ enum class MsgCode : uint16_t {
     EXAM_ALREADY_TAKEN = 278,
     EXAM_REVIEW_REQUEST = 279, // Teacher exam review (no restrictions)
 
-    // Notifications (290-299)
+    GAME_LIST_REQUEST = 350,
+    GAME_LIST_SUCCESS = 351,
+    GAME_LIST_FAILURE = 352,
+
+    GAME_LEVEL_LIST_REQUEST = 360,
+    GAME_LEVEL_LIST_SUCCESS = 361,
+    GAME_LEVEL_LIST_FAILURE = 362,
+
+    GAME_DATA_REQUEST = 370,
+    GAME_DATA_SUCCESS = 371,
+    GAME_DATA_FAILURE = 372,
+
+    GAME_SUBMIT_REQUEST = 380,
+    GAME_SUBMIT_SUCCESS = 381,
+    GAME_SUBMIT_FAILURE = 382,
     NOTIFICATION_PUSH = 290,
 
     // Chat Management (300-319)

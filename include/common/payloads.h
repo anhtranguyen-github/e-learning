@@ -802,6 +802,131 @@ namespace Payloads {
         }
     };
 
+    // --- Game Payloads ---
+
+    // GameListRequest
+    struct GameListRequest : public ISerializable {
+        std::string sessionToken;
+
+        std::string serialize() const override {
+            return sessionToken;
+        }
+
+        void deserialize(const std::string& raw) override {
+            sessionToken = raw;
+        }
+    };
+
+    struct GameMetadataDTO : public ISerializable {
+        std::string type; // "sentence_match", "picture_match", etc
+        std::string description;
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {type, description};
+             return utils::join(parts, '|');
+        }
+
+       void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) type = parts[0];
+            if (parts.size() >= 2) description = parts[1];
+        }
+    };
+
+    // GameLevelListRequest
+    struct GameLevelListRequest : public ISerializable {
+        std::string sessionToken;
+        std::string gameType; // e.g., "sentence_match"
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, gameType};
+             return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) gameType = parts[1];
+        }
+    };
+
+    struct GameLevelDTO : public ISerializable {
+        std::string id;
+        std::string level; // "beginner", etc.
+        std::string status; // "locked", "unlocked", "completed"
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {id, level, status};
+             return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) level = parts[1];
+            if (parts.size() >= 3) status = parts[2];
+        }
+    };
+
+    // GameDataRequest
+    struct GameDataRequest : public ISerializable {
+        std::string sessionToken;
+        std::string gameId;
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, gameId};
+             return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) gameId = parts[1];
+        }
+    };
+
+    struct GameDataDTO : public ISerializable {
+        std::string id;
+        std::string type;
+        std::string level;
+        std::string questionJson; // The raw JSON content
+
+        std::string serialize() const override {
+             std::vector<std::string> parts = {id, type, level, questionJson};
+             return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) id = parts[0];
+            if (parts.size() >= 2) type = parts[1];
+            if (parts.size() >= 3) level = parts[2];
+            if (parts.size() >= 4) questionJson = parts[3];
+        }
+    };
+
+    // GameSubmitRequest
+    struct GameSubmitRequest : public ISerializable {
+        std::string sessionToken;
+        std::string gameId;
+        std::string score;
+        std::string detailsJson; // How they played, what they matched
+
+         std::string serialize() const override {
+             std::vector<std::string> parts = {sessionToken, gameId, score, detailsJson};
+             return utils::join(parts, ';');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, ';');
+            if (parts.size() >= 1) sessionToken = parts[0];
+            if (parts.size() >= 2) gameId = parts[1];
+            if (parts.size() >= 3) score = parts[2];
+            if (parts.size() >= 4) detailsJson = parts[3];
+        }
+    };
+
+
     // Voice Call Payloads
     struct VoiceCallRequest : public ISerializable {
         std::string sessionToken;
