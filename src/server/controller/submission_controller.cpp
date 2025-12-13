@@ -75,7 +75,7 @@ void SubmissionController::handleStudentSubmission(int clientFd, const protocol:
 
     sessionManager->update_session(sessionToken);
 
-    // Check if exam already taken
+    // Check if exam already taken (by the requesting user)
     if (targetType == "exam") {
         if (resultRepo->hasResult(userId, targetType, targetId)) {
             protocol::Message response(protocol::MsgCode::SUBMIT_ANSWER_FAILURE, "Exam already taken");
