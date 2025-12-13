@@ -75,7 +75,7 @@ Page {
                     Layout.fillWidth: true
                     Text {
                         text: model.title || "Unknown Title"
-                        font.pixelSize: Style.subHeaderSize
+                        font.pixelSize: Style.subHeadingSize
                         font.bold: true
                         color: Style.textColor
                     }

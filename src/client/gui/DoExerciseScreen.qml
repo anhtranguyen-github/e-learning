@@ -130,6 +130,17 @@ Page {
          userAnswers[currentQuestionIndex] = answerField.text
     }
 
+    function checkAllAnswered() {
+        if (!examData.questions) return true
+        for (var i = 0; i < examData.questions.length; i++) {
+            var ans = userAnswers[i]
+            if (ans === undefined || ans === null || ans.toString().trim() === "") {
+                return false
+            }
+        }
+        return true
+    }
+
     function loadQuestion(index) {
         if (!examData.questions || index >= examData.questions.length) return;
         
@@ -240,6 +251,12 @@ Page {
                     }
                     onClicked: {
                         saveCurrentAnswer()
+                        if (!checkAllAnswered()) {
+                            resultText.text = "Please answer all questions before submitting."
+                            resultText.color = Style.errorColor
+                            overviewDrawer.close()
+                            return
+                        }
                         var finalAnswer = userAnswers.join('^')
                         networkManager.submitAnswer(targetType, exerciseId, finalAnswer)
                         overviewDrawer.close()
@@ -475,6 +492,11 @@ Page {
                             if (currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0)) {
                                 loadQuestion(++currentQuestionIndex)
                             } else {
+                                if (!checkAllAnswered()) {
+                                    resultText.text = "Please answer all questions before submitting."
+                                    resultText.color = Style.errorColor
+                                    return
+                                }
                                 // Join answers with caret delimiter
                                 var finalAnswer = userAnswers.join('^')
                                 networkManager.submitAnswer(targetType, exerciseId, finalAnswer)

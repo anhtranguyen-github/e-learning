@@ -84,7 +84,7 @@ Page {
 
                     Text {
                         text: resultTitle
-                        font.pixelSize: Style.headerSize
+                        font.pixelSize: Style.headingSize
                         font.bold: true
                         color: Style.textColor
                     }
@@ -93,7 +93,7 @@ Page {
                         spacing: 20
                         Text {
                             text: "Score: " + (resultScore ? parseFloat(resultScore).toFixed(1) : "0.0") + "%"
-                            font.pixelSize: Style.subHeaderSize
+                            font.pixelSize: Style.subHeadingSize
                             color: Style.primaryColor
                             font.bold: true
                         }
@@ -117,7 +117,7 @@ Page {
 
             Text {
                 text: "Questions Review"
-                font.pixelSize: Style.subHeaderSize
+                font.pixelSize: Style.subHeadingSize
                 font.bold: true
                 color: Style.textColor
             }
