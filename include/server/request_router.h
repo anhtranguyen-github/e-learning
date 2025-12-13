@@ -50,6 +50,9 @@ public:
 
     void registerMiddleware(std::shared_ptr<Middleware> middleware);
     void handleMessage(int clientFd, const protocol::Message& msg, ClientHandler* clientHandler = nullptr);
+
+    // Periodic tasks
+    void processTimeouts();
 };
 
 } // namespace server

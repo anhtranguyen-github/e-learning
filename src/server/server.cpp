@@ -209,6 +209,9 @@ void Server::run() {
     auto lastSessionCheck = std::chrono::steady_clock::now();
     const int sessionCheckInterval = 5; // seconds
 
+    auto lastTimeoutCheck = std::chrono::steady_clock::now();
+    const int timeoutCheckInterval = 1000; // milliseconds
+
     while (running) {
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -265,6 +268,13 @@ void Server::run() {
         if (elapsed >= sessionCheckInterval) {
             // sessionManager->checkExpiredSessions();
             lastSessionCheck = now;
+        }
+
+        // Periodically check for call timeouts
+        auto elapsedTimeout = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTimeoutCheck).count();
+        if (elapsedTimeout >= timeoutCheckInterval) {
+            requestRouter->processTimeouts();
+            lastTimeoutCheck = now;
         }
     }
 

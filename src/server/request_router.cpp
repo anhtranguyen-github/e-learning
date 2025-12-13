@@ -187,4 +187,10 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
     }
 }
 
+void RequestRouter::processTimeouts() {
+    if (chatController) {
+        chatController->processCallTimeouts();
+    }
+}
+
 } // namespace server
