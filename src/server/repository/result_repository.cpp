@@ -132,15 +132,16 @@ std::vector<Payloads::ResultSummaryDTO> ResultRepository::getResultsByUser(int u
 
 std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissions() {
     std::vector<Payloads::PendingSubmissionDTO> submissions;
-    // Join with users and exams/exercises to get more info
-    // For simplicity, we'll just get the raw result data and user name for now
-    // A proper implementation would join with exams/exercises tables to get titles
     
-    std::string query = "SELECT r.result_id, u.username, r.target_type, r.target_id, r.submitted_at, r.user_answer "
+    // Join with users and exercises/exams tables to get titles and status
+    std::string query = "SELECT r.result_id, u.username, r.target_type, r.target_id, r.submitted_at, "
+                        "r.user_answer, r.status, "
+                        "COALESCE(ex.title, e.title, 'Unknown') as title "
                         "FROM results r "
                         "JOIN users u ON r.user_id = u.user_id "
-                        "WHERE r.status = 'pending' "
-                        "ORDER BY r.submitted_at ASC";
+                        "LEFT JOIN exercises ex ON r.target_type = 'exercise' AND r.target_id = ex.exercise_id "
+                        "LEFT JOIN exams e ON r.target_type = 'exam' AND r.target_id = e.exam_id "
+                        "ORDER BY r.status DESC, r.submitted_at ASC"; // pending first, then graded
 
     PGresult* result = db->query(query);
     
@@ -150,10 +151,11 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
             dto.resultId = PQgetvalue(result, i, 0);
             dto.userName = PQgetvalue(result, i, 1);
             dto.targetType = PQgetvalue(result, i, 2);
-            dto.targetTitle = "ID: " + std::string(PQgetvalue(result, i, 3)); // Placeholder for title
+            dto.targetId = PQgetvalue(result, i, 3);
             dto.submittedAt = PQgetvalue(result, i, 4);
             dto.userAnswer = PQgetvalue(result, i, 5);
-            dto.targetId = PQgetvalue(result, i, 3); // Populate targetId for client to fetch metadata
+            dto.status = PQgetvalue(result, i, 6);
+            dto.targetTitle = PQgetvalue(result, i, 7);
             submissions.push_back(dto);
         }
         PQclear(result);
@@ -164,7 +166,7 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
 
 bool ResultRepository::getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail) {
     // 1. Fetch result data
-    std::string query = "SELECT score, feedback, user_answer FROM results WHERE user_id = " + std::to_string(userId) +
+    std::string query = "SELECT score, feedback, user_answer, grading_details FROM results WHERE user_id = " + std::to_string(userId) +
                         " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId) +
                         " ORDER BY submitted_at DESC LIMIT 1";
     
@@ -179,11 +181,11 @@ bool ResultRepository::getResultDetail(int userId, const std::string& targetType
     detail.score = PQgetvalue(res, 0, 0);
     detail.feedback = PQgetvalue(res, 0, 1);
     std::string userAnswerStr = PQgetvalue(res, 0, 2);
+    std::string gradingDetailsStr = PQgetvalue(res, 0, 3) ? PQgetvalue(res, 0, 3) : "";
     PQclear(res);
 
     auto userAnswers = utils::split(userAnswerStr, '^');
 
-    // 2. Fetch content
     // 2. Fetch content
     std::string jsonContent;
 
@@ -240,6 +242,27 @@ bool ResultRepository::getResultDetail(int userId, const std::string& targetType
         }
     }
 
+    // 4. Merge Grading Details
+    if (!gradingDetailsStr.empty()) {
+        Json::Value gradingRoot;
+        Json::Reader reader;
+        if (reader.parse(gradingDetailsStr, gradingRoot)) {
+            const Json::Value& items = gradingRoot["items"];
+            if (items.isArray()) {
+                for (unsigned int i = 0; i < items.size() && i < detail.questions.size(); ++i) {
+                     if (items[i].isMember("score")) {
+                         detail.questions[i].score = items[i]["score"].asString(); 
+                     }
+                     if (items[i].isMember("comment")) {
+                         detail.questions[i].comment = items[i]["comment"].asString();
+                     }
+                     // Optional: update status if teacher manually graded? 
+                     // For now, keep original status unless we decide teacher overrides it.
+                }
+            }
+        }
+    }
+
     return true;
 }
 
@@ -253,4 +276,56 @@ bool ResultRepository::hasResult(int userId, const std::string& targetType, int 
     return exists;
 }
 
+std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
+    std::vector<Payloads::SubmissionDTO> submissions;
+    
+    // Get all submissions with proper joins for titles and scores
+    std::string query = "SELECT r.result_id, u.username, r.target_type, r.target_id, r.submitted_at, "
+                        "r.user_answer, r.status, r.score, "
+                        "COALESCE(ex.title, e.title, 'Unknown') as title "
+                        "FROM results r "
+                        "JOIN users u ON r.user_id = u.user_id "
+                        "LEFT JOIN exercises ex ON r.target_type = 'exercise' AND r.target_id = ex.exercise_id "
+                        "LEFT JOIN exams e ON r.target_type = 'exam' AND r.target_id = e.exam_id "
+                        "ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.submitted_at DESC";
+
+    PGresult* result = db->query(query);
+    
+    if (result) {
+        for (int i = 0; i < PQntuples(result); ++i) {
+            Payloads::SubmissionDTO dto;
+            dto.resultId = PQgetvalue(result, i, 0);
+            dto.studentName = PQgetvalue(result, i, 1);
+            dto.targetType = PQgetvalue(result, i, 2);
+            dto.targetId = PQgetvalue(result, i, 3);
+            dto.submittedAt = PQgetvalue(result, i, 4);
+            dto.userAnswer = PQgetvalue(result, i, 5);
+            dto.status = PQgetvalue(result, i, 6);
+            dto.score = PQgetvalue(result, i, 7) ? PQgetvalue(result, i, 7) : "0";
+            dto.targetTitle = PQgetvalue(result, i, 8);
+            submissions.push_back(dto);
+        }
+        PQclear(result);
+    }
+    
+    return submissions;
+}
+
+bool ResultRepository::addFeedback(int resultId, const std::string& feedbackContent, const std::string& feedbackType) {
+    // Update feedback field, optionally storing feedback type in grading_details
+    std::string query = "UPDATE results SET feedback = $1, graded_at = CURRENT_TIMESTAMP WHERE result_id = $2";
+    
+    std::string s_resultId = std::to_string(resultId);
+    
+    const char* params[2];
+    params[0] = feedbackContent.c_str();
+    params[1] = s_resultId.c_str();
+    
+    PGresult* res = db->execParams(query.c_str(), 2, params);
+    bool success = (res && PQresultStatus(res) == PGRES_COMMAND_OK);
+    if (res) PQclear(res);
+    return success;
+}
+
 } // namespace server
+

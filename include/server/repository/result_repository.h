@@ -31,9 +31,14 @@ public:
     // Get all results for a user and target type
     std::vector<Payloads::ResultSummaryDTO> getResultsByUser(int userId, const std::string& targetType);
 
-    // Get pending submissions for teachers
-    // Get pending submissions for teachers
+    // Get pending submissions for teachers (legacy)
     std::vector<Payloads::PendingSubmissionDTO> getPendingSubmissions();
+
+    // Get all submissions for teacher review (using SubmissionDTO)
+    std::vector<Payloads::SubmissionDTO> getSubmissions();
+
+    // Add feedback to a result
+    bool addFeedback(int resultId, const std::string& feedbackContent, const std::string& feedbackType);
 
     // Get detailed result
     bool getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail);
