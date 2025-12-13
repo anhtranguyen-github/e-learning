@@ -6,51 +6,144 @@ import "."
 Page {
     background: Rectangle { color: Style.backgroundColor }
 
-    property var gameModel: ListModel {}
+    ListModel { id: gameListModel }
+    ListModel { id: itemsModel }
+
+    Component.onCompleted: {
+        networkManager.requestGameLevelList("sentence_match")
+    }
 
     Connections {
         target: networkManager
         
+        function onGameLevelListReceived(listData) {
+             gameListModel.clear()
+             if (listData.length === 0) return
+
+             var parts = listData.split(";")
+             
+             for (var i = 0; i < parts.length; i++) {
+                 if (parts[i].length > 0) {
+                     var dtoParts = parts[i].split("|")
+                     if (dtoParts.length >= 2) {
+                         var id = dtoParts[0]
+                         var level = dtoParts[1]
+                         var status = dtoParts[2] 
+                         
+                         gameListModel.append({ 
+                             gameId: id,
+                             gameLevel: level, 
+                             status: status
+                         })
+                     }
+                 }
+             }
+        }
+        
+        function onGameDataReceived(data) {
+             // Parse GameContentDTO: id|type|level|json
+             var parts = data.split("|")
+             if (parts.length >= 4) {
+                 var id = parts[0]
+                 var type = parts[1]
+                 var level = parts[2]
+                 // JSON can contain pipe, so join the rest
+                 var json = parts.slice(3).join("|")
+                 
+                 gameIdField.text = id
+                 
+                 // Update Type Combo
+                 for(var i=0; i<typeField.model.length; i++) {
+                     if(typeField.model[i] === type) typeField.currentIndex = i
+                 }
+
+                 // Update Level Combo
+                 var levelLower = level.toLowerCase()
+                 for(var j=0; j<levelField.model.length; j++) {
+                     if(levelField.model[j].toLowerCase() === levelLower) levelField.currentIndex = j
+                 }
+                 
+                 jsonField.text = json
+                 
+                 // Parse JSON into itemsModel
+                 itemsModel.clear()
+                 try {
+                     var arr = JSON.parse(json)
+                     if (Array.isArray(arr)) {
+                         for(var k=0; k<arr.length; k++) {
+                             itemsModel.append({ "question": arr[k].question || "", "answer": arr[k].answer || "" })
+                         }
+                     }
+                 } catch(e) {
+                     console.log("Error parsing JSON for items: " + e)
+                 }
+             }
+        }
+
         function onGameCreateSuccess(message) {
             statusMessage.text = "Game created successfully!"
             statusMessage.color = Style.successColor
+            // Refresh list
+            networkManager.requestGameLevelList(filterTypeCombo.currentText)
             // Clear inputs
-            typeField.currentIndex = 0
-            levelField.currentIndex = 0
-            jsonField.text = ""
+            clearForm()
         }
 
         function onGameCreateFailure(message) {
-            statusMessage.text = "Error: " + message
+            statusMessage.text = "Error creating game: " + message
             statusMessage.color = Style.errorColor
         }
         
         function onGameUpdateSuccess(message) {
             statusMessage.text = "Game updated successfully!"
             statusMessage.color = Style.successColor
+            networkManager.requestGameLevelList(filterTypeCombo.currentText)
+            clearForm()
         }
 
         function onGameUpdateFailure(message) {
-            statusMessage.text = "Error: " + message
+            statusMessage.text = "Error updating game: " + message
             statusMessage.color = Style.errorColor
         }
 
         function onGameDeleteSuccess(message) {
             statusMessage.text = "Game deleted successfully!"
             statusMessage.color = Style.successColor
-            deleteIdField.text = ""
+            // Refresh list
+            networkManager.requestGameLevelList(filterTypeCombo.currentText)
+            // If the deleted game was being edited, clear form
+            if (message.indexOf(gameIdField.text) !== -1) {
+                clearForm()
+            }
         }
 
         function onGameDeleteFailure(message) {
-            statusMessage.text = "Error: " + message
+            statusMessage.text = "Error deleting game: " + message
             statusMessage.color = Style.errorColor
         }
     }
 
+    function clearForm() {
+        gameIdField.text = ""
+        itemsModel.clear()
+        jsonField.text = ""
+        inputQ.text = ""
+        inputA.text = ""
+    }
+
+    function updateJson() {
+        var arr = []
+        for(var i=0; i<itemsModel.count; i++) {
+             var item = itemsModel.get(i)
+             arr.push({ "question": item.question, "answer": item.answer })
+        }
+        jsonField.text = JSON.stringify(arr, null, 2)
+    }
+
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
+        anchors.margins: Style.margin
+        spacing: Style.margin
 
         // Header
         RowLayout {
@@ -84,136 +177,361 @@ Page {
                 Layout.fillWidth: true
             }
         }
+        
+        Text {
+            id: statusMessage
+            text: ""
+            font.pixelSize: Style.bodySize
+            font.bold: true
+            Layout.alignment: Qt.AlignHCenter
+        }
 
-        ScrollView {
+        // Main 2-Column Layout
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
+            spacing: Style.margin
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 30
+            // LEFT COLUMN: Game List
+            Rectangle {
+                Layout.fillHeight: true
+                Layout.preferredWidth: parent.width * 0.4
+                color: Style.cardBackground
+                radius: Style.cornerRadius
+                border.color: "#e0e0e0"
 
-                // Create Game Section
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: createLayout.height + 40
-                    color: Style.cardBackground
-                    radius: Style.cornerRadius
-                    
-                    ColumnLayout {
-                        id: createLayout
-                        anchors.fill: parent
-                        anchors.margins: 20
-                        spacing: 15
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: Style.margin
+                    spacing: 15
 
-                        Text {
-                            text: "Create / Update Game"
-                            font.pixelSize: Style.subHeadingSize
-                            font.bold: true
-                            color: Style.textColor
-                        }
+                    Text {
+                        text: "Existing Games"
+                        font.pixelSize: Style.subHeadingSize
+                        font.bold: true
+                        color: Style.textColor
+                    }
 
-                        RowLayout {
+                    // Filter
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Type:"; color: Style.secondaryTextColor }
+                        ComboBox {
+                            id: filterTypeCombo
                             Layout.fillWidth: true
-                            spacing: 10
-                            
-                            Text { text: "ID (Update only):"; color: Style.textColor; width: 100 }
-                            TextField { 
-                                id: gameIdField
-                                placeholderText: "Leave empty for create"
-                                Layout.fillWidth: true 
+                            model: ["sentence_match", "word_match", "image_match"]
+                            onCurrentTextChanged: {
+                                networkManager.requestGameLevelList(currentText)
                             }
                         }
+                    }
+                    
+                    Rectangle { height: 1; Layout.fillWidth: true; color: "#f0f0f0" }
 
-                        RowLayout {
+                    // List
+                    ListView {
+                        id: gameList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: gameListModel
+                        spacing: 8
+
+                        delegate: Rectangle {
+                            width: gameList.width
+                            height: 60
+                            color: "#f8f9fa"
+                            radius: Style.cornerRadius
+                            border.color: gameIdField.text === model.gameId ? Style.primaryColor : "#e0e0e0"
+                            border.width: gameIdField.text === model.gameId ? 2 : 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 10
+                                
+                                Rectangle {
+                                    width: 80
+                                    height: 24
+                                    radius: 12
+                                    color: {
+                                        var lvl = model.gameLevel.toLowerCase()
+                                        if (lvl === "beginner") return Style.successColor
+                                        if (lvl === "intermediate") return Style.primaryColor
+                                        return Style.errorColor
+                                    }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: model.gameLevel
+                                        color: "white"
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                    }
+                                }
+
+                                Text {
+                                    text: "ID: " + model.gameId
+                                    font.bold: true
+                                    color: Style.textColor
+                                    Layout.fillWidth: true
+                                }
+                                
+                                Button {
+                                    text: "Edit"
+                                    flat: true
+                                    onClicked: {
+                                        statusMessage.text = "Loading..."
+                                        statusMessage.color = Style.secondaryTextColor
+                                        networkManager.requestGameData(model.gameId)
+                                    }
+                                }
+                                
+                                Button {
+                                    text: "×"
+                                    flat: true
+                                    onClicked: {
+                                        statusMessage.text = "Deleting..."
+                                        statusMessage.color = Style.secondaryTextColor
+                                        networkManager.requestAdminDeleteGame(model.gameId)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // RIGHT COLUMN: Editor
+            Rectangle {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                color: Style.cardBackground
+                radius: Style.cornerRadius
+                border.color: "#e0e0e0"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: Style.margin
+                    spacing: 15
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text {
+                            text: gameIdField.text === "" ? "Create New Game" : "Edit Game " + gameIdField.text
+                            font.pixelSize: Style.subHeadingSize
+                            font.bold: true
+                            color: Style.primaryColor
                             Layout.fillWidth: true
-                            spacing: 10
-                            
-                            Text { text: "Type:"; color: Style.textColor; width: 100 }
+                        }
+                        
+                        Button {
+                            text: "Clear / New"
+                            onClicked: clearForm()
+                        }
+                    }
+                    
+                    Rectangle { height: 1; Layout.fillWidth: true; color: "#f0f0f0" }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        
+                        // Hidden ID field logic, just displayed in title
+                        TextField { 
+                            id: gameIdField 
+                            visible: false 
+                            readOnly: true
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Text { text: "Type"; color: Style.secondaryTextColor; font.pixelSize: Style.smallSize }
                             ComboBox {
                                 id: typeField
                                 Layout.fillWidth: true
                                 model: ["sentence_match", "word_match", "image_match"]
                             }
                         }
-
-                        RowLayout {
+                        
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 10
-                            
-                            Text { text: "Level:"; color: Style.textColor; width: 100 }
+                            Text { text: "Level"; color: Style.secondaryTextColor; font.pixelSize: Style.smallSize }
                             ComboBox {
                                 id: levelField
                                 Layout.fillWidth: true
                                 model: ["beginner", "intermediate", "advanced"]
                             }
                         }
+                    }
 
+                    // Dynamic Item Manager
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: "#ffffff"
+                        
                         ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 5
+                            anchors.fill: parent
+                            spacing: 10
                             
-                            Text { text: "Question JSON:"; color: Style.textColor }
-                            TextArea {
-                                id: jsonField
+                            Text { 
+                                text: "Game Items"
+                                font.bold: true
+                                color: Style.textColor 
+                            }
+                            
+                            // Input Row
+                            RowLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 150
-                                placeholderText: '[{"question": "..."}]'
-                                wrapMode: TextEdit.Wrap
-                                background: Rectangle {
-                                    border.color: "#ccc"
+                                spacing: 10
+                                
+                                property string qLabel: {
+                                    if (typeField.currentText === "image_match") return "Image URL"
+                                    if (typeField.currentText === "sentence_match") return "Sentence Part 1"
+                                    return "Word"
+                                }
+                                property string aLabel: {
+                                    if (typeField.currentText === "image_match") return "Correct Word"
+                                    if (typeField.currentText === "sentence_match") return "Sentence Part 2"
+                                    return "Meaning/Match"
+                                }
+
+                                TextField {
+                                    id: inputQ
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 2
+                                    placeholderText: parent.qLabel
+                                    font.pixelSize: Style.bodySize
+                                    onAccepted: inputA.forceActiveFocus()
+                                }
+                                TextField {
+                                    id: inputA
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 2
+                                    placeholderText: parent.aLabel
+                                    font.pixelSize: Style.bodySize
+                                    onAccepted: addBtn.clicked() 
+                                }
+                                Button {
+                                    id: addBtn
+                                    text: "Add"
+                                    background: Rectangle {
+                                        color: Style.successColor
+                                        radius: Style.cornerRadius
+                                    }
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: "white"
+                                        font.bold: true
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    onClicked: {
+                                        if (inputQ.text !== "" && inputA.text !== "") {
+                                            itemsModel.append({ "question": inputQ.text, "answer": inputA.text })
+                                            inputQ.text = ""
+                                            inputA.text = ""
+                                            inputQ.forceActiveFocus()
+                                            updateJson()
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Items List
+                            ListView {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                model: itemsModel
+                                clip: true
+                                spacing: 5
+                                delegate: Rectangle {
+                                    width: ListView.view ? ListView.view.width : 0
+                                    height: 40
+                                    color: "#f8f9fa"
                                     radius: 4
+                                    border.color: "#e0e0e0"
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 5
+                                        spacing: 10
+                                        Text { 
+                                            text: model.question
+                                            font.pixelSize: Style.smallSize
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Text { text: "→"; color: Style.secondaryTextColor }
+                                        Text { 
+                                            text: model.answer 
+                                            font.pixelSize: Style.smallSize
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Button {
+                                            text: "×"
+                                            flat: true
+                                            Layout.preferredWidth: 30
+                                            onClicked: {
+                                                itemsModel.remove(index)
+                                                updateJson()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
 
-                        RowLayout {
-                            Layout.alignment: Qt.AlignRight
-                            spacing: 10
+                    // Raw JSON (Collapsable or Small)
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 5
+                        Text { text: "Raw JSON (Generated)"; color: Style.secondaryTextColor; font.pixelSize: Style.smallSize }
+                        TextArea {
+                            id: jsonField
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 80
+                            readOnly: true // Encourage using the builder
+                            wrapMode: TextEdit.Wrap
+                            background: Rectangle {
+                                color: "#f1f5f9"
+                                border.color: "#e0e0e0"
+                                radius: Style.cornerRadius
+                            }
+                        }
+                    }
 
-                            Button {
-                                text: "Create New"
-                                background: Rectangle {
-                                    color: Style.successColor
-                                    radius: Style.cornerRadius
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: "white"
-                                    font.bold: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                onClicked: {
-                                    statusMessage.text = "Sending request..."
-                                    statusMessage.color = Style.secondaryTextColor
+                    // Actions
+                    RowLayout {
+                        Layout.alignment: Qt.AlignRight
+                        spacing: 10
+
+                        Button {
+                            text: "Save Game"
+                            background: Rectangle {
+                                color: Style.primaryColor
+                                radius: Style.cornerRadius
+                            }
+                            contentItem: Text {
+                                text: gameIdField.text === "" ? "Create Game" : "Update Game"
+                                color: "white"
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: {
+                                statusMessage.text = "Saving..."
+                                statusMessage.color = Style.secondaryTextColor
+                                
+                                if (gameIdField.text === "") {
                                     networkManager.requestAdminCreateGame(
                                         typeField.currentText,
                                         levelField.currentText,
                                         jsonField.text
                                     )
-                                }
-                            }
-
-                            Button {
-                                text: "Update Existing"
-                                enabled: gameIdField.text.length > 0
-                                background: Rectangle {
-                                    color: style.enabled ? Style.primaryColor : Style.secondaryColor
-                                    property var style: parent
-                                    radius: Style.cornerRadius
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: "white"
-                                    font.bold: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                onClicked: {
-                                    statusMessage.text = "Sending request..."
-                                    statusMessage.color = Style.secondaryTextColor
+                                } else {
                                     networkManager.requestAdminUpdateGame(
                                         gameIdField.text,
                                         typeField.currentText,
@@ -224,69 +542,6 @@ Page {
                             }
                         }
                     }
-                }
-
-                // Delete Game Section
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: deleteLayout.height + 40
-                    color: Style.cardBackground
-                    radius: Style.cornerRadius
-                    
-                    ColumnLayout {
-                        id: deleteLayout
-                        anchors.fill: parent
-                        anchors.margins: 20
-                        spacing: 15
-
-                        Text {
-                            text: "Delete Game"
-                            font.pixelSize: Style.subHeadingSize
-                            font.bold: true
-                            color: Style.textColor
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-                            
-                            TextField { 
-                                id: deleteIdField
-                                placeholderText: "Game ID to delete"
-                                Layout.fillWidth: true 
-                            }
-                            
-                            Button {
-                                text: "Delete"
-                                enabled: deleteIdField.text.length > 0
-                                background: Rectangle {
-                                    color: style.enabled ? Style.errorColor : Style.secondaryColor
-                                    property var style: parent
-                                    radius: Style.cornerRadius
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: "white"
-                                    font.bold: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                onClicked: {
-                                    statusMessage.text = "Sending request..."
-                                    statusMessage.color = Style.secondaryTextColor
-                                    networkManager.requestAdminDeleteGame(deleteIdField.text)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                Text {
-                    id: statusMessage
-                    text: ""
-                    font.pixelSize: Style.bodySize
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
                 }
             }
         }

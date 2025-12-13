@@ -64,7 +64,7 @@ Page {
                 MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
-                    onEntered: parent.color = "#f8f9fa"
+                    onEntered: parent.color = Style.backgroundColor
                     onExited: parent.color = Style.cardBackground
                     onClicked: {
                         if (model.page === "LOGOUT") {

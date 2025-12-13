@@ -12,3 +12,6 @@ database/*.o
 *.log
 .DS_Store
 ./build_gui
+
+.shared
+.agent

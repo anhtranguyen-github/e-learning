@@ -102,8 +102,8 @@ Page {
                         
                         Text {
                             text: "Type: " + (targetType === "exam" ? "Exam" : "Exercise")
-                            font.pixelSize: Style.bodySize
-                            color: "gray"
+                            font.pixelSize: Style.smallSize
+                            color: Style.secondaryTextColor
                         }
                     }
 
@@ -132,7 +132,7 @@ Page {
                     height: col.height + 30
                     color: Style.cardBackground
                     radius: Style.cornerRadius
-                    border.color: model.status === "correct" ? "green" : "red"
+                    border.color: model.status === "correct" ? Style.successColor : Style.errorColor
                     border.width: 1
 
                     ColumnLayout {
@@ -155,7 +155,7 @@ Page {
                         Text {
                             text: "Your Answer: " + model.userAnswer
                             font.pixelSize: Style.bodySize
-                            color: model.status === "correct" ? "green" : "red"
+                            color: model.status === "correct" ? Style.successColor : Style.errorColor
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
                         }
@@ -163,7 +163,7 @@ Page {
                         Text {
                             text: "Correct Answer: " + model.correctAnswer
                             font.pixelSize: Style.bodySize
-                            color: "green"
+                            color: Style.successColor
                             visible: model.status !== "correct"
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
@@ -183,7 +183,7 @@ Page {
                             text: "Teacher Comment: " + model.teacherComment
                             font.pixelSize: Style.smallSize
                             font.italic: true
-                            color: "gray"
+                            color: Style.secondaryTextColor
                             visible: model.teacherComment !== ""
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true

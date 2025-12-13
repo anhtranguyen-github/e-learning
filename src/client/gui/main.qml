@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
+import QtGraphicalEffects 1.15
 import "."
 
 Window {
@@ -138,7 +139,7 @@ Window {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     background: Rectangle {
-                        color: "#7f8c8d" // Grey
+                        color: Style.secondaryColor
                         radius: Style.cornerRadius
                     }
                     onClicked: {
@@ -241,7 +242,7 @@ Window {
                     horizontalAlignment: Text.AlignHCenter
                 }
                 background: Rectangle {
-                    color: Style.errorColor
+                    color: parent.down ? Style.errorDarkColor : Style.errorColor
                     radius: Style.cornerRadius
                 }
                 onClicked: {
@@ -353,13 +354,22 @@ Window {
             Rectangle {
                 anchors.centerIn: parent
                 width: 400
-                height: contentLayout.height + 60
+                height: contentLayout.implicitHeight + 60
                 color: Style.cardBackground
                 radius: Style.cornerRadius
                 
                 // Simple shadow
                 border.color: "#e0e0e0"
                 border.width: 1
+
+                layer.enabled: true
+                layer.effect: DropShadow {
+                    transparentBorder: true
+                    horizontalOffset: 0
+                    verticalOffset: 2
+                    color: "#20000000"
+                    radius: 10
+                }
 
                 ColumnLayout {
                     id: contentLayout
@@ -493,7 +503,7 @@ Window {
             Rectangle {
                 anchors.centerIn: parent
                 width: 400
-                height: regContentLayout.height + 60
+                height: regContentLayout.implicitHeight + 60
                 color: Style.cardBackground
                 radius: Style.cornerRadius
                 

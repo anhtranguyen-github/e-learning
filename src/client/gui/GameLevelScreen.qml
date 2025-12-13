@@ -34,16 +34,16 @@ Page {
                         var status = dtoParts[2] // "unlocked"
 
                         var displayName = "Level: " + level.charAt(0).toUpperCase() + level.slice(1)
-                        var color = "#4e73df"
-                        if (level === "intermediate") color = "#f6c23e"
-                        if (level === "advanced") color = "#e74a3b"
+                        var color = Style.successColor // Beginner
+                        if (level === "intermediate") color = Style.primaryColor
+                        if (level === "advanced") color = Style.errorColor
 
                         levelModel.append({ 
                             gameId: id,
                             level: level, 
                             displayName: displayName,
                             status: status,
-                            color: color
+                            color: color.toString()
                         })
                     }
                 }

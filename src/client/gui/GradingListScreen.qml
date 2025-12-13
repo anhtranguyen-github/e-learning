@@ -89,7 +89,7 @@ Page {
             Text {
                 text: "Total: " + submissionModel.count
                 font.pixelSize: Style.smallSize
-                color: "gray"
+                color: Style.secondaryTextColor
             }
         }
 
@@ -105,9 +105,9 @@ Page {
             delegate: Rectangle {
                 visible: statusFilter === "all" || model.status === statusFilter
                 width: submissionListView.width
-                height: visible ? 120 : 0
                 color: Style.cardBackground
                 radius: Style.cornerRadius
+                height: visible ? 120 : 0
                 border.color: model.status === "pending" ? Style.warningColor : Style.successColor
                 border.width: 2
 
@@ -142,7 +142,7 @@ Page {
                             text: model.status === "pending" ? "PENDING" : "GRADED"
                             font.pixelSize: Style.smallSize
                             font.bold: true
-                            color: "white"
+                            color: Style.cardBackground
                         }
                     }
 
@@ -172,14 +172,14 @@ Page {
                             Text {
                                 text: "Type: " + model.targetType.charAt(0).toUpperCase() + model.targetType.slice(1)
                                 font.pixelSize: Style.bodySize
-                                color: "gray"
+                                color: Style.secondaryTextColor
                             }
                         }
 
                         Text {
                             text: "Submitted: " + model.submittedAt
                             font.pixelSize: Style.smallSize
-                            color: "gray"
+                            color: Style.secondaryTextColor
                         }
                     }
 

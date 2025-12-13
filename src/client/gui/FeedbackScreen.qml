@@ -22,7 +22,7 @@ Page {
 
         Text {
             text: "Result"
-            font.pixelSize: 32
+            font.pixelSize: Style.h1Size
             font.bold: true
             color: Style.primaryColor
             Layout.alignment: Qt.AlignHCenter
@@ -30,7 +30,7 @@ Page {
 
         Text {
             text: "Score: " + score
-            font.pixelSize: 24
+            font.pixelSize: Style.h2Size
             color: Style.textColor
             Layout.alignment: Qt.AlignHCenter
             visible: score !== ""
@@ -65,7 +65,7 @@ Page {
             Layout.preferredHeight: 50
             
             background: Rectangle {
-                color: Style.primaryColor
+                color: parent.down ? Style.primaryDarkColor : Style.primaryColor
                 radius: Style.cornerRadius
             }
             

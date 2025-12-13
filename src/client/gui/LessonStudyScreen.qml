@@ -138,7 +138,7 @@ Page {
                 Rectangle {
                     id: videoContainer
                     Layout.fillWidth: true
-                    Layout.preferredHeight: visible ? 300 : 0
+                    Layout.preferredHeight: visible ? 400 : 0
                     visible: !!lessonData.videoUrl || !!lessonData.audioUrl
                     color: "black"
                     

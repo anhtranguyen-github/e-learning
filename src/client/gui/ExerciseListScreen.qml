@@ -89,18 +89,19 @@ Page {
                     }
                     
                     RowLayout {
-                        spacing: 10
+                        spacing: Style.smallMargin
                         
                         Rectangle {
                             color: "#fff3e0"
                             radius: 4
-                            width: typeText.width + 16
-                            height: typeText.height + 8
+                            width: typeText.width + Style.smallMargin * 2
+                            height: typeText.height + Style.smallMargin
                             Text {
                                 id: typeText
                                 anchors.centerIn: parent
                                 text: model.type
                                 font.pixelSize: Style.smallSize
+                                font.bold: true
                                 color: "#ef6c00"
                             }
                         }
@@ -108,14 +109,15 @@ Page {
                         Rectangle {
                             color: "#e8f5e9"
                             radius: 4
-                            width: levelText.width + 16
-                            height: levelText.height + 8
+                            width: levelText.width + Style.smallMargin * 2
+                            height: levelText.height + Style.smallMargin
                             Text {
                                 id: levelText
                                 anchors.centerIn: parent
                                 text: model.level
                                 font.pixelSize: Style.smallSize
-                                color: Style.successColor
+                                font.bold: true
+                                color: Style.successColor                                
                             }
                         }
                     }

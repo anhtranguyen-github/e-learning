@@ -341,6 +341,7 @@ Page {
                     Layout.preferredHeight: contentHeight
                     model: mcModel
                     delegate: RadioButton {
+                        width: ListView.view.width
                         text: model.text
                         font.pixelSize: Style.bodySize
                         onCheckedChanged: if (checked) answerField.text = text
@@ -439,7 +440,7 @@ Page {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: parent.children[0].isRecording ? "Recording..." : "Tap to record"
-                        color: Style.textColor
+                        color: Style.secondaryTextColor
                         font.pixelSize: Style.smallSize
                     }
                 }
@@ -454,8 +455,8 @@ Page {
                         enabled: currentQuestionIndex > 0
                         Layout.preferredWidth: 120
                         background: Rectangle {
-                            color: parent.enabled ? "white" : "#f0f0f0"
-                            border.color: parent.enabled ? Style.primaryColor : "#cccccc"
+                            color: parent.enabled ? Style.cardBackground : "#f0f0f0"
+                            border.color: parent.enabled ? Style.primaryColor : "#e0e0e0"
                             border.width: 1
                             radius: Style.cornerRadius
                         }
@@ -477,13 +478,14 @@ Page {
                     Button {
                         text: currentQuestionIndex < (examData.questions ? examData.questions.length - 1 : 0) ? "Next" : "Submit"
                         Layout.preferredWidth: 120
+                        flat: true
                         background: Rectangle {
-                            color: parent.enabled ? Style.primaryColor : "#cccccc"
+                            color: parent.enabled ? Style.primaryColor : "#f0f0f0"
                             radius: Style.cornerRadius
                         }
                         contentItem: Text {
                             text: parent.text
-                            color: "white"
+                            color: parent.enabled ? "white" : "#999999"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             font.bold: true

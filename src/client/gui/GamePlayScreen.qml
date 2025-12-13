@@ -100,7 +100,7 @@ Page {
             Text {
                 text: "Score: " + score
                 font.bold: true
-                font.pixelSize: 18
+                font.pixelSize: Style.subHeadingSize
                 color: Style.primaryColor
             }
         }
@@ -188,7 +188,7 @@ Page {
             
             Text {
                 text: "Arrange the words to form a correct sentence:"
-                font.pixelSize: 18
+                font.pixelSize: Style.subHeadingSize
                 Layout.alignment: Qt.AlignHCenter
                 font.bold: true
                 color: Style.primaryColor
@@ -328,13 +328,13 @@ Page {
             Text {
                 text: "Select the correct meaning for:"
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 18
+                font.pixelSize: Style.subHeadingSize
             }
             
             Text {
                 text: currentPair ? currentPair.word_pair[0] : ""
                 font.bold: true
-                font.pixelSize: 32
+                font.pixelSize: Style.h1Size
                 color: Style.primaryColor
                 Layout.alignment: Qt.AlignHCenter
             }
@@ -379,7 +379,7 @@ Page {
             Text {
                 text: "Identify the image:"
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 18
+                font.pixelSize: Style.subHeadingSize
             }
 
             Image {

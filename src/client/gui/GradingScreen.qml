@@ -248,7 +248,7 @@ Page {
                 }
 
                 background: Rectangle {
-                    color: parent.down ? "#2e59d9" : "#4e73df"
+                    color: parent.down ? Style.primaryDarkColor : Style.primaryColor
                     radius: Style.cornerRadius
                 }
 

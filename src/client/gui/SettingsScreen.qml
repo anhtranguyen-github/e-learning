@@ -38,14 +38,19 @@ Page {
                     font.family: Style.fontFamily
                     font.pixelSize: Style.bodySize
                     font.bold: true
-                    color: Style.primaryColor
-                    padding: 10
+                    color: Style.textColor
+                    padding: 0
+                    leftPadding: Style.smallMargin
                 }
 
+                Layout.preferredHeight: levelColumn.implicitHeight + 40
+                
                 ColumnLayout {
+                    id: levelColumn
                     anchors.fill: parent
+                    anchors.topMargin: 10 // Make space for label
                     spacing: 10
-
+                    
                     Text {
                         text: "Select your proficiency level to adjust lesson difficulity:"
                         font.family: Style.fontFamily
@@ -83,12 +88,17 @@ Page {
                     font.family: Style.fontFamily
                     font.pixelSize: Style.bodySize
                     font.bold: true
-                    color: Style.primaryColor
-                    padding: 10
+                    color: Style.textColor
+                    padding: 0
+                    leftPadding: Style.smallMargin
                 }
 
+                Layout.preferredHeight: pathColumn.implicitHeight + 40
+
                 ColumnLayout {
+                    id: pathColumn
                     anchors.fill: parent
+                    anchors.topMargin: 10
                     spacing: 10
 
                     Text {

@@ -14,7 +14,7 @@ Page {
 
 
     background: Rectangle {
-        color: "#f5f5f5"
+        color: Style.backgroundColor
     }
 
     header: Header {
@@ -150,7 +150,7 @@ Page {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 50
-                    color: "#f8f9fa"
+                    color: Style.backgroundColor
                     border.color: "#e0e0e0"
                     border.width: 1
 
@@ -184,7 +184,7 @@ Page {
                         height: 60
                         
                         background: Rectangle {
-                            color: (currentRecipient === model.username) ? "#e3f2fd" : (parent.hovered ? "#f5f5f5" : "#ffffff")
+                            color: (currentRecipient === model.username) ? "#e3f2fd" : (parent.hovered ? Style.backgroundColor : Style.cardBackground)
                         }
 
                         RowLayout {
@@ -196,7 +196,7 @@ Page {
                                 width: 40
                                 height: 40
                                 radius: 20
-                                color: "#bdbdbd"
+                                color: Style.secondaryColor
                                 Label {
                                     anchors.centerIn: parent
                                     text: model.username.charAt(0).toUpperCase()
@@ -242,7 +242,7 @@ Page {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#f5f5f5"
+            color: Style.backgroundColor
 
             ColumnLayout {
                 anchors.fill: parent
@@ -319,7 +319,7 @@ Page {
                             spacing: 10
 
                             Rectangle {
-                                color: model.type === "SYSTEM" ? "#E0E0E0" : (model.sender === "me" ? "#DCF8C6" : "#FFFFFF")
+                                color: model.type === "SYSTEM" ? "#E0E0E0" : (model.sender === "me" ? "#DCF8C6" : Style.cardBackground)
                                 radius: 10
                                 border.color: "#e0e0e0"
                                 
@@ -336,7 +336,7 @@ Page {
                                     Label {
                                         text: model.sender
                                         font.pixelSize: 10
-                                        color: "#888888"
+                                        color: Style.secondaryTextColor
                                         visible: model.sender !== "me" && model.type !== "SYSTEM"
                                     }
 
@@ -374,7 +374,7 @@ Page {
                                     Label {
                                         text: model.timestamp
                                         font.pixelSize: 10
-                                        color: "#888888"
+                                        color: Style.secondaryTextColor
                                         Layout.alignment: Qt.AlignRight
                                         visible: model.type !== "SYSTEM"
                                     }
