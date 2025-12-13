@@ -35,12 +35,15 @@ Page {
             incomingCaller = callerUsername
             incomingCallerId = callerId
             incomingCallDialog.open()
+            addSystemMessage("Incoming Call from " + callerUsername)
         }
         
         function onCallAnswered(username) {
             inCall = true
             callPartner = username
+            outgoingCallDialog.close()
             inCallDialog.open()
+            addSystemMessage("Call Answered")
         }
         
         function onCallEnded(reason) {
@@ -48,13 +51,17 @@ Page {
             callPartner = ""
             inCallDialog.close()
             incomingCallDialog.close()
+            outgoingCallDialog.close()
+            addSystemMessage("Call Ended: " + reason)
         }
         
         function onCallFailed(reason) {
             inCall = false
             callPartner = ""
+            outgoingCallDialog.close()
             callFailedMessage.text = reason
             callFailedMessage.visible = true
+            addSystemMessage("Call Failed: " + reason)
         }
     }
 
@@ -217,6 +224,63 @@ Page {
                     inCall = false
                     callPartner = ""
                     inCallDialog.close()
+                }
+            }
+        }
+    }
+
+    // Outgoing Call Dialog
+    Dialog {
+        id: outgoingCallDialog
+        title: "Calling..."
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 300
+        
+        background: Rectangle {
+            color: Style.cardBackground
+            radius: Style.cornerRadius
+            border.color: Style.primaryColor
+            border.width: 2
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+
+            Text {
+                text: "📞"
+                font.pixelSize: 48
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "Calling " + currentRecipient + "..."
+                font.family: Style.fontFamily
+                font.pixelSize: Style.subHeadingSize
+                font.bold: true
+                color: Style.textColor
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Button {
+                text: "Cancel"
+                Layout.alignment: Qt.AlignHCenter
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                background: Rectangle {
+                    color: Style.errorColor
+                    radius: Style.cornerRadius
+                }
+                onClicked: {
+                    networkManager.endCall(currentRecipient)
+                    outgoingCallDialog.close()
                 }
             }
         }
@@ -401,6 +465,8 @@ Page {
                             }
                             onClicked: {
                                 networkManager.initiateCall(currentRecipient)
+                                outgoingCallDialog.open()
+                                addSystemMessage("Call Initiated")
                             }
                         }
                     }
@@ -427,13 +493,14 @@ Page {
                             spacing: 10
 
                             Rectangle {
-                                color: model.sender === "me" ? "#DCF8C6" : "#FFFFFF"
+                                color: model.type === "SYSTEM" ? "#E0E0E0" : (model.sender === "me" ? "#DCF8C6" : "#FFFFFF")
                                 radius: 10
                                 border.color: "#e0e0e0"
                                 
                                 Layout.maximumWidth: chatListView.width * 0.7
                                 Layout.preferredWidth: msgContent.width + 20
                                 Layout.preferredHeight: msgContent.height + 20
+                                Layout.alignment: model.type === "SYSTEM" ? Qt.AlignHCenter : (model.sender === "me" ? Qt.AlignRight : Qt.AlignLeft)
 
                                 ColumnLayout {
                                     id: msgContent
@@ -444,7 +511,7 @@ Page {
                                         text: model.sender
                                         font.pixelSize: 10
                                         color: "#888888"
-                                        visible: model.sender !== "me"
+                                        visible: model.sender !== "me" && model.type !== "SYSTEM"
                                     }
 
                                     Loader {
@@ -456,6 +523,7 @@ Page {
                                                 text: model.content
                                                 wrapMode: Text.Wrap
                                                 width: Math.min(implicitWidth, chatListView.width * 0.6)
+                                                horizontalAlignment: model.type === "SYSTEM" ? Text.AlignHCenter : Text.AlignLeft
                                             }
                                         }
 
@@ -476,6 +544,7 @@ Page {
                                         font.pixelSize: 10
                                         color: "#888888"
                                         Layout.alignment: Qt.AlignRight
+                                        visible: model.type !== "SYSTEM"
                                     }
                                 }
                             }
@@ -645,6 +714,19 @@ Page {
 
     Component.onCompleted: {
         networkManager.requestRecentChats()
+    }
+
+    function addSystemMessage(text) {
+        var now = new Date()
+        var timestamp = now.toLocaleTimeString()
+        
+        chatModel.append({
+            "sender": "System",
+            "content": text,
+            "type": "SYSTEM",
+            "timestamp": timestamp
+        })
+        chatListView.positionViewAtEnd()
     }
 
     function sendMessage() {
