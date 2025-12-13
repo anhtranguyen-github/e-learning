@@ -246,6 +246,7 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
 }
 
 void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg) {
+    (void)clientFd; // Suppress unused parameter warning
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
@@ -276,6 +277,7 @@ void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg
 }
 
 void ChatController::handleCallDecline(int clientFd, const protocol::Message& msg) {
+    (void)clientFd; // Suppress unused parameter warning
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
@@ -302,6 +304,7 @@ void ChatController::handleCallDecline(int clientFd, const protocol::Message& ms
 }
 
 void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
+    (void)clientFd; // Suppress unused parameter warning
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
