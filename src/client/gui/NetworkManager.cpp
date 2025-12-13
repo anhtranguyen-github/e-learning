@@ -159,6 +159,14 @@ void NetworkManager::requestExam(int id) {
     }
 }
 
+void NetworkManager::requestExamReview(int id) {
+    if (m_client->requestExamReview(id)) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request exam review");
+    }
+}
+
 void NetworkManager::submitAnswer(const QString &targetType, int targetId, const QString &answer) {
     if (m_client->submitAnswer(targetType.toStdString(), targetId, answer.toStdString())) {
         // Success

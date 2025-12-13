@@ -74,12 +74,12 @@ public:
     bool requestResultList();
     bool requestResultDetail(const std::string& targetType, const std::string& targetId);
     bool requestPendingSubmissions();
-    bool submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback);
-
+    bool submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback, const std::string& gradingDetails = "{}");
     // Exercise and exam requests
     bool requestExercises();
     bool requestExams();
-    bool requestExam(int examId);
+    bool requestExam(int examId);            // Student exam request
+    bool requestExamReview(int examId);      // Teacher exam review (no restrictions)
 
     // Chat
     bool sendPrivateMessage(const std::string& recipient, const std::string& content, const std::string& type = "TEXT");

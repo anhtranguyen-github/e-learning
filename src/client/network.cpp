@@ -759,6 +759,30 @@ bool NetworkClient::requestExam(int examId) {
     return true;
 }
 
+bool NetworkClient::requestExamReview(int examId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request exam review");
+        }
+        return false;
+    }
+
+    Payloads::ExamRequest req;
+    req.sessionToken = sessionToken;
+    req.examId = std::to_string(examId);
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::EXAM_REVIEW_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send exam review request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 bool NetworkClient::sendPrivateMessage(const std::string& recipient, const std::string& content, const std::string& type) {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {

@@ -33,7 +33,7 @@ Page {
         if (targetType === "exercise") {
             networkManager.requestExercise(160, tId)
         } else if (targetType === "exam") {
-            networkManager.requestExam(tId)
+            networkManager.requestExamReview(tId)  // Teacher uses review endpoint
         }
     }
 

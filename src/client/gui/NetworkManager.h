@@ -30,6 +30,7 @@ public:
     Q_INVOKABLE void requestResultList();
     Q_INVOKABLE void requestExercise(int type, int id);
     Q_INVOKABLE void requestExam(int id);
+    Q_INVOKABLE void requestExamReview(int id);  // Teacher exam review
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
     Q_INVOKABLE void requestPendingSubmissions();
     Q_INVOKABLE void requestResultDetail(const QString &targetType, const QString &targetId);
