@@ -202,12 +202,18 @@ void ChatController::handleUserGetRecentChats(int clientFd, const protocol::Mess
 }
 
 void ChatController::handleCallInitiate(int clientFd, const protocol::Message& msg) {
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Handling Call Initiate request from fd=" + std::to_string(clientFd));
+    }
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
 
     int callerId = sessionManager->get_user_id_by_session(req.sessionToken);
     if (callerId == -1) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("[VoiceCall] Initiate failed: Invalid session for fd=" + std::to_string(clientFd));
+        }
         protocol::Message response(protocol::MsgCode::CALL_FAILED, "Invalid session");
         std::vector<uint8_t> data = response.serialize();
         send(clientFd, data.data(), data.size(), 0);
@@ -218,6 +224,9 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
     int targetId = userRepository->getUserId(req.targetUser);
     
     if (targetId == -1) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("[VoiceCall] Initiate failed: Target user '" + req.targetUser + "' not found.");
+        }
         protocol::Message response(protocol::MsgCode::CALL_FAILED, "User not found");
         std::vector<uint8_t> data = response.serialize();
         send(clientFd, data.data(), data.size(), 0);
@@ -226,9 +235,15 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
 
     // Check if target is online
     bool isTargetOnline = connectionManager->isUserOnline(targetId);
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Target '" + req.targetUser + "' online status: " + (isTargetOnline ? "Online" : "Offline"));
+    }
     
     // Check if sender is already in a call (Single Call Session)
     if (activeUsersInCall.count(caller.getUsername()) > 0 || pendingCalls.count(caller.getUsername()) > 0) {
+        if (logger::serverLogger) {
+            logger::serverLogger->info("[VoiceCall] Initiate failed: Caller '" + caller.getUsername() + "' is already in a call.");
+        }
         protocol::Message response(protocol::MsgCode::CALL_FAILED, "You are already in a call");
         std::vector<uint8_t> data = response.serialize();
         send(clientFd, data.data(), data.size(), 0);
@@ -236,7 +251,6 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
     }
 
     // Check if target is busy (in a call or receiving a call)
-    // Note: checking pendingCalls by receiver key (targetUser). Also check if target is a caller in pendingCalls?
     bool targetIsBusy = false;
     if (activeUsersInCall.count(req.targetUser) > 0) targetIsBusy = true;
     if (pendingCalls.count(req.targetUser) > 0) targetIsBusy = true; // Receiving a call
@@ -250,6 +264,9 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
     }
 
     if (targetIsBusy) {
+        if (logger::serverLogger) {
+            logger::serverLogger->info("[VoiceCall] Initiate failed: Target '" + req.targetUser + "' is busy.");
+        }
         protocol::Message response(protocol::MsgCode::CALL_FAILED, "User is busy");
         std::vector<uint8_t> data = response.serialize();
         send(clientFd, data.data(), data.size(), 0);
@@ -274,22 +291,23 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
 
     // Send incoming call notification ONLY if target is online
     if (isTargetOnline) {
+        if (logger::serverLogger) {
+            logger::serverLogger->info("[VoiceCall] Sending CALL_INCOMING to '" + req.targetUser + "' (ID: " + std::to_string(targetId) + ")");
+        }
         Payloads::VoiceCallNotification notification;
         notification.callerUsername = caller.getUsername();
         notification.callerId = std::to_string(callerId);
         
         protocol::Message callNotification(protocol::MsgCode::CALL_INCOMING, notification.serialize());
         connectionManager->sendToUser(targetId, callNotification);
-    } 
-    // If offline, we effectively simulate ringing by doing nothing here and waiting for timeout.
-
-    if (logger::serverLogger) {
-        logger::serverLogger->info("Call initiated from " + caller.getUsername() + " to " + req.targetUser);
+    } else {
+        if (logger::serverLogger) {
+            logger::serverLogger->info("[VoiceCall] Target '" + req.targetUser + "' is offline. Waiting for timeout logic.");
+        }
     }
 
-
     if (logger::serverLogger) {
-        logger::serverLogger->info("Call initiated from " + caller.getUsername() + " to " + req.targetUser);
+        logger::serverLogger->info("[VoiceCall] Call initiated successfully: " + caller.getUsername() + " -> " + req.targetUser);
     }
 
     // Save SYSTEM message
@@ -304,6 +322,9 @@ void ChatController::handleCallInitiate(int clientFd, const protocol::Message& m
 
 void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg) {
     (void)clientFd;
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Handling Call Answer request.");
+    }
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
@@ -318,7 +339,9 @@ void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg
     // Verify this call was pending
     std::string answererName = answerer.getUsername();
     if (pendingCalls.count(answererName) == 0 || pendingCalls[answererName].caller != req.targetUser) {
-        // Call not found or expired
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("[VoiceCall] Answer failed: No pending call found for " + answererName + " from " + req.targetUser);
+        }
         return; 
     }
 
@@ -338,7 +361,7 @@ void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg
     connectionManager->sendToUser(callerId, response);
 
     if (logger::serverLogger) {
-        logger::serverLogger->info("Call answered by " + answerer.getUsername());
+        logger::serverLogger->info("[VoiceCall] Call connected: " + req.targetUser + " <-> " + answererName);
     }
 
     // Save SYSTEM message
@@ -353,6 +376,9 @@ void ChatController::handleCallAnswer(int clientFd, const protocol::Message& msg
 
 void ChatController::handleCallDecline(int clientFd, const protocol::Message& msg) {
     (void)clientFd;
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Handling Call Decline request.");
+    }
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
@@ -367,8 +393,14 @@ void ChatController::handleCallDecline(int clientFd, const protocol::Message& ms
     std::string declinerName = decliner.getUsername();
 
     // Remove from pending if exists
+    bool callFound = false;
     if (pendingCalls.count(declinerName) > 0) {
         pendingCalls.erase(declinerName);
+        callFound = true;
+    }
+
+    if (!callFound && logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Decline: No pending call found for " + declinerName);
     }
 
     // Notify caller that call was declined
@@ -376,7 +408,7 @@ void ChatController::handleCallDecline(int clientFd, const protocol::Message& ms
     connectionManager->sendToUser(callerId, response);
 
     if (logger::serverLogger) {
-        logger::serverLogger->info("Call declined by " + decliner.getUsername());
+        logger::serverLogger->info("[VoiceCall] Call declined by " + decliner.getUsername() + " (Caller: " + req.targetUser + ")");
     }
 
     // Save SYSTEM message
@@ -391,6 +423,9 @@ void ChatController::handleCallDecline(int clientFd, const protocol::Message& ms
 
 void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
     (void)clientFd;
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[VoiceCall] Handling Call End request.");
+    }
     std::string payload = msg.toString();
     Payloads::VoiceCallRequest req;
     req.deserialize(payload);
@@ -407,15 +442,14 @@ void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
     activeUsersInCall.erase(req.targetUser);
 
     // Also check pending calls just in case (e.g. cancelling an initiated call)
-    // If Ender was the Caller (cancelling request)
-    // We check if 'req.targetUser' has a pending call from 'ender'
+    bool wasPending = false;
     if (pendingCalls.count(req.targetUser) > 0 && pendingCalls[req.targetUser].caller == ender.getUsername()) {
         pendingCalls.erase(req.targetUser);
+        wasPending = true;
     }
-    // If Ender was the Receiver (should match handleCallDecline logic, but maybe they accepted then ended?)
-    // If they were in pending, handleCallEnd (cancel) is valid too.
     if (pendingCalls.count(ender.getUsername()) > 0) {
         pendingCalls.erase(ender.getUsername());
+        wasPending = true;
     }
 
     // Notify other party
@@ -423,7 +457,7 @@ void ChatController::handleCallEnd(int clientFd, const protocol::Message& msg) {
     connectionManager->sendToUser(otherId, response);
 
     if (logger::serverLogger) {
-        logger::serverLogger->info("Call ended by " + ender.getUsername());
+        logger::serverLogger->info("[VoiceCall] Call ended by " + ender.getUsername() + " with " + req.targetUser + (wasPending ? " (Cancelled Pending)" : ""));
     }
 
     // Save SYSTEM message
