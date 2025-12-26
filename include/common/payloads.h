@@ -545,16 +545,18 @@ namespace Payloads {
     struct SubmissionDTO : public ISerializable {
         std::string resultId;
         std::string studentName;
+        std::string studentId;
         std::string targetType;     // "exercise" or "exam"
         std::string targetTitle;
         std::string targetId;
+        std::string lessonId;
         std::string submittedAt;
         std::string status;         // "pending" or "graded"
         std::string score;
         std::string userAnswer;
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {resultId, studentName, targetType, targetTitle, targetId, submittedAt, status, score, userAnswer};
+            std::vector<std::string> parts = {resultId, studentName, targetType, targetTitle, targetId, submittedAt, status, score, userAnswer, studentId, lessonId};
             return utils::join(parts, '|');
         }
 
@@ -569,6 +571,8 @@ namespace Payloads {
             if (parts.size() >= 7) status = parts[6];
             if (parts.size() >= 8) score = parts[7];
             if (parts.size() >= 9) userAnswer = parts[8];
+            if (parts.size() >= 10) studentId = parts[9];
+            if (parts.size() >= 11) lessonId = parts[10];
         }
     };
 

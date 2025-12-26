@@ -28,7 +28,7 @@ Page {
             if (parts.length > 1) {
                 for (var i = 1; i < parts.length; i++) {
                     var itemParts = parts[i].split('|')
-                    // SubmissionDTO: resultId|studentName|targetType|targetTitle|targetId|submittedAt|status|score|userAnswer
+                    // SubmissionDTO: resultId|studentName|targetType|targetTitle|targetId|submittedAt|status|score|userAnswer|studentId|lessonId
                     if (itemParts.length >= 7) {
                         submissionModel.append({
                             "resultId": itemParts[0],
@@ -39,7 +39,9 @@ Page {
                             "submittedAt": itemParts[5],
                             "status": itemParts[6] || "pending",
                             "score": itemParts.length >= 8 ? itemParts[7] : "0",
-                            "userAnswer": itemParts.length >= 9 ? itemParts[8] : ""
+                            "userAnswer": itemParts.length >= 9 ? itemParts[8] : "",
+                            "studentId": itemParts.length >= 10 ? itemParts[9] : "",
+                            "lessonId": itemParts.length >= 11 ? itemParts[10] : ""
                         })
                     }
                 }
@@ -117,10 +119,12 @@ Page {
                         stackView.push("GradingScreen.qml", {
                             "resultId": model.resultId,
                             "userName": model.studentName,
+                            "studentId": model.studentId,
                             "targetType": model.targetType,
                             "targetTitle": model.targetTitle,
                             "userAnswer": model.userAnswer,
-                            "targetId": model.targetId
+                            "targetId": model.targetId,
+                            "lessonId": model.lessonId
                         })
                     }
                 }

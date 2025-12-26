@@ -190,14 +190,48 @@ bool ResultRepository::getResultDetail(int userId, const std::string& targetType
     std::string jsonContent;
 
     if (targetType == "exercise") {
-        std::string contentQuery = "SELECT title, questions FROM exercises WHERE exercise_id = " + std::to_string(targetId);
+        std::string contentQuery = "SELECT title, question, answer, options, explanation, type FROM exercises WHERE exercise_id = " + std::to_string(targetId);
         res = db->query(contentQuery);
         if (!res || PQntuples(res) == 0) {
             if (res) PQclear(res);
             return false;
         }
         detail.title = PQgetvalue(res, 0, 0);
-        jsonContent = PQgetvalue(res, 0, 1) ? PQgetvalue(res, 0, 1) : "";
+        std::string questionText = PQgetvalue(res, 0, 1) ? PQgetvalue(res, 0, 1) : "";
+        std::string answerText = PQgetvalue(res, 0, 2) ? PQgetvalue(res, 0, 2) : "";
+        std::string optionsText = PQgetvalue(res, 0, 3) ? PQgetvalue(res, 0, 3) : "";
+        std::string explanationText = PQgetvalue(res, 0, 4) ? PQgetvalue(res, 0, 4) : "";
+        std::string typeText = PQgetvalue(res, 0, 5) ? PQgetvalue(res, 0, 5) : "";
+        if (typeText == "essay" || typeText == "speaking") {
+            jsonContent.clear();
+        } else if (!questionText.empty()) {
+            Json::Value root(Json::arrayValue);
+            Json::Value item;
+            item["text"] = questionText;
+            item["type"] = typeText;
+            item["answer"] = answerText;
+            item["explanation"] = explanationText;
+
+            Json::Value opts(Json::arrayValue);
+            if (!optionsText.empty()) {
+                Json::Value parsedOptions;
+                Json::Reader optionsReader;
+                if (optionsReader.parse(optionsText, parsedOptions) && parsedOptions.isArray()) {
+                    opts = parsedOptions;
+                } else {
+                    auto splitOpts = utils::split(optionsText, ',');
+                    for (const auto& opt : splitOpts) {
+                        if (!opt.empty()) {
+                            opts.append(opt);
+                        }
+                    }
+                }
+            }
+            item["options"] = opts;
+            root.append(item);
+            Json::FastWriter writer;
+            jsonContent = writer.write(root);
+        }
         PQclear(res);
 
     } else if (targetType == "exam") {
@@ -280,9 +314,10 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
     std::vector<Payloads::SubmissionDTO> submissions;
     
     // Get all submissions with proper joins for titles and scores
-    std::string query = "SELECT r.result_id, u.username, r.target_type, r.target_id, r.submitted_at, "
+    std::string query = "SELECT r.result_id, u.username, r.user_id, r.target_type, r.target_id, r.submitted_at, "
                         "r.user_answer, r.status, r.score, "
-                        "COALESCE(ex.title, e.title, 'Unknown') as title "
+                        "COALESCE(ex.title, e.title, 'Unknown') as title, "
+                        "COALESCE(ex.lesson_id, e.lesson_id) as lesson_id "
                         "FROM results r "
                         "JOIN users u ON r.user_id = u.user_id "
                         "LEFT JOIN exercises ex ON r.target_type = 'exercise' AND r.target_id = ex.exercise_id "
@@ -296,13 +331,15 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
             Payloads::SubmissionDTO dto;
             dto.resultId = PQgetvalue(result, i, 0);
             dto.studentName = PQgetvalue(result, i, 1);
-            dto.targetType = PQgetvalue(result, i, 2);
-            dto.targetId = PQgetvalue(result, i, 3);
-            dto.submittedAt = PQgetvalue(result, i, 4);
-            dto.userAnswer = PQgetvalue(result, i, 5);
-            dto.status = PQgetvalue(result, i, 6);
-            dto.score = PQgetvalue(result, i, 7) ? PQgetvalue(result, i, 7) : "0";
-            dto.targetTitle = PQgetvalue(result, i, 8);
+            dto.studentId = PQgetvalue(result, i, 2);
+            dto.targetType = PQgetvalue(result, i, 3);
+            dto.targetId = PQgetvalue(result, i, 4);
+            dto.submittedAt = PQgetvalue(result, i, 5);
+            dto.userAnswer = PQgetvalue(result, i, 6);
+            dto.status = PQgetvalue(result, i, 7);
+            dto.score = PQgetvalue(result, i, 8) ? PQgetvalue(result, i, 8) : "0";
+            dto.targetTitle = PQgetvalue(result, i, 9);
+            dto.lessonId = PQgetvalue(result, i, 10) ? PQgetvalue(result, i, 10) : "";
             submissions.push_back(dto);
         }
         PQclear(result);
@@ -330,4 +367,3 @@ bool ResultRepository::addFeedback(int resultId, const std::string& feedbackCont
 }
 
 } // namespace server
-

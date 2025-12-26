@@ -1,5 +1,6 @@
 #include "server/repository/exercise_repository.h"
 #include "common/logger.h"
+#include "common/utils.h"
 #include <sstream>
 #include <algorithm>
 #include <json/json.h>
@@ -76,8 +77,56 @@ bool ExerciseRepository::parseExerciseFromRow(PGresult* result, int row, Exercis
 
         // Try to parse from 'questions' column first
         int col_questions = PQfnumber(result, "questions");
+        bool hasQuestions = false;
         if (col_questions != -1 && !PQgetisnull(result, row, col_questions)) {
-            exercise.setQuestions(parseQuestions(PQgetvalue(result, row, col_questions)));
+            auto parsed = parseQuestions(PQgetvalue(result, row, col_questions));
+            if (!parsed.empty()) {
+                exercise.setQuestions(parsed);
+                hasQuestions = true;
+            }
+        }
+
+        if (!hasQuestions) {
+            int col_question = PQfnumber(result, "question");
+            if (col_question != -1 && !PQgetisnull(result, row, col_question)) {
+                exercise.setQuestion(PQgetvalue(result, row, col_question));
+
+                int col_answer = PQfnumber(result, "answer");
+                if (col_answer != -1 && !PQgetisnull(result, row, col_answer)) {
+                    exercise.setAnswer(PQgetvalue(result, row, col_answer));
+                }
+
+                int col_explanation = PQfnumber(result, "explanation");
+                if (col_explanation != -1 && !PQgetisnull(result, row, col_explanation)) {
+                    exercise.setExplanation(PQgetvalue(result, row, col_explanation));
+                }
+
+                int col_options = PQfnumber(result, "options");
+                if (col_options != -1 && !PQgetisnull(result, row, col_options)) {
+                    std::string optionsRaw = PQgetvalue(result, row, col_options);
+                    if (!optionsRaw.empty()) {
+                        std::vector<std::string> opts;
+                        Json::Value optionsJson;
+                        Json::Reader optionsReader;
+                        if (optionsReader.parse(optionsRaw, optionsJson) && optionsJson.isArray()) {
+                            for (const auto& opt : optionsJson) {
+                                opts.push_back(opt.asString());
+                            }
+                        } else {
+                            opts = utils::split(optionsRaw, ',');
+                        }
+                        if (!opts.empty()) {
+                            exercise.setOptions(opts);
+                        }
+                    }
+                }
+
+                auto qs = exercise.getQuestions();
+                if (!qs.empty()) {
+                    qs[0].setType(exercise.getType());
+                    exercise.setQuestions(qs);
+                }
+            }
         }
 
         return true;

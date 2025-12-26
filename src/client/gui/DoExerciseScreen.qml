@@ -19,6 +19,8 @@ Page {
     property var examData: ({ questions: [] })
     property var preloadedExamData: null
     property int currentQuestionIndex: 0
+    property string speakingRecordingPath: ""
+    property bool speakingHasRecording: false
     
     readonly property int questionCount: {
         if (root.examData && root.examData.questions && Array.isArray(root.examData.questions)) {
@@ -168,9 +170,18 @@ Page {
         } else {
             answerField.text = ""
         }
+
+        if (exerciseTypeStr.toUpperCase().indexOf("SPEAKING") !== -1) {
+            speakingRecordingPath = answerField.text
+            speakingHasRecording = answerField.text !== ""
+        } else {
+            speakingRecordingPath = ""
+            speakingHasRecording = false
+        }
     }
 
     ListModel { id: mcModel }
+
 
         // Question Overview Panel (Drawer)
         Drawer {
@@ -429,9 +440,19 @@ Page {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                parent.isRecording = !parent.isRecording
                                 if (!parent.isRecording) {
-                                    answerField.text = "[Audio Recording Submitted]"
+                                    speakingRecordingPath = networkManager.startSpeakingRecording()
+                                    if (speakingRecordingPath === "") {
+                                        resultText.text = "Audio recording unavailable."
+                                        resultText.color = Style.errorColor
+                                        return
+                                    }
+                                    parent.isRecording = true
+                                } else {
+                                    speakingRecordingPath = networkManager.stopSpeakingRecording()
+                                    parent.isRecording = false
+                                    speakingHasRecording = true
+                                    answerField.text = speakingRecordingPath
                                 }
                             }
                         }
@@ -439,7 +460,7 @@ Page {
                     
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: parent.children[0].isRecording ? "Recording..." : "Tap to record"
+                        text: parent.children[0].isRecording ? "Recording..." : (speakingHasRecording ? "Recording saved" : "Tap to record")
                         color: Style.secondaryTextColor
                         font.pixelSize: Style.smallSize
                     }

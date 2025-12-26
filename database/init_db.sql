@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS results (
     status VARCHAR(20) CHECK (status IN ('pending', 'graded')) DEFAULT 'graded'
 );
 
+
 CREATE TABLE IF NOT EXISTS game_items (
     game_id SERIAL PRIMARY KEY,
     type VARCHAR(50) CHECK (type IN ('word_match', 'sentence_match', 'image_match')),

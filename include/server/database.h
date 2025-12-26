@@ -2,7 +2,7 @@
 #define DATABASE_H
 
 #include <string>
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 #include <mutex>
 
 namespace server {

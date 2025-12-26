@@ -1,7 +1,28 @@
 # Compiler and flags
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -I/usr/include/jsoncpp -pthread
-LDFLAGS = -pthread -lpq -ljsoncpp
+UNAME_S := $(shell uname -s)
+PKG_CONFIG := $(shell command -v pkg-config 2>/dev/null)
+
+CXX ?= g++
+CXXFLAGS ?= -std=c++17 -Wall -Wextra -I./include -pthread
+LDFLAGS ?= -pthread -lpq -ljsoncpp
+
+ifneq (,$(findstring Linux,$(UNAME_S)))
+	CXXFLAGS += -I/usr/include/jsoncpp
+endif
+
+ifneq (,$(findstring Darwin,$(UNAME_S)))
+	CXX ?= clang++
+	BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
+	ifneq ($(BREW_PREFIX),)
+		CXXFLAGS += -I$(BREW_PREFIX)/include -I$(BREW_PREFIX)/opt/jsoncpp/include -I$(BREW_PREFIX)/opt/libpq/include
+		LDFLAGS += -L$(BREW_PREFIX)/lib -L$(BREW_PREFIX)/opt/jsoncpp/lib -L$(BREW_PREFIX)/opt/libpq/lib
+	endif
+endif
+
+ifneq ($(PKG_CONFIG),)
+	CXXFLAGS += $(shell pkg-config --cflags jsoncpp libpq 2>/dev/null)
+	LDFLAGS += $(shell pkg-config --libs jsoncpp libpq 2>/dev/null)
+endif
 
 # Directories
 SRC_DIR = src

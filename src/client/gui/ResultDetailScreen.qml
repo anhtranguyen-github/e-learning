@@ -122,6 +122,7 @@ Page {
                 font.pixelSize: Style.subHeadingSize
                 font.bold: true
                 color: Style.textColor
+                visible: questionModel.count > 0
             }
 
             // Questions List

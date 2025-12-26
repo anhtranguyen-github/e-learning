@@ -1,15 +1,18 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtMultimedia 5.15
 import "."
 
 Page {
     property string resultId
     property string userName
+    property string studentId
     property string targetType
     property string targetTitle
     property string userAnswer
     property string targetId
+    property string lessonId
 
     background: Rectangle { color: Style.backgroundColor }
     
@@ -65,6 +68,13 @@ Page {
                 var qObj = JSON.parse(qStr)
                 var qText = qObj.text || qObj.question || "Question " + (i+1)
                 var qType = qObj.type || "unknown"
+                var audioPath = ""
+                if (qType.toLowerCase().indexOf("speaking") !== -1 && uAns !== "") {
+                    audioPath = networkManager.saveAudioFromBase64(uAns)
+                    if (audioPath !== "") {
+                        uAns = "Audio recording"
+                    }
+                }
                 
                 questionModel.append({
                     "index": i,
@@ -73,7 +83,8 @@ Page {
                     "userAnswer": uAns,
                     "correctAnswer": qObj.answer || qObj.correctAnswer || "N/A",
                     "score": "0",
-                    "comment": ""
+                    "comment": "",
+                    "audioPath": audioPath
                 })
             } catch (e) {
                 console.log("Error parsing question JSON:", e)
@@ -83,7 +94,8 @@ Page {
                     "type": "unknown",
                     "userAnswer": uAns,
                     "score": "0",
-                    "comment": ""
+                    "comment": "",
+                    "audioPath": ""
                 })
             }
         }
@@ -104,13 +116,20 @@ Page {
             radius: Style.cornerRadius
             border.color: "#e0e0e0"
 
-            ColumnLayout {
-                id: contentCol
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.margins: 15
-                spacing: 10
+                ColumnLayout {
+                    id: contentCol
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 15
+                    spacing: 10
+
+                    Text {
+                        text: "Student ID: " + studentId + " | Lesson ID: " + lessonId
+                        font.pixelSize: Style.smallSize
+                        color: Style.secondaryTextColor
+                        visible: studentId !== "" || lessonId !== ""
+                    }
 
                 // Question Header
                 Text {
@@ -143,6 +162,27 @@ Page {
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     color: Style.textColor
+                }
+
+                RowLayout {
+                    visible: model.audioPath && model.audioPath !== ""
+                    spacing: 10
+
+                    Audio {
+                        id: audioPlayer
+                        source: model.audioPath === "" ? "" : ("file://" + model.audioPath)
+                    }
+
+                    Button {
+                        text: audioPlayer.playbackState === Audio.PlayingState ? "Stop Audio" : "Play Audio"
+                        onClicked: {
+                            if (audioPlayer.playbackState === Audio.PlayingState) {
+                                audioPlayer.stop()
+                            } else {
+                                audioPlayer.play()
+                            }
+                        }
+                    }
                 }
 
                 Rectangle { height: 1; Layout.fillWidth: true; color: "#e0e0e0" }

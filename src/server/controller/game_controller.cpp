@@ -35,12 +35,13 @@ void GameController::handleGameListRequest(int clientFd, const protocol::Message
     for (const auto& type : types) {
         Payloads::GameMetadataDTO dto;
         dto.type = type;
-        // Mock description based on type
-        if (type == "sentence_match") dto.description = "Match sentence fragments to form correct sentences.";
-        else if (type == "word_match") dto.description = "Match words to their meanings.";
-        else if (type == "image_match") dto.description = "Match words to the correct images.";
-        else dto.description = "A fun game to learn English.";
         
+          // Mock description based on type
+        // if (type == "sentence_match") dto.description = "Match sentence fragments to form correct sentences.";
+        // else if (type == "word_match") dto.description = "Match words to their meanings.";
+        // else if (type == "image_match") dto.description = "Match words to the correct images.";
+        // else dto.description = "A fun game to learn English.";
+
         serializedGames.push_back(dto.serialize());
     }
 

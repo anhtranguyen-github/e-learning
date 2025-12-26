@@ -6,6 +6,8 @@
 #include <QStandardPaths>
 #include <QDateTime>
 #include <QCryptographicHash>
+#include <QUrl>
+#include <QAudioEncoderSettings>
 
 NetworkManager::NetworkManager(QObject *parent)
     : QObject(parent), m_client(std::make_unique<client::NetworkClient>()) {
@@ -13,6 +15,15 @@ NetworkManager::NetworkManager(QObject *parent)
     m_pollTimer = new QTimer(this);
     m_pollTimer->setInterval(100); // Poll every 100ms
     connect(m_pollTimer, &QTimer::timeout, this, &NetworkManager::checkMessages);
+
+    m_audioRecorder = new QAudioRecorder(this);
+    QAudioEncoderSettings audioSettings;
+    audioSettings.setCodec("audio/pcm");
+    audioSettings.setSampleRate(44100);
+    audioSettings.setChannelCount(1);
+    audioSettings.setQuality(QMultimedia::HighQuality);
+    m_audioRecorder->setAudioSettings(audioSettings);
+    m_audioRecorder->setContainerFormat("wav");
 }
 
 NetworkManager::~NetworkManager() {
@@ -168,11 +179,100 @@ void NetworkManager::requestExamReview(int id) {
 }
 
 void NetworkManager::submitAnswer(const QString &targetType, int targetId, const QString &answer) {
-    if (m_client->submitAnswer(targetType.toStdString(), targetId, answer.toStdString())) {
+    std::string finalAnswer = answer.toStdString();
+    QFile file(answer);
+    if (file.exists()) {
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray fileData = file.readAll();
+            finalAnswer = fileData.toBase64().toStdString();
+            file.close();
+        } else {
+            emit errorOccurred("Failed to read audio file");
+            return;
+        }
+    }
+
+    if (m_client->submitAnswer(targetType.toStdString(), targetId, finalAnswer)) {
         // Success
     } else {
         emit errorOccurred("Failed to submit answer");
     }
+}
+
+QString NetworkManager::createAudioRecordingPath() {
+    QString baseDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    if (baseDir.isEmpty()) {
+        baseDir = QDir::tempPath();
+    }
+    QDir dir(baseDir + "/socker_recordings");
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+    QString fileName = QString("speaking_%1.wav").arg(QDateTime::currentMSecsSinceEpoch());
+    return dir.filePath(fileName);
+}
+
+QString NetworkManager::saveAudioFromBase64(const QString &base64) {
+    if (base64.isEmpty()) {
+        return "";
+    }
+
+    QString trimmed = base64;
+    int marker = trimmed.indexOf("base64,");
+    if (marker != -1) {
+        trimmed = trimmed.mid(marker + 7);
+    }
+
+    QByteArray audioData = QByteArray::fromBase64(trimmed.toUtf8());
+    if (audioData.isEmpty()) {
+        return "";
+    }
+
+    QString baseDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    if (baseDir.isEmpty()) {
+        baseDir = QDir::tempPath();
+    }
+    QDir dir(baseDir + "/socker_recordings");
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+    QString fileName = QString("speaking_review_%1.wav").arg(QDateTime::currentMSecsSinceEpoch());
+    QString filePath = dir.filePath(fileName);
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return "";
+    }
+    file.write(audioData);
+    file.close();
+    return filePath;
+}
+
+QString NetworkManager::startSpeakingRecording() {
+    if (!m_audioRecorder) {
+        return "";
+    }
+
+    if (m_audioRecorder->state() == QMediaRecorder::RecordingState) {
+        return m_audioOutputPath;
+    }
+
+    m_audioOutputPath = createAudioRecordingPath();
+    m_audioRecorder->setOutputLocation(QUrl::fromLocalFile(m_audioOutputPath));
+    m_audioRecorder->record();
+    return m_audioOutputPath;
+}
+
+QString NetworkManager::stopSpeakingRecording() {
+    if (!m_audioRecorder) {
+        return "";
+    }
+
+    if (m_audioRecorder->state() == QMediaRecorder::RecordingState) {
+        m_audioRecorder->stop();
+    }
+
+    return m_audioOutputPath;
 }
 
 void NetworkManager::requestPendingSubmissions() {

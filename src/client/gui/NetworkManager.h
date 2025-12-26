@@ -5,6 +5,7 @@
 #include <QString>
 #include <QThread>
 #include <QTimer>
+#include <QAudioRecorder>
 #include <memory>
 #include "client/network.h"
 
@@ -32,6 +33,10 @@ public:
     Q_INVOKABLE void requestExam(int id);
     Q_INVOKABLE void requestExamReview(int id);  // Teacher exam review
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
+    Q_INVOKABLE QString createAudioRecordingPath();
+    Q_INVOKABLE QString saveAudioFromBase64(const QString &base64);
+    Q_INVOKABLE QString startSpeakingRecording();
+    Q_INVOKABLE QString stopSpeakingRecording();
     Q_INVOKABLE void requestPendingSubmissions();
     Q_INVOKABLE void requestResultDetail(const QString &targetType, const QString &targetId);
     Q_INVOKABLE void submitGrade(const QString &resultId, const QString &score, const QString &feedback, const QString &gradingDetails = "{}");
@@ -118,6 +123,8 @@ private slots:
 private:
     std::unique_ptr<client::NetworkClient> m_client;
     QTimer *m_pollTimer;
+    QAudioRecorder *m_audioRecorder;
+    QString m_audioOutputPath;
 };
 
 #endif // NETWORKMANAGER_H

@@ -1,4 +1,4 @@
-# Feature Development Workflow
+# Feature Development Workflow 
 
 This document outlines the standard process for adding, updating, or refactoring features in the project, focusing on the key classes involved.
 

@@ -6,7 +6,7 @@
 #include <string>
 #include "server/database.h"
 #include "server/model/game.h"
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 
 namespace server {
 

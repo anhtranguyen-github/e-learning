@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.15)
 
 project(SockerClient LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Quick Widgets Network)
+find_package(Qt5 REQUIRED COMPONENTS Quick Widgets Network Multimedia)
+find_package(Threads REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -37,7 +38,8 @@ target_link_libraries(socker_client
     Qt5::Quick
     Qt5::Widgets
     Qt5::Network
-    pthread
+    Qt5::Multimedia
+    Threads::Threads
 )
 
 # Copy QML files and qmldir to build directory

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 namespace server {
 
@@ -46,6 +47,16 @@ bool SubmissionController::sendMessage(int clientFd, const protocol::Message& ms
 // ============================================================================
 // Message Handlers
 // ============================================================================
+
+static std::string trimWhitespace(const std::string& value) {
+    const char* whitespace = " \t\n\r";
+    const auto start = value.find_first_not_of(whitespace);
+    if (start == std::string::npos) {
+        return "";
+    }
+    const auto end = value.find_last_not_of(whitespace);
+    return value.substr(start, end - start + 1);
+}
 
 void SubmissionController::handleStudentSubmission(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
@@ -91,34 +102,39 @@ void SubmissionController::handleStudentSubmission(int clientFd, const protocol:
     if (targetType == "exercise") {
         Exercise exercise = exerciseRepo->loadExerciseById(targetId);
         if (exercise.getExerciseId() != -1) {
-            std::vector<Question> questions = exercise.getQuestions();
-            if (questions.empty()) {
+            const std::string exerciseType = exercise.getType();
+            if (exerciseType == "essay" || exerciseType == "speaking") {
+                status = "pending";
                 score = 0.0;
-                feedback = "Error: No questions found for exercise";
-            } else {
-                std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
-                int correctCount = 0;
-                bool hasSubjective = false;
-
-                for (size_t i = 0; i < questions.size(); ++i) {
-                    std::string qType = questions[i].getType();
-                    if (qType == "essay" || qType == "speaking" || qType == "rewrite_sentence") {
-                        hasSubjective = true;
-                    }
-
-                    std::string correct = questions[i].getAnswer();
-                    std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
-                    
-                    if (user == correct) {
-                        correctCount++;
-                    }
-                }
-
-                if (hasSubjective) {
-                    status = "pending";
-                    score = 0.0;
-                    feedback = "Pending instructor review";
+                feedback = "Pending instructor review";
+            } else if (exerciseType == "rewrite_sentence") {
+                std::string correct = trimWhitespace(exercise.getAnswer());
+                std::string user = trimWhitespace(userAnswer);
+                if (!correct.empty() && user == correct) {
+                    score = 100.0;
+                    feedback = "Correct.";
                 } else {
+                    score = 0.0;
+                    feedback = "Incorrect.";
+                }
+            } else {
+                std::vector<Question> questions = exercise.getQuestions();
+                if (questions.empty()) {
+                    score = 0.0;
+                    feedback = "Error: No questions found for exercise";
+                } else {
+                    std::vector<std::string> userAnswers = utils::split(userAnswer, '^');
+                    int correctCount = 0;
+
+                    for (size_t i = 0; i < questions.size(); ++i) {
+                        std::string correct = questions[i].getAnswer();
+                        std::string user = (i < userAnswers.size()) ? userAnswers[i] : "";
+                        
+                        if (user == correct) {
+                            correctCount++;
+                        }
+                    }
+
                     score = (static_cast<double>(correctCount) / questions.size()) * 100.0;
                     feedback = "You got " + std::to_string(correctCount) + " out of " + std::to_string(questions.size()) + " correct.";
                 }
