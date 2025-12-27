@@ -12,8 +12,20 @@ Page {
         id: levelModel
     }
 
+    function refreshGameLevels() {
+        if (gameType !== "") {
+            networkManager.requestGameLevelList(gameType)
+        }
+    }
+
     Component.onCompleted: {
-        networkManager.requestGameLevelList(gameType)
+        refreshGameLevels()
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            refreshGameLevels()
+        }
     }
 
     Connections {
@@ -86,6 +98,24 @@ Page {
                 font.bold: true
                 color: Style.textColor
                 Layout.fillWidth: true
+            }
+
+            Button {
+                text: "Refresh"
+                background: Rectangle {
+                    color: "transparent"
+                    border.color: Style.primaryColor
+                    border.width: 1
+                    radius: Style.cornerRadius
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: Style.primaryColor
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: refreshGameLevels()
             }
         }
 

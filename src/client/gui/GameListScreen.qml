@@ -10,8 +10,18 @@ Page {
         id: gameTypeModel
     }
 
-    Component.onCompleted: {
+    function refreshGameList() {
         networkManager.requestGameList()
+    }
+
+    Component.onCompleted: {
+        refreshGameList()
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            refreshGameList()
+        }
     }
 
     Connections {
@@ -87,6 +97,24 @@ Page {
                 font.bold: true
                 color: Style.textColor
                 Layout.fillWidth: true
+            }
+
+            Button {
+                text: "Refresh"
+                background: Rectangle {
+                    color: "transparent"
+                    border.color: Style.primaryColor
+                    border.width: 1
+                    radius: Style.cornerRadius
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: Style.primaryColor
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: refreshGameList()
             }
         }
 

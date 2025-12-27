@@ -35,11 +35,19 @@ Page {
                 var jsonStr = parts.slice(3).join("|")
                 try {
                     var parsedData = JSON.parse(jsonStr)
+                    var questions = []
+                    if (Array.isArray(parsedData)) {
+                        questions = parsedData
+                    } else if (parsedData && Array.isArray(parsedData.questions)) {
+                        questions = parsedData.questions
+                    } else if (parsedData) {
+                        questions = [parsedData]
+                    }
                     gameData = {
                         id: parts[0],
                         type: parts[1],
                         level: parts[2],
-                        questions: parsedData
+                        questions: questions
                     }
                     console.log("Game Data Loaded:", gameData.type, gameData.questions.length)
                 } catch (e) {
@@ -175,8 +183,7 @@ Page {
     
     function submitGame() {
         isGameFinished = true
-        var details = JSON.stringify(userAnswers)
-        networkManager.submitGameResult(gameId, score.toString(), details)
+        networkManager.submitGameResult(gameId, score.toString(), "")
     }
 
     // --- Game Components ---
@@ -185,6 +192,9 @@ Page {
         id: sentenceMatchComponent
         ColumnLayout {
             property var question: gameData ? gameData.questions[currentQuestionIndex] : null
+            property var parts: question ? (question.sentence_parts || question.sentenceParts || []) : []
+            property string correctSentence: question ? (question.correct_sentence || question.correctSentence || "") : ""
+            property var selectedIndexes: []
             
             Text {
                 text: "Arrange the words to form a correct sentence:"
@@ -194,23 +204,41 @@ Page {
                 color: Style.primaryColor
             }
             
-            // Display shuffled fragments or just "Words: ..."
-            // Ideally we'd have draggable items, but for simplicity in QML GridView/Flow without drag-drop lib:
-            // We can show clickable words to build sentence.
-            
             property string currentInput: ""
-            
+
+            function rebuildSentence() {
+                var words = []
+                for (var i = 0; i < selectedIndexes.length; i++) {
+                    words.push(parts[selectedIndexes[i]])
+                }
+                currentInput = words.join(" ")
+            }
+
+            function normalizeSentence(value) {
+                return value.replace(/\s+/g, " ").trim()
+            }
+
+            function resetSelection() {
+                selectedIndexes = []
+                currentInput = ""
+            }
+
+            onQuestionChanged: resetSelection()
+
             Flow {
                 Layout.fillWidth: true
                 spacing: 10
                 
                 Repeater {
-                   model: question ? question.sentence_parts : [] 
+                   model: parts.length 
                    Button {
-                       text: modelData
+                       text: parts[index]
+                       enabled: selectedIndexes.indexOf(index) === -1
                        onClicked: {
-                           if (currentInput.length > 0) currentInput += " "
-                           currentInput += modelData
+                           var next = selectedIndexes.slice(0)
+                           next.push(index)
+                           selectedIndexes = next
+                           rebuildSentence()
                        }
                    }
                 }
@@ -232,25 +260,56 @@ Page {
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: selectedIndexes.length
+                    Rectangle {
+                        radius: 8
+                        color: "#f0f0f0"
+                        border.color: "#d0d0d0"
+                        height: 28
+                        width: Math.max(wordText.implicitWidth + 16, 50)
+                        Text {
+                            id: wordText
+                            anchors.centerIn: parent
+                            text: parts[selectedIndexes[index]]
+                            font.pixelSize: Style.smallSize
+                        }
+                    }
+                }
+            }
             
             RowLayout {
                 Layout.alignment: Qt.AlignRight
                 Button {
                     text: "Clear"
-                    onClicked: currentInput = ""
+                    onClicked: resetSelection()
+                }
+                Button {
+                    text: "Undo"
+                    enabled: selectedIndexes.length > 0
+                    onClicked: {
+                        var next = selectedIndexes.slice(0)
+                        next.pop()
+                        selectedIndexes = next
+                        rebuildSentence()
+                    }
                 }
                 Button {
                     text: "Submit Answer"
-                    enabled: currentInput.length > 0
+                    enabled: selectedIndexes.length === parts.length && parts.length > 0
                     highlighted: true
                     onClicked: {
                         // Validate
-                        var isCorrect = (currentInput === question.correct_sentence)
+                        var isCorrect = (normalizeSentence(currentInput) === normalizeSentence(correctSentence))
                         if (isCorrect) {
                             score += 10
                         }
                         userAnswers.push({
-                            question: question.correct_sentence,
+                            question: correctSentence,
                             userResponse: currentInput,
                             correct: isCorrect
                         })
@@ -258,7 +317,7 @@ Page {
                         // Move to next
                         if (currentQuestionIndex < gameData.questions.length - 1) {
                             nextQuestion()
-                            currentInput = ""
+                            resetSelection()
                         } else {
                             submitGame()
                         }
