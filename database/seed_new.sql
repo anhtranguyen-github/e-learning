@@ -3,6 +3,10 @@
 -- ===================================================
 -- Mock patch data is integrated below.
 
+
+-- psql -d english_learning -f database/seed_new.sql
+
+
 \echo '--- Truncating all tables ---'
 TRUNCATE TABLE results, exams, exercises, lessons, game_items, users RESTART IDENTITY CASCADE;
 
@@ -41,70 +45,99 @@ FROM generate_series(1,20) s(i);
 
 \echo '--- Inserting Exercises ---'
 -- 1. Single Question Exercises
-INSERT INTO exercises (lesson_id, title, type, level, questions, media_url, created_by)
+INSERT INTO exercises (lesson_id, title, type, level, question, answer, media_url, created_by)
 SELECT 
     (random()*19 + 1)::int,
     'Exercise ' || i,
     (ARRAY['rewrite_sentence','essay','speaking'])[1 + (random()*2)::int],
     (ARRAY['beginner','intermediate','advanced'])[1 + (random()*2)::int],
-    jsonb_build_array(jsonb_build_object(
-        'text', 'Question text for exercise ' || i,
-        'answer', 'Answer text for exercise ' || i,
-        'type', 'text' -- Default or derived
-    )),
+    'Question text for exercise ' || i,
+    'Answer text for exercise ' || i,
     'https://example.com/media' || i,
     1
 FROM generate_series(1,10) s(i);
 
--- 2. Multi-Question Exercises (New Format)
-INSERT INTO exercises (lesson_id, title, type, level, questions, created_by)
-VALUES 
-(1, 'Multi-Q Exercise 1', 'multiple_choice', 'beginner', 
- '[
-    {"text": "What is 2+2?", "type": "multiple_choice", "options": ["3", "4", "5"], "answer": "4", "explanation": "Math"},
-    {"text": "What is 5+5?", "type": "multiple_choice", "options": ["10", "20"], "answer": "10", "explanation": "Math"}
- ]'::jsonb, 1),
-(1, 'Multi-Q Exercise 2', 'fill_in_blank', 'intermediate',
- '[
-    {"text": "The sky is ___.", "type": "fill_in_blank", "options": [], "answer": "blue", "explanation": "Nature"},
-    {"text": "Grass is ___.", "type": "fill_in_blank", "options": [], "answer": "green", "explanation": "Nature"}
- ]'::jsonb, 1);
+-- 2. Multi-Question Exercises (split into single-question rows for legacy schema)
+INSERT INTO exercises (lesson_id, title, type, level, question, answer, explanation, created_by) VALUES
+(1, 'Multi-Q Exercise 1 - Q1', 'rewrite_sentence', 'beginner',
+ 'She don''t like apples.',
+ 'She doesn''t like apples.',
+ 'Subject-verb agreement.',
+ 1),
+(1, 'Multi-Q Exercise 1 - Q2', 'rewrite_sentence', 'beginner',
+ 'He go to school every day.',
+ 'He goes to school every day.',
+ 'Third person singular.',
+ 1),
+(1, 'Multi-Q Exercise 2 - Q1', 'essay', 'intermediate',
+ 'Explain why the sky appears blue.',
+ '',
+ 'Open-ended response.',
+ 1),
+(1, 'Multi-Q Exercise 2 - Q2', 'speaking', 'intermediate',
+ 'Describe your favorite place.',
+ '',
+ 'Open-ended response.',
+ 1);
 
 \echo '--- Inserting Mock Essay Exercise ---'
-INSERT INTO exercises (exercise_id, lesson_id, title, type, level, questions, created_by)
+INSERT INTO exercises (exercise_id, lesson_id, title, type, level, question, answer, explanation, created_by)
 SELECT
     24,
     1,
     'Exercise 24 (Mock Essay)',
     'essay',
     'intermediate',
-    jsonb_build_array(
-        jsonb_build_object(
-            'text', 'Write a short paragraph about your favorite hobby.',
-            'type', 'essay',
-            'answer', '',
-            'explanation', 'Subjective question for manual grading.'
-        )
-    ),
+    'Write a short paragraph about your favorite hobby.',
+    '',
+    'Subjective question for manual grading.',
     1
 WHERE NOT EXISTS (SELECT 1 FROM exercises WHERE exercise_id = 24);
 
 UPDATE exercises
-SET questions = jsonb_build_array(
-    jsonb_build_object(
-        'text', 'Write a short paragraph about your favorite hobby.',
-        'type', 'essay',
-        'answer', '',
-        'explanation', 'Subjective question for manual grading.'
-    )
-)
+SET question = 'Write a short paragraph about your favorite hobby.',
+    answer = '',
+    explanation = 'Subjective question for manual grading.'
 WHERE exercise_id = 24
-  AND (questions IS NULL OR jsonb_typeof(questions) <> 'array' OR questions = '[]'::jsonb);
+  AND (question IS NULL OR question = '');
 
 SELECT setval(
     pg_get_serial_sequence('exercises', 'exercise_id'),
     GREATEST((SELECT COALESCE(MAX(exercise_id), 1) FROM exercises), 24)
 );
+
+\echo '--- Inserting Additional Exercises ---'
+INSERT INTO exercises (lesson_id, title, type, level, question, answer, explanation, media_url, created_by) VALUES
+(2, 'Rewrite 1: Present Simple', 'rewrite_sentence', 'beginner',
+ 'He go to school every day.',
+ 'He goes to school every day.',
+ 'Third person singular needs -es.',
+ NULL, 1),
+(3, 'Rewrite 2: Correct Verb', 'rewrite_sentence', 'beginner',
+ 'She are happy.',
+ 'She is happy.',
+ 'Use "is" with she.',
+ NULL, 1),
+(4, 'Rewrite 3: Present Perfect', 'rewrite_sentence', 'intermediate',
+ 'I have been study English for two years.',
+ 'I have been studying English for two years.',
+ 'Use the -ing form after "been".',
+ NULL, 1),
+(5, 'Rewrite 4: Word Order', 'rewrite_sentence', 'beginner',
+ 'the boy walk the dog',
+ 'the boy walks the dog',
+ 'Subject-verb-object order.',
+ NULL, 1),
+(6, 'Speaking Practice: Describe a Trip', 'speaking', 'advanced',
+ 'Describe a memorable trip you have taken.',
+ '',
+ 'Open-ended speaking response.',
+ NULL, 1),
+(7, 'Essay Practice: Importance of Sleep', 'essay', 'intermediate',
+ 'Explain why sleep is important for health.',
+ '',
+ 'Open-ended writing response.',
+ NULL, 1);
 
 \echo '--- Inserting Exams ---'
 INSERT INTO exams (lesson_id, title, type, level, question, created_by)
@@ -147,7 +180,7 @@ SELECT COUNT(*) AS total FROM exams;
 
 \echo '--- Inserting Subjective Exam ---'
 INSERT INTO exams (lesson_id, title, type, level, question, created_by)
-VALUES (1, 'Subjective Exam 1', 'mixed', 'intermediate', 
+VALUES (1, 'Subjective Exam 1', 'multiple_choice', 'intermediate', 
     '[
         {"text": "Explain the importance of grammar.", "type": "essay", "answer": "", "explanation": "Subjective"},
         {"text": "Read this paragraph aloud.", "type": "speaking", "answer": "", "explanation": "Subjective"}
@@ -174,15 +207,23 @@ VALUES (2, 'exercise', 2, 0.0, 'My essay', 'Pending instructor review', 'pending
 \echo 'Results:'
 SELECT COUNT(*) AS total FROM results;
 
-\echo '--- Inserting Chat Messages ---'
-INSERT INTO chat_messages (sender_id, receiver_id, content, message_type) VALUES
-(1, 2, 'Hello Student, how are you?', 'TEXT'),
-(2, 1, 'I am doing well, thank you!', 'TEXT'),
-(1, 2, 'Do you have any questions about the lesson?', 'TEXT'),
-(2, 1, 'Not yet, I will ask if I do.', 'TEXT');
-
-\echo 'Messages:'
-SELECT COUNT(*) AS total FROM chat_messages;
+\echo '--- Inserting Chat Messages (if table exists) ---'
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'chat_messages'
+    ) THEN
+        INSERT INTO chat_messages (sender_id, receiver_id, content, message_type) VALUES
+        (1, 2, 'Hello Student, how are you?', 'TEXT'),
+        (2, 1, 'I am doing well, thank you!', 'TEXT'),
+        (1, 2, 'Do you have any questions about the lesson?', 'TEXT'),
+        (2, 1, 'Not yet, I will ask if I do.', 'TEXT');
+        RAISE NOTICE 'Messages: %', (SELECT COUNT(*) FROM chat_messages);
+    ELSE
+        RAISE NOTICE 'Skipping chat_messages seed (table missing).';
+    END IF;
+END $$;
 
 \echo '--- Seeding Complete ---'
 -- =====================================
@@ -399,7 +440,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     'have today data',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Describe your priority tasks for today.", "type": "essay", "answer": "", "explanation": "Subjective input regarding daily priorities."},
@@ -445,7 +486,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Write a sentence using the word: Serendipity.", "type": "essay", "answer": "", "explanation": "Creative writing."},
@@ -460,7 +501,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Speaking_Test',
-    'mixed',
+    'multiple_choice',
     'advanced',
     '[
         {"text": "Read the following paragraph aloud.", "type": "speaking", "answer": "", "explanation": "Pronunciation check."}
@@ -490,7 +531,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     'have today data',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Describe your priority tasks for today.", "type": "essay", "answer": "", "explanation": "Subjective input regarding daily priorities."},
@@ -536,7 +577,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Write a sentence using the word: Serendipity.", "type": "essay", "answer": "", "explanation": "Creative writing."},
@@ -551,7 +592,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Speaking_Test',
-    'mixed',
+    'multiple_choice',
     'advanced',
     '[
         {"text": "Read the following paragraph aloud.", "type": "speaking", "answer": "", "explanation": "Pronunciation check."}
@@ -581,7 +622,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check_2',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Correct: He go to school everyday.", "type": "rewrite_sentence", "answer": "He goes to school everyday.", "explanation": "Third person singular."},
@@ -596,7 +637,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check_3',
-    'mixed',
+    'multiple_choice',
     'intermediate',
     '[
         {"text": "Correct: I have seen him yesterday.", "type": "rewrite_sentence", "answer": "I saw him yesterday.", "explanation": "Specific past time requires Past Simple."},
@@ -611,7 +652,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check_4',
-    'mixed',
+    'multiple_choice',
     'advanced',
     '[
         {"text": "Correct: If I was you, I would go.", "type": "rewrite_sentence", "answer": "If I were you, I would go.", "explanation": "Subjunctive mood."},
@@ -626,7 +667,7 @@ INSERT INTO exams (lesson_id, title, type, level, question, created_by)
 SELECT 
     l.lesson_id,
     '12_15_25_Grammar_Check_5',
-    'mixed',
+    'multiple_choice',
     'advanced',
     '[
         {"text": "Correct: The data are valid.", "type": "rewrite_sentence", "answer": "The data is valid. (or are, dependent on style guide)", "explanation": "Collective nouns usage."},

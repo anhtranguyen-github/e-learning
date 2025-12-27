@@ -2,6 +2,7 @@
 -- SEED DATABASE WITH LARGE TEST DATA
 -- ===================================================
 
+-- psql -d english_learning -f database/seed.sql
 
 
 -- psql -d english_learning -f database/patch_mock_games.sql
