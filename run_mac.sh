@@ -1,19 +1,42 @@
 #!/usr/bin/env bash
 
+function detect_os() {
+  uname -s
+}
+
+function maybe_set_qt_prefix() {
+  if [ -n "${CMAKE_PREFIX_PATH:-}" ]; then
+    return 0
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local qt_prefix
+  qt_prefix="$(brew --prefix qt@5 2>/dev/null)"
+  if [ -z "$qt_prefix" ]; then
+    qt_prefix="$(brew --prefix qt 2>/dev/null)"
+  fi
+
+  if [ -n "$qt_prefix" ]; then
+    export CMAKE_PREFIX_PATH="$qt_prefix"
+  fi
+}
+
 function build() {
   echo "[BUILD] Compiling Project..."
-  
+
   echo "--- Building Server ---"
   make directories bin/server
-  
+
   echo "--- Building Qt Client ---"
   mkdir -p src/client/gui/build
-  # Use subshell to avoid changing directory for the main script
-  (
-    cd src/client/gui/build
-    cmake ..
-    make
-  )
+  if [ "$(detect_os)" = "Darwin" ]; then
+    maybe_set_qt_prefix
+  fi
+  cmake -S src/client/gui -B src/client/gui/build
+  cmake --build src/client/gui/build
 }
 
 function build_console() {
