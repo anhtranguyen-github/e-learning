@@ -165,23 +165,43 @@ std::vector<Payloads::PendingSubmissionDTO> ResultRepository::getPendingSubmissi
 }
 
 bool ResultRepository::getResultDetail(int userId, const std::string& targetType, int targetId, Payloads::ResultDetailDTO& detail) {
-    // 1. Fetch result data
-    std::string query = "SELECT score, feedback, user_answer, grading_details FROM results WHERE user_id = " + std::to_string(userId) +
+    // 1. Fetch result data (all attempts)
+    std::string query = "SELECT result_id, score, feedback, user_answer, grading_details FROM results WHERE user_id = " + std::to_string(userId) +
                         " AND target_type = '" + targetType + "' AND target_id = " + std::to_string(targetId) +
-                        " ORDER BY submitted_at DESC LIMIT 1";
-    
+                        " ORDER BY submitted_at DESC";
+
     PGresult* res = db->query(query);
     if (!res || PQntuples(res) == 0) {
         if (res) PQclear(res);
         return false;
     }
 
+    auto safeValue = [&](int row, int col) -> std::string {
+        if (PQgetisnull(res, row, col)) {
+            return "";
+        }
+        char* val = PQgetvalue(res, row, col);
+        return val ? val : "";
+    };
+
     detail.targetId = std::to_string(targetId);
     detail.targetType = targetType;
-    detail.score = PQgetvalue(res, 0, 0);
-    detail.feedback = PQgetvalue(res, 0, 1);
-    std::string userAnswerStr = PQgetvalue(res, 0, 2);
-    std::string gradingDetailsStr = PQgetvalue(res, 0, 3) ? PQgetvalue(res, 0, 3) : "";
+    detail.score = safeValue(0, 1);
+    detail.feedback = safeValue(0, 2);
+    std::string userAnswerStr = safeValue(0, 3);
+    std::string gradingDetailsStr = safeValue(0, 4);
+
+    for (int i = 0; i < PQntuples(res); ++i) {
+        Payloads::ResultAttemptDTO attempt;
+        attempt.resultId = safeValue(i, 0);
+        attempt.score = safeValue(i, 1);
+        if (attempt.score.empty()) {
+            attempt.score = "0";
+        }
+        attempt.feedback = safeValue(i, 2);
+        detail.attempts.push_back(attempt);
+    }
+
     PQclear(res);
 
     auto userAnswers = utils::split(userAnswerStr, '^');
@@ -312,6 +332,13 @@ bool ResultRepository::hasResult(int userId, const std::string& targetType, int 
 
 std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
     std::vector<Payloads::SubmissionDTO> submissions;
+
+    if (!db || !db->isConnected()) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("Database not connected in getSubmissions");
+        }
+        return submissions;
+    }
     
     // Get all submissions with proper joins for titles and scores
     std::string query = "SELECT r.result_id, u.username, r.user_id, r.target_type, r.target_id, r.submitted_at, "
@@ -327,19 +354,47 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
     PGresult* result = db->query(query);
     
     if (result) {
+        if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+            if (logger::serverLogger) {
+                logger::serverLogger->error("Query failed in getSubmissions: " + std::string(PQerrorMessage(db->getConnection())));
+            }
+            PQclear(result);
+            return submissions;
+        }
+
+        int fieldCount = PQnfields(result);
+        if (fieldCount < 11) {
+            if (logger::serverLogger) {
+                logger::serverLogger->error("Unexpected column count in getSubmissions: " + std::to_string(fieldCount));
+            }
+            PQclear(result);
+            return submissions;
+        }
+
+        auto safeValue = [&](int row, int col) -> std::string {
+            if (PQgetisnull(result, row, col)) {
+                return "";
+            }
+            char* val = PQgetvalue(result, row, col);
+            return val ? val : "";
+        };
+
         for (int i = 0; i < PQntuples(result); ++i) {
             Payloads::SubmissionDTO dto;
-            dto.resultId = PQgetvalue(result, i, 0);
-            dto.studentName = PQgetvalue(result, i, 1);
-            dto.studentId = PQgetvalue(result, i, 2);
-            dto.targetType = PQgetvalue(result, i, 3);
-            dto.targetId = PQgetvalue(result, i, 4);
-            dto.submittedAt = PQgetvalue(result, i, 5);
-            dto.userAnswer = PQgetvalue(result, i, 6);
-            dto.status = PQgetvalue(result, i, 7);
-            dto.score = PQgetvalue(result, i, 8) ? PQgetvalue(result, i, 8) : "0";
-            dto.targetTitle = PQgetvalue(result, i, 9);
-            dto.lessonId = PQgetvalue(result, i, 10) ? PQgetvalue(result, i, 10) : "";
+            dto.resultId = safeValue(i, 0);
+            dto.studentName = safeValue(i, 1);
+            dto.studentId = safeValue(i, 2);
+            dto.targetType = safeValue(i, 3);
+            dto.targetId = safeValue(i, 4);
+            dto.submittedAt = safeValue(i, 5);
+            dto.userAnswer = safeValue(i, 6);
+            dto.status = safeValue(i, 7);
+            dto.score = safeValue(i, 8);
+            if (dto.score.empty()) {
+                dto.score = "0";
+            }
+            dto.targetTitle = safeValue(i, 9);
+            dto.lessonId = safeValue(i, 10);
             submissions.push_back(dto);
         }
         PQclear(result);

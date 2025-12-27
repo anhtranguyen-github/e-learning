@@ -3,6 +3,8 @@
 #include "common/utils.h"
 #include "common/logger.h"
 #include <sys/socket.h>
+#include <cerrno>
+#include <cstring>
 #include <unistd.h>
 #include <sstream>
 #include <vector>
@@ -24,12 +26,20 @@ ResultController::ResultController(std::shared_ptr<SessionManager> sessionMgr,
 
 bool ResultController::sendMessage(int clientFd, const protocol::Message& msg) {
     try {
+        if (clientFd < 0) {
+            if (logger::serverLogger) {
+                logger::serverLogger->error("Invalid client fd=" + std::to_string(clientFd));
+            }
+            return false;
+        }
+
         std::vector<uint8_t> serialized = msg.serialize();
         ssize_t bytesSent = send(clientFd, serialized.data(), serialized.size(), 0);
         
         if (bytesSent < 0) {
             if (logger::serverLogger) {
-                logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd));
+                logger::serverLogger->error("Failed to send message to fd=" + std::to_string(clientFd) +
+                                            ", error=" + std::string(strerror(errno)));
             }
             return false;
         }
@@ -167,12 +177,20 @@ void ResultController::handleStudentResultDetailRequest(int clientFd, const prot
         return;
     }
 
+    int responseFd = clientFd;
+    if (sessionManager && sessionManager->get_user_id_by_fd(responseFd) == -1) {
+        auto fds = sessionManager->get_fds_by_user_id(userId);
+        if (!fds.empty()) {
+            responseFd = fds[0];
+        }
+    }
+
     if (resultRepo->getResultDetail(userId, req.targetType, targetId, detail)) {
         protocol::Message response(protocol::MsgCode::RESULT_DETAIL_SUCCESS, detail.serialize());
-        sendMessage(clientFd, response);
+        sendMessage(responseFd, response);
     } else {
         protocol::Message response(protocol::MsgCode::RESULT_LIST_FAILURE, "Result not found");
-        sendMessage(clientFd, response);
+        sendMessage(responseFd, response);
     }
 }
 

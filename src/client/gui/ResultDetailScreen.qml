@@ -26,24 +26,37 @@ Page {
     ListModel {
         id: questionModel
     }
+    ListModel {
+        id: attemptModel
+    }
 
     Connections {
         target: networkManager
         function onResultDetailReceived(detailData) {
-            // Format: targetId|targetType|title|score|feedback|q1~q2~q3...
-            // q format: text^user^correct^status
-            
-            var parts = detailData.split('|')
-            if (parts.length >= 5) {
-                resultTitle = parts[2]
-                resultScore = parts[3]
-                resultFeedback = parts[4]
-                
-                questionModel.clear()
-                
-                if (parts.length >= 6) {
-                    var qStr = parts[5]
-                    var questions = qStr.split('~')
+            // Format: targetId|targetType|title|resultId|score|feedback|questions;resultId|score|feedback;...
+            // question format: text^user^correct^status^score^comment
+            questionModel.clear()
+            attemptModel.clear()
+
+            var chunks = detailData.split(';')
+            if (chunks.length < 1) {
+                return
+            }
+
+            var headerParts = chunks[0].split('|')
+            if (headerParts.length >= 6) {
+                resultTitle = headerParts[2]
+                resultScore = headerParts[4]
+                resultFeedback = headerParts[5]
+
+                attemptModel.append({
+                    "resultId": headerParts[3],
+                    "score": headerParts[4],
+                    "feedback": headerParts[5]
+                })
+
+                if (headerParts.length >= 7 && headerParts[6] !== "") {
+                    var questions = headerParts[6].split('~')
                     for (var i = 0; i < questions.length; i++) {
                         var qParts = questions[i].split('^')
                         if (qParts.length >= 4) {
@@ -57,6 +70,18 @@ Page {
                             })
                         }
                     }
+                }
+            }
+
+            for (var j = 1; j < chunks.length; j++) {
+                if (chunks[j] === "") continue
+                var attemptParts = chunks[j].split('|')
+                if (attemptParts.length >= 3) {
+                    attemptModel.append({
+                        "resultId": attemptParts[0],
+                        "score": attemptParts[1],
+                        "feedback": attemptParts[2]
+                    })
                 }
             }
         }
@@ -113,6 +138,56 @@ Page {
                         color: Style.textColor
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
+                    }
+                }
+            }
+
+            Text {
+                text: "All Attempts"
+                font.pixelSize: Style.subHeadingSize
+                font.bold: true
+                color: Style.textColor
+                visible: attemptModel.count > 0
+            }
+
+            Repeater {
+                model: attemptModel
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    height: attemptCol.height + 24
+                    color: Style.cardBackground
+                    radius: Style.cornerRadius
+                    border.color: "#e0e0e0"
+                    border.width: 1
+
+                    ColumnLayout {
+                        id: attemptCol
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.margins: 12
+                        spacing: 6
+
+                        Text {
+                            text: "Result ID: " + model.resultId
+                            font.pixelSize: Style.smallSize
+                            color: Style.secondaryTextColor
+                        }
+
+                        Text {
+                            text: "Score: " + (model.score ? parseFloat(model.score).toFixed(1) : "0.0") + "%"
+                            font.pixelSize: Style.bodySize
+                            color: Style.primaryColor
+                            font.bold: true
+                        }
+
+                        Text {
+                            text: "Feedback: " + (model.feedback ? model.feedback : "No feedback")
+                            font.pixelSize: Style.bodySize
+                            color: Style.textColor
+                            wrapMode: Text.Wrap
+                            Layout.fillWidth: true
+                        }
                     }
                 }
             }

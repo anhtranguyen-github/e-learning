@@ -283,8 +283,8 @@ void NetworkManager::requestPendingSubmissions() {
     }
 }
 
-void NetworkManager::submitGrade(const QString &resultId, const QString &score, const QString &feedback, const QString &gradingDetails) {
-    if (m_client->submitGrade(resultId.toStdString(), score.toStdString(), feedback.toStdString(), gradingDetails.toStdString())) {
+void NetworkManager::submitGrade(const QString &resultId, const QString &userId, const QString &score, const QString &feedback) {
+    if (m_client->submitGrade(resultId.toStdString(), userId.toStdString(), score.toStdString(), feedback.toStdString())) {
         // Success
     } else {
         emit errorOccurred("Failed to submit grade");

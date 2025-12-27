@@ -74,7 +74,7 @@ public:
     bool requestResultList();
     bool requestResultDetail(const std::string& targetType, const std::string& targetId);
     bool requestPendingSubmissions();
-    bool submitGrade(const std::string& resultId, const std::string& score, const std::string& feedback, const std::string& gradingDetails = "{}");
+    bool submitGrade(const std::string& resultId, const std::string& userId, const std::string& score, const std::string& feedback);
     // Exercise and exam requests
     bool requestExercises();
     bool requestExams();

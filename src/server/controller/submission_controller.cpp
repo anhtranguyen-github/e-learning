@@ -219,7 +219,7 @@ void SubmissionController::handleTeacherGradeSubmission(int clientFd, const prot
         return;
     }
 
-    if (resultRepo->updateResult(resultId, score, req.feedback, "graded", req.gradingDetails)) {
+    if (resultRepo->updateResult(resultId, score, req.feedback, "graded", "")) {
         protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_SUCCESS, "Grade updated successfully");
         sendMessage(clientFd, response);
     } else {

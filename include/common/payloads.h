@@ -522,12 +522,12 @@ namespace Payloads {
     struct GradeSubmissionRequest : public ISerializable {
         std::string sessionToken;
         std::string resultId;
+        std::string userId;
         std::string score;
         std::string feedback;
-        std::string gradingDetails;
 
         std::string serialize() const override {
-            std::vector<std::string> parts = {sessionToken, resultId, score, feedback, gradingDetails};
+            std::vector<std::string> parts = {sessionToken, resultId, userId, score, feedback};
             return utils::join(parts, ';');
         }
 
@@ -535,9 +535,9 @@ namespace Payloads {
             auto parts = utils::split(raw, ';');
             if (parts.size() >= 1) sessionToken = parts[0];
             if (parts.size() >= 2) resultId = parts[1];
-            if (parts.size() >= 3) score = parts[2];
-            if (parts.size() >= 4) feedback = parts[3];
-            if (parts.size() >= 5) gradingDetails = parts[4];
+            if (parts.size() >= 3) userId = parts[2];
+            if (parts.size() >= 4) score = parts[3];
+            if (parts.size() >= 5) feedback = parts[4];
         }
     };
 
@@ -666,6 +666,24 @@ namespace Payloads {
         }
     };
 
+    struct ResultAttemptDTO : public ISerializable {
+        std::string resultId;
+        std::string score;
+        std::string feedback;
+
+        std::string serialize() const override {
+            std::vector<std::string> parts = {resultId, score, feedback};
+            return utils::join(parts, '|');
+        }
+
+        void deserialize(const std::string& raw) override {
+            auto parts = utils::split(raw, '|');
+            if (parts.size() >= 1) resultId = parts[0];
+            if (parts.size() >= 2) score = parts[1];
+            if (parts.size() >= 3) feedback = parts[2];
+        }
+    };
+
     struct ResultDetailDTO : public ISerializable {
         std::string targetId;
         std::string targetType;
@@ -673,34 +691,70 @@ namespace Payloads {
         std::string score;
         std::string feedback;
         std::vector<QuestionResultDTO> questions;
+        std::vector<ResultAttemptDTO> attempts;
 
         std::string serialize() const override {
-            std::string base = utils::join({targetId, targetType, title, score, feedback}, '|');
+            std::string base = utils::join({targetId, targetType, title}, '|');
             std::vector<std::string> qParts;
             for (const auto& q : questions) {
                 qParts.push_back(q.serialize());
             }
-            if (!qParts.empty()) {
-                base += "|" + utils::join(qParts, '~');
+            std::string questionsStr = utils::join(qParts, '~');
+
+            std::vector<std::string> attemptParts;
+            if (!attempts.empty()) {
+                std::string firstAttempt = attempts[0].serialize();
+                firstAttempt += "|" + questionsStr;
+                attemptParts.push_back(firstAttempt);
+
+                for (size_t i = 1; i < attempts.size(); ++i) {
+                    attemptParts.push_back(attempts[i].serialize());
+                }
             }
+
+            if (!attemptParts.empty()) {
+                base += "|" + utils::join(attemptParts, ';');
+            }
+
             return base;
         }
 
         void deserialize(const std::string& raw) override {
-            auto parts = utils::split(raw, '|');
-            if (parts.size() >= 1) targetId = parts[0];
-            if (parts.size() >= 2) targetType = parts[1];
-            if (parts.size() >= 3) title = parts[2];
-            if (parts.size() >= 4) score = parts[3];
-            if (parts.size() >= 5) feedback = parts[4];
-            
-            if (parts.size() >= 6) {
-                std::string qStr = parts[5];
-                auto qList = utils::split(qStr, '~');
+            auto chunks = utils::split(raw, ';');
+            if (chunks.empty()) return;
+
+            auto headerParts = utils::split(chunks[0], '|');
+            if (headerParts.size() >= 1) targetId = headerParts[0];
+            if (headerParts.size() >= 2) targetType = headerParts[1];
+            if (headerParts.size() >= 3) title = headerParts[2];
+            if (headerParts.size() >= 4) {
+                ResultAttemptDTO firstAttempt;
+                firstAttempt.resultId = headerParts[3];
+                if (headerParts.size() >= 5) firstAttempt.score = headerParts[4];
+                if (headerParts.size() >= 6) firstAttempt.feedback = headerParts[5];
+                attempts.push_back(firstAttempt);
+                score = firstAttempt.score;
+                feedback = firstAttempt.feedback;
+            }
+
+            if (headerParts.size() >= 7 && !headerParts[6].empty()) {
+                auto qList = utils::split(headerParts[6], '~');
                 for (const auto& qRaw : qList) {
                     QuestionResultDTO q;
                     q.deserialize(qRaw);
                     questions.push_back(q);
+                }
+            }
+
+            for (size_t i = 1; i < chunks.size(); ++i) {
+                if (chunks[i].empty()) continue;
+                auto attemptParts = utils::split(chunks[i], '|');
+                if (attemptParts.size() >= 1) {
+                    ResultAttemptDTO attempt;
+                    attempt.resultId = attemptParts[0];
+                    if (attemptParts.size() >= 2) attempt.score = attemptParts[1];
+                    if (attemptParts.size() >= 3) attempt.feedback = attemptParts[2];
+                    attempts.push_back(attempt);
                 }
             }
         }

@@ -45,18 +45,44 @@ void FeedbackController::handleGetSubmissions(int clientFd, const protocol::Mess
 
     sessionManager->update_session(req.sessionToken);
 
+    if (!resultRepo) {
+        if (logger::serverLogger) {
+            logger::serverLogger->error("[FeedbackController] resultRepo is null");
+        }
+        protocol::Message response(protocol::MsgCode::PENDING_SUBMISSIONS_FAILURE, "Server error");
+        sendMessage(clientFd, response);
+        return;
+    }
+
     // Get all submissions (both pending and graded)
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[FeedbackController] Loading submissions");
+    }
     auto submissions = resultRepo->getSubmissions();
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[FeedbackController] Loaded submissions: " + std::to_string(submissions.size()));
+    }
 
     // Serialize using SubmissionDTO
     std::vector<std::string> serializedDtos;
-    for (const auto& sub : submissions) {
+    serializedDtos.reserve(submissions.size());
+    const size_t kMaxAnswerBytes = 20000;
+    for (auto& sub : submissions) {
+        if (sub.userAnswer.size() > kMaxAnswerBytes) {
+            if (logger::serverLogger) {
+                logger::serverLogger->warn("[FeedbackController] Truncating userAnswer for result " + sub.resultId);
+            }
+            sub.userAnswer = sub.userAnswer.substr(0, kMaxAnswerBytes) + "...[truncated]";
+        }
         serializedDtos.push_back(sub.serialize());
     }
 
     std::string responsePayload = std::to_string(serializedDtos.size());
     if (!serializedDtos.empty()) {
         responsePayload += ";" + utils::join(serializedDtos, ';');
+    }
+    if (logger::serverLogger) {
+        logger::serverLogger->debug("[FeedbackController] Response payload size: " + std::to_string(responsePayload.size()));
     }
 
     protocol::Message response(protocol::MsgCode::PENDING_SUBMISSIONS_SUCCESS, responsePayload);
@@ -97,7 +123,7 @@ void FeedbackController::handleGradeSubmission(int clientFd, const protocol::Mes
         return;
     }
 
-    if (resultRepo->updateResult(resultId, score, req.feedback, "graded", req.gradingDetails)) {
+    if (resultRepo->updateResult(resultId, score, req.feedback, "graded", "")) {
         protocol::Message response(protocol::MsgCode::GRADE_SUBMISSION_SUCCESS, "Grade updated successfully");
         sendMessage(clientFd, response);
         

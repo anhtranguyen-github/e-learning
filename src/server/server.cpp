@@ -119,6 +119,15 @@ int Server::acceptClient() {
     int flags = fcntl(clientFd, F_GETFL, 0);
     fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
 
+#ifdef SO_NOSIGPIPE
+    int noSigPipe = 1;
+    if (setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe)) < 0) {
+        if (logger::serverLogger) {
+            logger::serverLogger->warn("Failed to set SO_NOSIGPIPE on client fd=" + std::to_string(clientFd));
+        }
+    }
+#endif
+
     clientSockets.insert(clientFd);
 
     char clientIp[INET_ADDRSTRLEN];
@@ -338,6 +347,7 @@ int main(int argc, char* argv[]) {
     // Handle signals gracefully
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+    signal(SIGPIPE, SIG_IGN);
 
     if (!srv.start()) {
         std::cerr << "Failed to start server" << std::endl;

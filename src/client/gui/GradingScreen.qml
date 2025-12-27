@@ -210,22 +210,28 @@ Page {
                     spacing: 10
 
                     Text { text: "Score (0-10):"; verticalAlignment: Text.AlignVCenter }
-                    TextField {
-                        id: scoreField
-                        Layout.preferredWidth: 80
-                        text: model.score
-                        validator: DoubleValidator { bottom: 0; top: 10; decimals: 1 }
-                        onEditingFinished: {
-                            model.score = text
-                        }
+                TextField {
+                    id: scoreField
+                    Layout.preferredWidth: 80
+                    text: model.score
+                    validator: DoubleValidator { bottom: 0; top: 10; decimals: 1 }
+                    onTextChanged: {
+                        model.score = text
                     }
+                    onEditingFinished: {
+                        model.score = text
+                    }
+                }
 
-                    Text { text: "Comment:"; verticalAlignment: Text.AlignVCenter }
+                    Text { text: "Feedback:"; verticalAlignment: Text.AlignVCenter }
                     TextField {
                         id: commentField
                         Layout.fillWidth: true
                         placeholderText: "Specific feedback..."
                         text: model.comment
+                        onTextChanged: {
+                            model.comment = text
+                        }
                         onEditingFinished: {
                             model.comment = text
                         }
@@ -300,9 +306,26 @@ Page {
         }
     }
 
+    function buildFeedback(overallFeedback) {
+        var parts = []
+        var overall = overallFeedback ? overallFeedback.trim() : ""
+        if (overall.length > 0) {
+            parts.push("Overall: " + overall)
+        }
+
+        for (var i = 0; i < questionModel.count; i++) {
+            var item = questionModel.get(i)
+            var comment = item.comment ? item.comment.trim() : ""
+            if (comment.length > 0) {
+                parts.push("Q" + (i + 1) + ": " + comment)
+            }
+        }
+
+        return parts.join("\n")
+    }
+
     function submitGrading(overallFeedback) {
         var totalScore = 0
-        var detailsArray = []
         var maxTotal = 0
 
         for (var i = 0; i < questionModel.count; i++) {
@@ -310,28 +333,15 @@ Page {
             var s = parseFloat(item.score) || 0
             totalScore += s
             maxTotal += 10 // Assuming 10 per question
-            
-            detailsArray.push({
-                "question": item.questionText,
-                "userAnswer": item.userAnswer,
-                "score": s,
-                "comment": item.comment
-            })
         }
 
         // Normalize total score to 0-100 scale
         var normalizedScore = (maxTotal > 0) ? (totalScore / maxTotal) * 100 : 0
         normalizedScore = Math.round(normalizedScore * 10) / 10
 
-        var gradingDetailsObj = {
-            "items": detailsArray,
-            "overallFeedback": overallFeedback
-        }
+        var feedbackText = buildFeedback(overallFeedback)
+        console.log("Submitting:", normalizedScore, feedbackText, studentId)
         
-        var detailsJson = JSON.stringify(gradingDetailsObj)
-        
-        console.log("Submitting:", normalizedScore, overallFeedback, detailsJson)
-        
-        networkManager.submitGrade(resultId, normalizedScore.toString(), overallFeedback, detailsJson)
+        networkManager.submitGrade(resultId, studentId, normalizedScore.toString(), feedbackText)
     }
 }
