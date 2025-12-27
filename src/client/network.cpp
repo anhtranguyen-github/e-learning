@@ -539,6 +539,10 @@ bool NetworkClient::requestStudyLesson(int lessonId, const std::string& lessonTy
 }
 
 bool NetworkClient::requestExercise(protocol::MsgCode exerciseType, int exerciseId) {
+    return requestExercise(exerciseType, exerciseId, "");
+}
+
+bool NetworkClient::requestExercise(protocol::MsgCode exerciseType, int exerciseId, const std::string& studentId) {
     if (!connected || !loggedIn) {
         if (logger::clientLogger) {
             logger::clientLogger->error("Not logged in - cannot request exercise");
@@ -546,10 +550,21 @@ bool NetworkClient::requestExercise(protocol::MsgCode exerciseType, int exercise
         return false;
     }
 
-    Payloads::SpecificExerciseRequest req;
-    req.sessionToken = sessionToken;
-    req.exerciseId = std::to_string(exerciseId);
-    std::string payload = req.serialize();
+    std::string payload;
+    if (exerciseType == protocol::MsgCode::STUDY_EXERCISE_REQUEST) {
+        Payloads::StudyExerciseRequest req;
+        req.sessionToken = sessionToken;
+        req.exerciseId = std::to_string(exerciseId);
+        req.exerciseType = "";
+        req.studentId = studentId;
+        payload = req.serialize();
+    } else {
+        Payloads::SpecificExerciseRequest req;
+        req.sessionToken = sessionToken;
+        req.exerciseId = std::to_string(exerciseId);
+        req.studentId = studentId;
+        payload = req.serialize();
+    }
     protocol::Message msg(exerciseType, payload);
 
     if (!sendMessage(msg)) {
@@ -604,6 +619,30 @@ bool NetworkClient::requestPendingSubmissions() {
     if (!sendMessage(msg)) {
         if (logger::clientLogger) {
             logger::clientLogger->error("Failed to send pending submissions request");
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool NetworkClient::requestSubmissionDetail(const std::string& resultId) {
+    if (!connected || !loggedIn) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Not logged in - cannot request submission detail");
+        }
+        return false;
+    }
+
+    Payloads::SubmissionDetailRequest req;
+    req.sessionToken = sessionToken;
+    req.resultId = resultId;
+    std::string payload = req.serialize();
+    protocol::Message msg(protocol::MsgCode::SUBMISSION_DETAIL_REQUEST, payload);
+
+    if (!sendMessage(msg)) {
+        if (logger::clientLogger) {
+            logger::clientLogger->error("Failed to send submission detail request");
         }
         return false;
     }

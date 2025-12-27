@@ -70,10 +70,12 @@ public:
 
     // Exercise and result management
     bool requestExercise(protocol::MsgCode exerciseType, int exerciseId);
+    bool requestExercise(protocol::MsgCode exerciseType, int exerciseId, const std::string& studentId);
     bool submitAnswer(const std::string& targetType, int targetId, const std::string& answer);
     bool requestResultList();
     bool requestResultDetail(const std::string& targetType, const std::string& targetId);
     bool requestPendingSubmissions();
+    bool requestSubmissionDetail(const std::string& resultId);
     bool submitGrade(const std::string& resultId, const std::string& userId, const std::string& score, const std::string& feedback);
     // Exercise and exam requests
     bool requestExercises();

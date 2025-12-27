@@ -77,6 +77,7 @@ public:
         // Teacher/Admin only requests
         if (msg.code == protocol::MsgCode::GRADE_SUBMISSION_REQUEST ||
             msg.code == protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST ||
+            msg.code == protocol::MsgCode::SUBMISSION_DETAIL_REQUEST ||
             msg.code == protocol::MsgCode::EXAM_REVIEW_REQUEST) {
             
             if (role != "teacher" && role != "admin") {

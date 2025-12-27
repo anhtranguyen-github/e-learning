@@ -30,6 +30,8 @@ public:
     Q_INVOKABLE void requestExamList();
     Q_INVOKABLE void requestResultList();
     Q_INVOKABLE void requestExercise(int type, int id);
+    Q_INVOKABLE void requestExercise(int type, int id, const QString &studentId);
+    Q_INVOKABLE void requestSubmissionDetail(const QString &resultId);
     Q_INVOKABLE void requestExam(int id);
     Q_INVOKABLE void requestExamReview(int id);  // Teacher exam review
     Q_INVOKABLE void submitAnswer(const QString &targetType, int targetId, const QString &answer);
@@ -86,6 +88,7 @@ signals:
     void answerSubmissionSuccess(const QString &targetType, const QString &targetId);
     void answerSubmissionFailure(const QString &message);
     void pendingSubmissionsReceived(const QString &listData);
+    void submissionDetailReceived(const QString &resultId, const QString &userAnswer);
     void gradeSubmissionSuccess(const QString &message);
     void gradeSubmissionFailure(const QString &message);
     void examAlreadyTaken(const QString &message);

@@ -344,7 +344,8 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
     std::string query = "SELECT r.result_id, u.username, r.user_id, r.target_type, r.target_id, r.submitted_at, "
                         "r.user_answer, r.status, r.score, "
                         "COALESCE(ex.title, e.title, 'Unknown') as title, "
-                        "COALESCE(ex.lesson_id, e.lesson_id) as lesson_id "
+                        "COALESCE(ex.lesson_id, e.lesson_id) as lesson_id, "
+                        "ex.type as exercise_type "
                         "FROM results r "
                         "JOIN users u ON r.user_id = u.user_id "
                         "LEFT JOIN exercises ex ON r.target_type = 'exercise' AND r.target_id = ex.exercise_id "
@@ -363,7 +364,7 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
         }
 
         int fieldCount = PQnfields(result);
-        if (fieldCount < 11) {
+        if (fieldCount < 12) {
             if (logger::serverLogger) {
                 logger::serverLogger->error("Unexpected column count in getSubmissions: " + std::to_string(fieldCount));
             }
@@ -387,7 +388,7 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
             dto.targetType = safeValue(i, 3);
             dto.targetId = safeValue(i, 4);
             dto.submittedAt = safeValue(i, 5);
-            dto.userAnswer = safeValue(i, 6);
+            std::string rawAnswer = safeValue(i, 6);
             dto.status = safeValue(i, 7);
             dto.score = safeValue(i, 8);
             if (dto.score.empty()) {
@@ -395,12 +396,36 @@ std::vector<Payloads::SubmissionDTO> ResultRepository::getSubmissions() {
             }
             dto.targetTitle = safeValue(i, 9);
             dto.lessonId = safeValue(i, 10);
+            std::string exerciseType = safeValue(i, 11);
+            if (!rawAnswer.empty()) {
+                if (dto.targetType == "exercise" && exerciseType == "speaking") {
+                    dto.userAnswer = "[audio]";
+                } else {
+                    dto.userAnswer = "[text]";
+                }
+            } else {
+                dto.userAnswer.clear();
+            }
             submissions.push_back(dto);
         }
         PQclear(result);
     }
     
     return submissions;
+}
+
+bool ResultRepository::getSubmissionDetail(int resultId, Payloads::SubmissionDetailDTO& detail) {
+    std::string query = "SELECT user_answer FROM results WHERE result_id = " + std::to_string(resultId);
+    PGresult* result = db->query(query);
+    if (!result || PQntuples(result) == 0) {
+        if (result) PQclear(result);
+        return false;
+    }
+
+    detail.resultId = std::to_string(resultId);
+    detail.userAnswer = PQgetvalue(result, 0, 0) ? PQgetvalue(result, 0, 0) : "";
+    PQclear(result);
+    return true;
 }
 
 bool ResultRepository::addFeedback(int resultId, const std::string& feedbackContent, const std::string& feedbackType) {

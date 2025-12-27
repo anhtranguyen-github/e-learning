@@ -181,6 +181,9 @@ void RequestRouter::handleMessage(int clientFd, const protocol::Message& msg, Cl
         case protocol::MsgCode::PENDING_SUBMISSIONS_REQUEST:
             feedbackController->handleGetSubmissions(clientFd, msg);
             break;
+        case protocol::MsgCode::SUBMISSION_DETAIL_REQUEST:
+            feedbackController->handleSubmissionDetailRequest(clientFd, msg);
+            break;
 
         // Exam (Student)
         case protocol::MsgCode::EXAM_LIST_REQUEST:

@@ -13,6 +13,7 @@ Page {
     property string userAnswer
     property string targetId
     property string lessonId
+    property string lastContent: ""
 
     background: Rectangle { color: Style.backgroundColor }
     
@@ -34,9 +35,12 @@ Page {
         }
 
         if (targetType === "exercise") {
-            networkManager.requestExercise(160, tId)
+            networkManager.requestExercise(160, tId, studentId)
         } else if (targetType === "exam") {
             networkManager.requestExamReview(tId)  // Teacher uses review endpoint
+        }
+        if (resultId !== "") {
+            networkManager.requestSubmissionDetail(resultId)
         }
     }
 
@@ -45,18 +49,29 @@ Page {
         function onExerciseContentReceived(content) { parseContent(content) }
         function onExamContentReceived(content) { parseContent(content) }
         function onGradeSubmissionSuccess(msg) { stackView.pop() }
+        function onSubmissionDetailReceived(detailResultId, detailUserAnswer) {
+            if (detailResultId !== resultId) {
+                return
+            }
+            userAnswer = detailUserAnswer
+            if (lastContent !== "") {
+                parseContent(lastContent)
+            }
+        }
     }
 
     function parseContent(content) {
+        lastContent = content
         questionModel.clear()
         
         var parts = content.split('|')
-        if (parts.length < 6) {
+        var offset = (studentId !== "" && parts.length >= 7 && parts[0] === studentId) ? 1 : 0
+        if (parts.length < 6 + offset) {
             console.warn("Invalid content format received in GradingScreen")
             return
         }
 
-        var questionsStr = parts.slice(5).join('|')
+        var questionsStr = parts.slice(5 + offset).join('|')
         var questionsList = questionsStr.split('^')
         var userAnswers = userAnswer.split("^")
         
@@ -317,7 +332,7 @@ Page {
             var item = questionModel.get(i)
             var comment = item.comment ? item.comment.trim() : ""
             if (comment.length > 0) {
-                parts.push("Q" + (i + 1) + ": " + comment)
+                parts.push(comment)
             }
         }
 

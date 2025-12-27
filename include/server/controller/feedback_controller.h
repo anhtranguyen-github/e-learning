@@ -28,6 +28,9 @@ public:
 
     // Teacher gets list of all student submissions
     void handleGetSubmissions(int clientFd, const protocol::Message& msg);
+
+    // Teacher requests full submission detail (userAnswer)
+    void handleSubmissionDetailRequest(int clientFd, const protocol::Message& msg);
     
     // Teacher submits grade for a submission
     void handleGradeSubmission(int clientFd, const protocol::Message& msg);

@@ -93,6 +93,39 @@ void FeedbackController::handleGetSubmissions(int clientFd, const protocol::Mess
     }
 }
 
+void FeedbackController::handleSubmissionDetailRequest(int clientFd, const protocol::Message& msg) {
+    std::string payload = msg.toString();
+
+    Payloads::SubmissionDetailRequest req;
+    req.deserialize(payload);
+
+    if (!sessionManager->is_session_valid(req.sessionToken)) {
+        protocol::Message response(protocol::MsgCode::SUBMISSION_DETAIL_FAILURE, "Invalid session");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    sessionManager->update_session(req.sessionToken);
+
+    int resultId = 0;
+    try {
+        resultId = std::stoi(req.resultId);
+    } catch (...) {
+        protocol::Message response(protocol::MsgCode::SUBMISSION_DETAIL_FAILURE, "Invalid result ID");
+        sendMessage(clientFd, response);
+        return;
+    }
+
+    Payloads::SubmissionDetailDTO detail;
+    if (resultRepo->getSubmissionDetail(resultId, detail)) {
+        protocol::Message response(protocol::MsgCode::SUBMISSION_DETAIL_SUCCESS, detail.serialize());
+        sendMessage(clientFd, response);
+    } else {
+        protocol::Message response(protocol::MsgCode::SUBMISSION_DETAIL_FAILURE, "Submission not found");
+        sendMessage(clientFd, response);
+    }
+}
+
 void FeedbackController::handleGradeSubmission(int clientFd, const protocol::Message& msg) {
     std::string payload = msg.toString();
     

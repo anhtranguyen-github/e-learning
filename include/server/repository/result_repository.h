@@ -36,6 +36,7 @@ public:
 
     // Get all submissions for teacher review (using SubmissionDTO)
     std::vector<Payloads::SubmissionDTO> getSubmissions();
+    bool getSubmissionDetail(int resultId, Payloads::SubmissionDetailDTO& detail);
 
     // Add feedback to a result
     bool addFeedback(int resultId, const std::string& feedbackContent, const std::string& feedbackType);

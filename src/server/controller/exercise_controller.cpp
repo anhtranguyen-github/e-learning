@@ -217,6 +217,10 @@ void ExerciseController::handleStudentStudyExerciseRequest(int clientFd, const p
     // Serialize using DTO
     Payloads::ExerciseDTO dto = exercise.toDTO();
     std::string serializedContent = dto.serialize();
+    if (!req.studentId.empty() && sessionManager &&
+        sessionManager->get_user_role_by_fd(clientFd) == "teacher") {
+        serializedContent = req.studentId + "|" + serializedContent;
+    }
     
     // Send success response
     protocol::Message response(protocol::MsgCode::STUDY_EXERCISE_SUCCESS, serializedContent);
@@ -289,6 +293,10 @@ void ExerciseController::handleStudentSpecificExerciseRequest(int clientFd, cons
     // Use DTO
     Payloads::ExerciseDTO dto = exercise.toDTO();
     std::string content = dto.serialize();
+    if (!req.studentId.empty() && sessionManager &&
+        sessionManager->get_user_role_by_fd(clientFd) == "teacher") {
+        content = req.studentId + "|" + content;
+    }
     
     protocol::Message response(successCode, content);
     sendMessage(clientFd, response);

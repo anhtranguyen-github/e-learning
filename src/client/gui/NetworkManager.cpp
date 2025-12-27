@@ -155,10 +155,22 @@ void NetworkManager::requestResultList() {
 }
 
 void NetworkManager::requestExercise(int type, int id) {
-    if (m_client->requestExercise(static_cast<protocol::MsgCode>(type), id)) {
+    requestExercise(type, id, "");
+}
+
+void NetworkManager::requestExercise(int type, int id, const QString &studentId) {
+    if (m_client->requestExercise(static_cast<protocol::MsgCode>(type), id, studentId.toStdString())) {
         // Success
     } else {
         emit errorOccurred("Failed to request exercise");
+    }
+}
+
+void NetworkManager::requestSubmissionDetail(const QString &resultId) {
+    if (m_client->requestSubmissionDetail(resultId.toStdString())) {
+        // Success
+    } else {
+        emit errorOccurred("Failed to request submission detail");
     }
 }
 
@@ -547,6 +559,16 @@ void NetworkManager::checkMessages() {
                 break;
             case protocol::MsgCode::PENDING_SUBMISSIONS_FAILURE:
                 emit errorOccurred("Failed to get pending submissions");
+                break;
+            case protocol::MsgCode::SUBMISSION_DETAIL_SUCCESS: {
+                Payloads::SubmissionDetailDTO dto;
+                dto.deserialize(msg.toString());
+                emit submissionDetailReceived(QString::fromStdString(dto.resultId),
+                                              QString::fromStdString(dto.userAnswer));
+                break;
+            }
+            case protocol::MsgCode::SUBMISSION_DETAIL_FAILURE:
+                emit errorOccurred("Failed to get submission detail");
                 break;
             case protocol::MsgCode::GRADE_SUBMISSION_SUCCESS:
                 emit gradeSubmissionSuccess(QString::fromStdString(msg.toString()));
